@@ -100,6 +100,10 @@ test coverage run:
 Documentation
 -------------
 
+.. image:: https://readthedocs.org/projects/snowex_db/badge/?version=latest
+    :target: https://snowex_db.readthedocs.io/en/latest/?badge=latest
+    :alt: Documentation Status
+
 There is a whole host of resources for users in the documentation. It has been
 setup for you to preview in your browser.
 
