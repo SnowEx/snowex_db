@@ -2,6 +2,10 @@
 Welcome to the SnowEx Database
 ==============================
 
+.. image:: https://readthedocs.org/projects/snowex_db/badge/?version=latest
+    :target: https://snowex_db.readthedocs.io/en/latest/?badge=latest
+    :alt: Documentation Status
+
 Database creation and management software for SnowEx data. The goal is to
 create a single source (citeable) dataset that is cross queriable for snow
 researchers.
@@ -30,7 +34,7 @@ Mac OS
 
 First ensure you have following prerequisites:
 
-* Python3.5 +
+* Python3.7 +
 * HomeBrew
 
 Then to install the postgres database with postgis functionality run:
@@ -45,7 +49,7 @@ Ubuntu
 
 First ensure you have following prerequisites:
 
-* Python3.6 +
+* Python3.7 +
 * wget
 
 Then to install the postgres database with postgis functionality run:
@@ -54,6 +58,22 @@ Then to install the postgres database with postgis functionality run:
 .. code-block:: bash
 
   cd scripts/install && sh install_ubuntu.sh
+
+Docker
+~~~~~~
+
+Alternatively if you have docker install on either os,
+the simplest way to spin up the db is to run:
+
+.. code-block:: bash
+
+    docker-compose up -d
+
+To tear it down (which will delete the data!)
+
+.. code-block:: bash
+
+    docker-compose down
 
 Python
 ------
@@ -99,10 +119,6 @@ test coverage run:
 
 Documentation
 -------------
-
-.. image:: https://readthedocs.org/projects/snowex_db/badge/?version=latest
-    :target: https://snowex_db.readthedocs.io/en/latest/?badge=latest
-    :alt: Documentation Status
 
 There is a whole host of resources for users in the documentation. It has been
 setup for you to preview in your browser.
