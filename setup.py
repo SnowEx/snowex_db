@@ -10,15 +10,11 @@ with open('README.rst') as readme_file:
 with open('docs/history.rst') as history_file:
     history = history_file.read()
 
-with open('requirements.txt') as req:
-    requirements = req.read().split('\n')
-
 with open('requirements_dev.txt') as req:
     # Ignore the -r on the two lines
     setup_requirements = req.read().split('\n')[2:]
 
-setup_requirements += requirements
-test_requirements = ['pytest>=3'] + requirements
+test_requirements = ['pytest>=3'] + setup_requirements
 
 setup(
     author="Micah Johnson",
@@ -38,7 +34,7 @@ setup(
             'clear_dataset=snowex_db.cli:clear_dataset',
         ],
     },
-    install_requires=requirements,
+    install_requires=setup_requirements,
     long_description=readme + '\n\n' + history,
     include_package_data=True,
     keywords='snowex_db',
