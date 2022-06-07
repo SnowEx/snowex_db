@@ -22,7 +22,7 @@ U.S. Geological Survey, 20171101, USGS NED Original Product Resolution CO MesaCo
 import glob
 from os.path import abspath, expanduser, join
 
-from snowexsql.batch import UploadRasterBatch
+from snowex_db.batch import UploadRasterBatch
 
 
 def main():

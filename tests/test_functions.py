@@ -8,8 +8,8 @@ from geoalchemy2.shape import to_shape
 from shapely.geometry import Point
 from sqlalchemy import MetaData
 
-from snowexsql.functions import *
-from snowexsql.upload import *
+from snowex_db.functions import *
+from snowex_db.upload import *
 
 from .sql_test_base import DBSetup
 

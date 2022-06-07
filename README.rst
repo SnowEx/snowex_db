@@ -1,39 +1,27 @@
-====================
-Welcome to snowexsql
-====================
-
-.. image:: https://readthedocs.org/projects/snowexsql/badge/?version=latest
-    :target: https://snowexsql.readthedocs.io/en/latest/?badge=latest
-    :alt: Documentation Status
-
-.. image:: https://img.shields.io/github/workflow/status/SnowEx/snowexsql/snowexsql
-    :target: https://github.com/SnowEx/snowexsql/actions/workflows/main.yml
-    :alt: Testing Status
-
-.. image:: https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/micahjohnson150/2034019acc40a963bd02d2fcbb31c5a9/raw/snowexsql__heads_master.json
-    :alt: Code Coverage
+==============================
+Welcome to the SnowEx Database
+==============================
 
 Database creation and management software for SnowEx data. The goal is to
 create a single source (citeable) dataset that is cross queriable for snow
 researchers.
 
-WARNING - This is under active development in preparation for SnowEx Hackweek.  Use at your own risk.  Data will change as it is QA/QC'd and the end goal is for all data in this database to be pulled from NSIDC.  The goal is for this to become a community database open to all. 
+WARNING - This is under active development in preparation for SnowEx Hackweek.
+Use at your own risk.  Data will change as it is QA/QC'd and the end goal is
+for all data in this database to be pulled from NSIDC.  The goal is for this
+to become a community database open to all.
 
 Features
 --------
-
-* Database management for SnowEx Data
+* Auto parse header information and include it in upload
+* Interpret and upload csv, rasters, uavsar files,
+* Full provenance for download and upload
 * Manage Site, Point, Profile and Raster Data
-* Populate the snowex database
-* Convenient GIS tools
 * PostGreSQL Database end point for researchers
 
 
 Installing
 ----------
-If you are just planning on using the database, then only install the
-python package instructions below.
-
 If you are are database maintainers or installing it for the first time
 follow the instructions below completely.
 
@@ -117,9 +105,8 @@ setup for you to preview in your browser.
 
 In there you will find:
 
-* Examples of database use
 * Database structure
-* API to the python package snowexsql
+* API to the python package snowex_db
 * Links to other resources
 * Notes about the data uploaded
 * Info on populating the database

@@ -14,10 +14,10 @@ import time
 from os import listdir, mkdir
 from os.path import abspath, basename, dirname, expanduser, isdir, join
 
-from snowexsql.conversions import INSAR_to_rasterio
-from snowexsql.metadata import read_InSar_annotation
-from snowexsql.projection import reproject_raster_by_epsg
-from snowexsql.utilities import get_logger, read_n_lines
+from snowex_db.conversions import INSAR_to_rasterio
+from snowex_db.metadata import read_InSar_annotation
+from snowex_db.projection import reproject_raster_by_epsg
+from snowex_db.utilities import get_logger, read_n_lines
 
 log = get_logger('grd2tif')
 

@@ -6,10 +6,10 @@ import pytest
 from numpy.testing import assert_almost_equal
 from sqlalchemy import func
 
-from snowexsql.conversions import *
-from snowexsql.data import ImageData, PointData
-from snowexsql.metadata import read_InSar_annotation
-from snowexsql.upload import PointDataCSV, UploadRaster
+from snowex_db.conversions import *
+from snowex_db.data import ImageData, PointData
+from snowex_db.metadata import read_InSar_annotation
+from snowex_db.upload import PointDataCSV, UploadRaster
 
 from .sql_test_base import DBSetup
 

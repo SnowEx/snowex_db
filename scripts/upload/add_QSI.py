@@ -23,8 +23,8 @@ from subprocess import check_output
 
 import pandas as pd
 
-from snowexsql.batch import UploadRasterBatch
-from snowexsql.utilities import find_files, get_logger
+from snowex_db.batch import UploadRasterBatch
+from snowex_db.utilities import find_files, get_logger
 
 
 def reproject(filenames, out_epsg, out_dir, adjust_vdatum=False):

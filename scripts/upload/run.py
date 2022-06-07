@@ -25,7 +25,7 @@ import time
 from convert_uavsar import main as convert_uavsar
 from create import main as create
 from resample_smp import main as resample_smp
-from snowexsql.utilities import get_logger
+from snowex_db.utilities import get_logger
 
 start = time.time()
 log = get_logger('Populate')

@@ -9,7 +9,7 @@ import pandas as pd
 import pytest
 import pytz
 
-from snowexsql.metadata import *
+from snowex_db.metadata import *
 
 dt = datetime.datetime(2020, 2, 5, 13, 30, 0, 0, pytz.timezone('MST'))
 info = {'site_name': 'Grand Mesa',
@@ -316,7 +316,7 @@ class TestSMPHeader(DataHeaderTestBase):
 
 class TestSMPMeasurementLog():
     """
-    Class for testing the snowexsql.metadata.SMPMeasurementLog class.
+    Class for testing the snowex_db.metadata.SMPMeasurementLog class.
     """
 
     @classmethod

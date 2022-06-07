@@ -2,8 +2,8 @@
 Script is used to confirm uploads to the db were successful
 """
 
-from snowexsql.db import get_db
-from snowexsql.data import SiteData, PointData, LayerData, ImageData
+from snowex_db.db import get_db
+from snowex_db.data import SiteData, PointData, LayerData, ImageData
 import pytest
 
 @pytest.fixture(scope='session')

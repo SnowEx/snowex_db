@@ -5,7 +5,7 @@ import pandas as pd
 import pytest
 import pytz
 
-from snowexsql.interpretation import *
+from snowex_db.interpretation import *
 
 
 @pytest.mark.filterwarnings('ignore:Assuming')

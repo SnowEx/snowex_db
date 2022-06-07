@@ -8,7 +8,7 @@ from geoalchemy2.types import WKTElement
 from numpy.testing import assert_almost_equal
 from rasterio.crs import CRS
 
-from snowexsql.projection import *
+from snowex_db.projection import *
 
 
 @pytest.mark.parametrize('info, expected', [

@@ -10,8 +10,8 @@ import glob
 import time
 from os.path import abspath, join
 
-from snowexsql.db import get_db
-from snowexsql.upload import *
+from snowex_db.db import get_db
+from snowex_db.upload import *
 
 
 def main():

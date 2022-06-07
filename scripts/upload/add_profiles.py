@@ -10,7 +10,7 @@ import glob
 from os import listdir
 from os.path import abspath, basename, join, relpath
 
-from snowexsql.batch import UploadProfileBatch
+from snowex_db.batch import UploadProfileBatch
 
 
 def main():

@@ -4,7 +4,7 @@ import glob
 from os.path import abspath, join
 import pandas as pd
 
-from snowexsql.batch import UploadProfileBatch
+from snowex_db.batch import UploadProfileBatch
 
 
 def main():

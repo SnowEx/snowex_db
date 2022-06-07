@@ -10,7 +10,7 @@ python add_aso.py
 from datetime import date
 from os.path import join
 
-from snowexsql.batch import UploadRasterBatch
+from snowex_db.batch import UploadRasterBatch
 
 
 def main():

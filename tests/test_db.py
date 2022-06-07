@@ -4,8 +4,8 @@ from os.path import dirname, join
 import pytest
 from sqlalchemy import MetaData, Table, inspect
 
-from snowexsql.data import ImageData, LayerData, PointData, SiteData
-from snowexsql.db import *
+from snowex_db.data import ImageData, LayerData, PointData, SiteData
+from snowex_db.db import *
 
 from .sql_test_base import DBSetup
 

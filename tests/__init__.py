@@ -1,1 +1,1 @@
-""" Test package for snowexsql."""
+""" Test package for snowex_db."""

@@ -21,7 +21,7 @@ from os.path import abspath, basename, isdir, join
 #import matplotlib.pyplot as plt
 import pandas as pd
 
-from snowexsql.utilities import get_logger, read_n_lines
+from snowex_db.utilities import get_logger, read_n_lines
 
 
 def open_df(smp_f, header_pos=6):

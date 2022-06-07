@@ -9,13 +9,13 @@ Installation
 .. Stable release
 .. --------------
 ..
-.. To install a stable release of snowexsql, run this command in your terminal:
+.. To install a stable release of snowex_db, run this command in your terminal:
 ..
 .. .. code-block:: console
 ..
-..     $ pip install snowexsql
+..     $ pip install snowex_db
 ..
-.. This is the preferred method to install snowexsql, as it will always install the most recent stable release.
+.. This is the preferred method to install snowex_db, as it will always install the most recent stable release.
 ..
 .. If you don't have `pip`_ installed, this `Python installation guide`_ can guide
 .. you through the process.
@@ -98,7 +98,7 @@ running small unittests on.
 
 5. Make user snow a read only user
 
-6. Installs the python package snowexsql
+6. Installs the python package snowex_db
 
 **Notes for Remote Access**
 
@@ -126,13 +126,13 @@ running small unittests on.
 Install From Source
 -------------------
 
-The sources for snowexsql can be downloaded from the `Github repo`_.
+The sources for snowex_db can be downloaded from the `Github repo`_.
 
 You can either clone the public repository:
 
 .. code-block:: console
 
-    $ git clone git://github.com/SnowEx/snowexsql
+    $ git clone git://github.com/SnowEx/snowex_db
 
 Once you have a copy of the source, you can install it with:
 
@@ -186,6 +186,6 @@ can take a few hours.
 Running the scripts individually does not consider whether the data is in the db. So running a script twice will result
 in that data being uploaded twice!
 
-.. _Github repo: https://github.com/SnowEx/snowexsql
-.. _tarball: https://github.com/SnowEx/snowexsql/tarball/master
+.. _Github repo: https://github.com/SnowEx/snowex_db
+.. _tarball: https://github.com/SnowEx/snowex_db/tarball/master
 .. _NSIDC: https://urs.earthdata.nasa.gov/profile

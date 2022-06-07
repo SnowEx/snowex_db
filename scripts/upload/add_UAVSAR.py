@@ -23,7 +23,7 @@ import sys
 import glob
 from os.path import abspath, expanduser, join
 
-from snowexsql.batch import UploadUAVSARBatch
+from snowex_db.batch import UploadUAVSARBatch
 
 
 def main():

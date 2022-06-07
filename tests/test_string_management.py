@@ -1,5 +1,5 @@
 import pytest
-from snowexsql.string_management import *
+from snowex_db.string_management import *
 
 
 @pytest.mark.parametrize("in_str, expected", [

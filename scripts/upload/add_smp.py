@@ -10,8 +10,8 @@ Added smp measurements to the database
 import glob
 from os.path import abspath, join
 
-from snowexsql.batch import UploadProfileBatch
-from snowexsql.utilities import get_logger
+from snowex_db.batch import UploadProfileBatch
+from snowex_db.utilities import get_logger
 import concurrent.futures
 
 

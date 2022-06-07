@@ -1,5 +1,4 @@
 -r docs/requirements.txt
--r requirements.txt
 pip>=21,<22
 bump2version==0.5.11
 wheel==0.33.6
@@ -13,3 +12,11 @@ snowmicropyn
 jupyterlab==2.2.10
 matplotlib==3.2.2
 moto==3.1.11
+coloredlogs>=14.0
+progressbar2>=3.51.3
+utm>=0.5.0,<1.0
+geoalchemy2>=0.6,<1.0
+geopandas>=0.7,<1.0
+psycopg2-binary>=2.9.0,<2.10.0
+rasterio>=1.1.5
+boto3>=1.23.7,<1.24

@@ -1,8 +1,8 @@
 """
 Script used to create the database and tables for the first time
 """
-from snowexsql.db import get_db, initialize
-from snowexsql.utilities import get_logger
+from snowex_db.db import get_db, initialize
+from snowex_db.utilities import get_logger
 import argparse
 
 

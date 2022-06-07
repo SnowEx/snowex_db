@@ -3,7 +3,7 @@ from os.path import dirname
 
 import pytest
 
-from snowexsql.utilities import *
+from snowex_db.utilities import *
 
 
 def test_read_nline():
