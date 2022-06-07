@@ -4,7 +4,6 @@ represent tables where columns are mapped as attributed. Any class inheriting
 from Base is a real table in the database. This is called Object Relational
 Mapping in the sqlalchemy or ORM.
 """
-import datetime
 
 from geoalchemy2 import Geometry, Raster
 from sqlalchemy import Column, Date, DateTime, Float, Integer, String, Time

@@ -36,7 +36,7 @@ The SnowEx Database currently is formed of 4 tables.
 
 Every query will need a session and access to a database via name::
 
-  from snowex_db.db import get_db
+  from snowexsql.db import get_db
 
   # Connect to the database we made. This may not be named snowex.
   db_name = 'snowex'

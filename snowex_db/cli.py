@@ -3,7 +3,7 @@ import argparse
 import pandas as pd
 
 from snowex_db.data import *
-from snowex_db.db import get_db
+from snowexsql.db import get_db
 
 
 def clear_dataset():

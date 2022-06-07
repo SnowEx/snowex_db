@@ -3,12 +3,7 @@ Module for functions that interpret various strings encountered in files.
 These functions either prep, strip, or interpret strings for headers or
 the actual data to be uploaded.
 """
-
-import datetime
-import warnings
-
 import numpy as np
-import pandas as pd
 
 
 def clean_str(messy):

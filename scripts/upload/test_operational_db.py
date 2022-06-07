@@ -2,7 +2,7 @@
 Script is used to confirm uploads to the db were successful
 """
 
-from snowex_db.db import get_db
+from snowexsql.db import get_db
 from snowex_db.data import SiteData, PointData, LayerData, ImageData
 import pytest
 

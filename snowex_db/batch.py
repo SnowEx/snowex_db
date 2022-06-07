@@ -7,7 +7,7 @@ import glob
 import time
 from os.path import abspath, basename, expanduser, join
 
-from snowex_db.db import get_db
+from snowexsql.db import get_db
 from snowex_db.interpretation import get_InSar_flight_comment
 from snowex_db.metadata import (DataHeader, SMPMeasurementLog,
                                 read_InSar_annotation)

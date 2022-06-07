@@ -7,9 +7,9 @@ from os.path import basename
 
 import pandas as pd
 import pytz
+from snowexsql.db import get_table_attributes
 
 from .data import SiteData
-from .db import get_table_attributes
 from .interpretation import *
 from .projection import add_geom, reproject_point_in_dict
 from .string_management import *

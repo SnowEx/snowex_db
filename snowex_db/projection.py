@@ -4,7 +4,6 @@ Module for functions that handle anything regarding coordinate projections.
 import rasterio
 import utm
 from geoalchemy2.elements import WKTElement
-from rasterio.crs import CRS
 from rasterio.warp import Resampling, calculate_default_transform, reproject
 
 

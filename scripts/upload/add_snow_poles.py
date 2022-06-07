@@ -9,7 +9,7 @@ Uploads the SnowEx 2020 depths derived from cameras looking at poles to the data
 import time
 from os.path import abspath
 
-from snowex_db.db import get_db
+from snowexsql.db import get_db
 from snowex_db.upload import *
 
 
