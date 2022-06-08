@@ -21,7 +21,7 @@ Features
 * Interpret and upload csv, rasters, uavsar files,
 * Full provenance for download and upload
 * Manage Site, Point, Profile and Raster Data
-* PostGreSQL Database end point for researchers
+* PostgreSQL Database end point for researchers
 
 
 Installing
