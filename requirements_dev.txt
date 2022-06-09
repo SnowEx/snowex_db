@@ -1,19 +1,12 @@
 -r docs/requirements.txt
+-r requirements.txt 
 pip>=21,<22
 bump2version==0.5.11
-wheel>0.34.0, <0.35.0
-git+https://github.com/SnowEx/snowexsql.git@snowex_repo_split
 watchdog==0.9.0
 flake8==3.7.8
 coverage==4.5.4
 twine==1.14.0
 pytest==6.2.3
 pytest-runner==5.1
-snowmicropyn
 jupyterlab==2.2.10
-matplotlib==3.2.2
 moto==3.1.11
-coloredlogs>=14.0
-progressbar2>=3.51.3
-rasterio>=1.1.5
-boto3>=1.23.7,<1.24
