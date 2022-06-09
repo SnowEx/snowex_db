@@ -56,7 +56,7 @@ jobs:
         name: Get Coverage for badge
         run: |
           # Run coverage save the results
-          coverage run --source snowexsql -m pytest
+          coverage run --source snowex_db -m pytest
           SUMMARY=`coverage report -m | grep TOTAL`
 
           # Save results as ENV var
@@ -82,7 +82,7 @@ jobs:
         with:
           auth: ${{ secrets.GIST_SECRET }}
           gistID: 2034019acc40a963bd02d2fcbb31c5a9
-          filename: snowexsql__${{ env.BRANCH }}.json
+          filename: snowex_db__${{ env.BRANCH }}.json
           label: Coverage
           message: ${{ env.COVERAGE }}
           color: green
