@@ -83,7 +83,7 @@ jobs:
         uses: schneegans/dynamic-badges-action@v1.0.0
         with:
           auth: ${{ secrets.GIST_SECRET }}
-          gistID: 2034019acc40a963bd02d2fcbb31c5a9
+          gistID: d404e9cded83f72fcca65081358cc11b
           filename: snowex_db_${{ env.BRANCH }}.json
           label: coverage
           message: ${{ env.COVERAGE }}
