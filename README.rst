@@ -6,7 +6,7 @@ Welcome to the SnowEx Database
     :target: https://snowex_db.readthedocs.io/en/latest/?badge=latest
     :alt: Documentation Status
 
-.. image:: https://github.com/SnowEx/snowex_db/actions/workflows/main.yml/badge.svg
+.. image:: https://img.shields.io/github/workflow/status/SnowEx/snowex_db/snowex_db
     :target: https://github.com/SnowEx/snowex_db/actions/workflows/main.yml
     :alt: Testing Status
 

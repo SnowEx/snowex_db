@@ -85,20 +85,21 @@ class UploadProfileData:
             df['comments'] = f"fname = {f}, " \
                              f"serial no. = {serial_no}"
 
-        # Standardize all depth data
-        new_depth = standardize_depth(df['depth'],
-                                      desired_format=depth_fmt,
-                                      is_smp=is_smp)
+        if not df.empty:
+            # Standardize all depth data
+            new_depth = standardize_depth(df['depth'],
+                                          desired_format=depth_fmt,
+                                          is_smp=is_smp)
 
-        if 'bottom_depth' in df.columns:
-            delta = df['depth'] - new_depth
-            df['bottom_depth'] = df['bottom_depth'] - delta
+            if 'bottom_depth' in df.columns:
+                delta = df['depth'] - new_depth
+                df['bottom_depth'] = df['bottom_depth'] - delta
 
-        df['depth'] = new_depth
+            df['depth'] = new_depth
 
-        delta = abs(df['depth'].max() - df['depth'].min())
-        self.log.info('File contains {} profiles each with {} layers across '
-                      '{:0.2f} cm'.format(len(self.hdr.data_names), len(df), delta))
+            delta = abs(df['depth'].max() - df['depth'].min())
+            self.log.info('File contains {} profiles each with {} layers across '
+                          '{:0.2f} cm'.format(len(self.hdr.data_names), len(df), delta))
         return df
 
     def check(self, site_info):
@@ -189,34 +190,24 @@ class UploadProfileData:
         Args:
             session: SQLAlchemy session
         """
-        long_upload = False
 
         # Construct a dataframe with all metadata
         for pt in self.data_names:
             df = self.build_data(pt)
 
-            # Add a progressbar if its long upload
-            if len(df.index) > 1000:
-                long_upload = True
-                bar = progressbar.ProgressBar(max_value=len(df.index))
-
-            else:
-                long_upload = False
-
             # Grab each row, convert it to dict and join it with site info
-            objects = []
-            for i, row in df.iterrows():
-                data = row.to_dict()
+            if not df.empty:
+                objects = []
+                for i, row in df.iterrows():
+                    data = row.to_dict()
 
-                # self.log.debug('\tAdding {} for {} at {}cm'.format(value_type, data['site_id'], data['depth']))
-                d = LayerData(**data)
-                objects.append(d)
-
-            session.bulk_save_objects(objects)
-            session.commit()
-
-            # if long_upload:
-            #     bar.update(i)
+                    # self.log.debug('\tAdding {} for {} at {}cm'.format(value_type, data['site_id'], data['depth']))
+                    d = LayerData(**data)
+                    objects.append(d)
+                session.bulk_save_objects(objects)
+                session.commit()
+            else:
+                self.log.warning('File contains header but no data which is sometimes expected. Skipping db submission.')
 
         self.log.debug('Profile Submitted!\n')
 

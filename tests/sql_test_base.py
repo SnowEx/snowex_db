@@ -147,7 +147,10 @@ class TableTestBase(DBSetup):
         q = self.get_query(filter_attribute, filter_value, query=q)
 
         records = q.all()
-        received = getattr(records[0], attribute_to_check)
+        if records:
+            received = getattr(records[0], attribute_to_check)
+        else:
+            received = None
 
         try:
             received = float(received)
