@@ -1,5 +1,5 @@
 wheel>0.34.0, <0.35.0
-git+https://github.com/SnowEx/snowexsql.git@snowex_repo_split
+snowexsql>=0.2.0, <0.3.0
 snowmicropyn
 matplotlib>=3.2.2, <3.3.0
 moto==3.1.11
