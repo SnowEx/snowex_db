@@ -14,7 +14,7 @@ from moto import mock_s3
 from snowexsql.functions import ST_PixelAsPoint
 
 from snowex_db.conversions import raster_to_rasterio
-from snowex_db.data import ImageData
+from snowexsql.data import ImageData
 from snowex_db.upload import UploadRaster, COGHandler
 
 from .sql_test_base import DBSetup, TableTestBase, pytest_generate_tests

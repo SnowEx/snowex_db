@@ -5,7 +5,7 @@ import numpy as np
 import pytz
 import os
 
-from snowex_db.data import LayerData
+from snowexsql.data import LayerData
 from snowex_db.upload import UploadProfileData
 
 from .sql_test_base import TableTestBase, pytest_generate_tests
@@ -267,7 +267,7 @@ class TestSMPProfile(TableTestBase):
     """
 
     args = ['S06M0874_2N12_20200131.CSV']
-    kwargs = {'timezone': 'UTC', 'units': 'Newtons', 'header_sep': ':', 'instrument':'snowmicropen'}
+    kwargs = {'timezone': 'UTC', 'units': 'Newtons', 'header_sep': ':', 'instrument': 'snowmicropen'}
     UploaderClass = UploadProfileData
     TableClass = LayerData
     dt = datetime.datetime(2020, 1, 31, 22, 42, 14, 0, pytz.FixedOffset(-420))
@@ -303,3 +303,22 @@ class TestSMPProfile(TableTestBase):
         """
         result = self.session.query(LayerData.comments).limit(1).one()
         assert f'fname = {os.path.basename(self.args[0])}' in result[0]
+
+
+class TestEmptyProfile(TableTestBase):
+    """
+    Test that a file with header info that doesnt have data (which
+    happens on purpose) doesnt upload anything
+    """
+
+    args = ['empty_data.csv']
+    kwargs = {'timezone': 'MST'}
+    UploaderClass = UploadProfileData
+    TableClass = LayerData
+    dt = datetime.datetime(2020, 2, 5, 13, 40, 0, 0,  pytz.FixedOffset(-360))
+
+    params = {'test_count': [dict(data_name='hand_hardness', expected_count=0)],
+              'test_value': [dict(data_name='hand_hardness', attribute_to_check='value', filter_attribute='depth',
+                                  filter_value=1, expected=None)],
+              'test_unique_count': [dict(data_name='hand_hardness', attribute_to_count='comments', expected_count=0)]
+        }

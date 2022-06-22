@@ -2,7 +2,7 @@ import argparse
 
 import pandas as pd
 
-from snowex_db.data import *
+from snowexsql.data import *
 from snowexsql.db import get_db
 
 

@@ -18,7 +18,7 @@ test_requirements = ['pytest>=3'] + setup_requirements
 
 setup(
     author="Micah Johnson",
-    python_requires='>=3.6',
+    python_requires='>=3.7',
     classifiers=[
         'Development Status :: 2 - Pre-Alpha',
         'Intended Audience :: Developers',

@@ -4,12 +4,11 @@ to describing data.
 """
 
 from os.path import basename
-
 import pandas as pd
-import pytz
+
 from snowexsql.db import get_table_attributes
 
-from .data import SiteData
+from snowexsql.data import SiteData
 from .interpretation import *
 from .projection import add_geom, reproject_point_in_dict
 from .string_management import *
@@ -325,6 +324,7 @@ class DataHeader(object):
               'avgdensity': 'density',
               'avg_density': 'density',
               'dielectric_constant': 'permittivity',
+              'flag': 'flags'
               }
 
     # Known possible profile types anything not in here will throw an error
@@ -423,12 +423,9 @@ class DataHeader(object):
 
         Assumptions:
 
-        1. There is NOT greater than N commas in the header information prior to the column
-        list
+        1. The last line in file is of representative csv data
 
-        2. The last line in file is of representative csv data
-
-        3. The first column is numeric
+        2. The header is the last column that has more chars than numbers
 
         Args:
             lines: Complete list of strings from the file
@@ -442,35 +439,27 @@ class DataHeader(object):
         n_columns = len(lines[-1].split(','))
 
         # Use these to monitor if a larger column count is found
-        header_pos_options = [0, 0]
-        header_lengths = [0, 0]
+        header_pos = 0
+        if lines[0][0] == '#':
+            header_indicator = '#'
+        else:
+            header_indicator = None
 
         for i, l in enumerate(lines):
-            # Get rid of things in parentheses.
-            clean_line = l.split(',')
+            if i == 0:
+                previous = get_alpha_ratio(lines[i])
+            else:
+                previous = get_alpha_ratio(lines[i-1])
 
-            # column count
-            n = len(clean_line)
+            if line_is_header(l, expected_columns=n_columns,
+                              header_indicator=header_indicator,
+                              previous_alpha_ratio=previous):
+                header_pos = i
 
-            # Grab the columns header if we see one a little bigger
-            if n >= n_columns:
-                header_pos_options[0] = i
-                header_lengths[0] = n
-
-            # If we find a column count larger than the current replace it
-            if header_lengths[0] > header_lengths[1]:
-                header_lengths[1] = header_lengths[0]
-                header_pos_options[1] = header_pos_options[0]
-
-            # Break if we find number in the first position (Assumption #3)
-            entry = clean_line[0].replace('-', '').replace('.', '')
-
-            if entry.isnumeric():
-                self.log.debug('Found end of header at line {}...'.format(i))
-                header_pos_options[1] = i - 1
+            if i > header_pos:
                 break
 
-        header_pos = header_pos_options[1]
+        self.log.debug('Found end of header at line {}...'.format(header_pos))
 
         # Parse the columns header based on the size of the last line
         str_line = lines[header_pos]
@@ -479,10 +468,10 @@ class DataHeader(object):
             str_line = strip_encapsulated(str_line, c)
 
         raw_cols = str_line.strip('#').split(',')
-        columns = [standardize_key(c) for c in raw_cols]
+        standard_cols = [standardize_key(c) for c in raw_cols]
 
         # Rename any column names to more standard ones
-        columns = remap_data_names(columns, self.rename)
+        columns = remap_data_names(standard_cols, self.rename)
 
         # Determine the profile type
         (self.data_names, self.multi_sample_profiles) = \
@@ -617,6 +606,9 @@ class DataHeader(object):
             if k and value:
                 data[k] = value.strip(' ').replace('"', '').replace('  ', ' ')
 
+            elif k and not value:
+                data[k] = None
+
         # If there is not header data then don't bother (useful for point data)
         if data:
             data = add_date_time_keys(
@@ -702,13 +694,17 @@ class DataHeader(object):
 
         info.update(self.extra_header)
 
-        # Convert slope and aspect to numbers
+        # Convert slope, aspect, and zone to numbers
         info = manage_degrees(info)
         info = manage_aspect(info)
+        info = manage_utm_zone(info)
 
         # Convert lat/long to utm and vice versa if either exist
+        original_zone = info['utm_zone']
         info = reproject_point_in_dict(
             info, is_northern=self.northern_hemisphere)
+        if info['utm_zone'] != original_zone and original_zone is not None:
+            self.log.warning(f'Overwriting UTM zone in the header from {original_zone} to {info["utm_zone"]}')
 
         # Check for point data which will contain this in the data not the
         # header

@@ -1,6 +1,6 @@
 import datetime
 
-from snowex_db.data import PointData
+from snowexsql.data import PointData
 from snowex_db.upload import PointDataCSV
 
 from .sql_test_base import TableTestBase, pytest_generate_tests
@@ -129,6 +129,7 @@ class TestGPRPointData(PointsBase):
             dict(data_name='swe', attribute_to_count='date', expected_count=3)
         ]
     }
+
 
 class TestPoleDepthData(PointsBase):
     dt = datetime.date(2020, 2, 1)

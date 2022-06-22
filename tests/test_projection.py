@@ -11,22 +11,26 @@ from rasterio.crs import CRS
 from snowex_db.projection import *
 
 
-@pytest.mark.parametrize('info, expected', [
+@pytest.mark.parametrize('info, utm_zone, expected', [
     # Test we add UTM info when its not provided
-    ({'latitude': 39.039, 'longitude': -108.003}, {'easting': 759397.644, 'northing': 4325379.675, 'utm_zone': 12}),
+    ({'latitude': 39.039, 'longitude': -108.003}, None,
+     {'easting': 759397.644, 'northing': 4325379.675, 'utm_zone': 12}),
     # Test we add lat long when its not provided
-    ({'easting': 759397.644, 'northing': 4325379.675, 'utm_zone': 12}, {'latitude': 39.039, 'longitude': -108.003}),
+    ({'easting': 759397.644, 'northing': 4325379.675, 'utm_zone': 12}, None,
+     {'latitude': 39.039, 'longitude': -108.003}),
     # Test ignoring easting in another projection
-    ({'latitude': 39.008078, 'longitude': -108.184794, 'utm_wgs84_easting': 743766.4795, 'utm_wgs84_northing': 4321444.155},
+    ({'latitude': 39.008078, 'longitude': -108.184794, 'utm_wgs84_easting': 743766.4795,
+      'utm_wgs84_northing': 4321444.155}, None,
      {'easting': 743766.480, 'northing': 4321444.155}),
     # Confirm we force the zone to zone 12
-    ({'latitude':39.097464, 'longitude':-107.862476}, {'northing':4332280.1658, 'easting':771338.607})
+    ({'latitude': 39.097464, 'longitude': -107.862476}, 12,
+     {'northing': 4332280.1658, 'easting': 771338.607, "utm_zone": 12})
 ])
-def test_reproject_point_in_dict(info, expected):
+def test_reproject_point_in_dict(info, utm_zone, expected):
     """
     Test adding point projection information
     """
-    result = reproject_point_in_dict(info)
+    result = reproject_point_in_dict(info, zone_number=utm_zone)
 
     for k, v in expected.items():
         assert k in result

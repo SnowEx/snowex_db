@@ -45,18 +45,20 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y postgis gdal-bin
           python -m pip install --upgrade pip
-          pip install pytest coverage
-          if [ -f requirements_dev.txt ]; then pip install -r requirements_dev.txt; fi
+          pip install pytest coverage wheel
+          pip install -r requirements.txt 
+          python setup.py install 
+
       - name: Test with pytest
         run: |
-          pytest -s
+          pytest -s tests/
 
       # Run coverage only once
       - if: ${{ matrix.python-version == '3.9'}}
         name: Get Coverage for badge
         run: |
           # Run coverage save the results
-          coverage run --source snowexsql -m pytest
+          coverage run --source snowex_db -m pytest tests
           SUMMARY=`coverage report -m | grep TOTAL`
 
           # Save results as ENV var
@@ -82,7 +84,7 @@ jobs:
         with:
           auth: ${{ secrets.GIST_SECRET }}
           gistID: 2034019acc40a963bd02d2fcbb31c5a9
-          filename: snowexsql__${{ env.BRANCH }}.json
-          label: Coverage
+          filename: snowex_db_${{ env.BRANCH }}.json
+          label: coverage
           message: ${{ env.COVERAGE }}
           color: green

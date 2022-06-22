@@ -128,3 +128,15 @@ def test_get_InSar_flight_comment(data_name, expected):
 
     comment = get_InSar_flight_comment(data_name, desc)
     assert comment == expected
+
+
+@pytest.mark.parametrize("info, expected_zone", [
+    # Test a string zone is used
+    ({'utm_zone': '12N'}, 12),
+    # Test utm_zone not provided
+    ({}, None),
+])
+def test_manage_utm_zone(info, expected_zone):
+    result = manage_utm_zone(info)
+    assert result['utm_zone'] == expected_zone
+
