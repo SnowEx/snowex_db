@@ -15,7 +15,7 @@ from rasterio.crs import CRS
 from rasterio.transform import Affine
 from sqlalchemy.dialects import postgresql
 
-from .data import PointData
+from snowexsql.data import PointData
 from .utilities import get_logger
 
 

@@ -8,7 +8,7 @@ import pandas as pd
 
 from snowexsql.db import get_table_attributes
 
-from .data import SiteData
+from snowexsql.data import SiteData
 from .interpretation import *
 from .projection import add_geom, reproject_point_in_dict
 from .string_management import *
@@ -324,6 +324,7 @@ class DataHeader(object):
               'avgdensity': 'density',
               'avg_density': 'density',
               'dielectric_constant': 'permittivity',
+              'flag': 'flags'
               }
 
     # Known possible profile types anything not in here will throw an error

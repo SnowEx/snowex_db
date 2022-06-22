@@ -14,7 +14,7 @@ import boto3
 import logging
 from snowexsql.db import get_table_attributes
 
-from .data import ImageData, LayerData, PointData
+from snowexsql.data import ImageData, LayerData, PointData
 from .interpretation import add_date_time_keys, standardize_depth
 from .metadata import DataHeader
 from .string_management import parse_none, remap_data_names

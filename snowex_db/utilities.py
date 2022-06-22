@@ -11,7 +11,7 @@ from os.path import getctime, join
 import coloredlogs
 
 
-def get_logger(name, debug=True, ext_logger=None,):
+def get_logger(name, debug=True, ext_logger=None):
     """
     Retrieve a colored logs logger and assign a custom name to it.
 
@@ -19,6 +19,7 @@ def get_logger(name, debug=True, ext_logger=None,):
         name: Name of the loggger
         debug: Boolean for where to show debug statements
         ext_logger: Recieves a logger object and installs colored logs to it.
+
     Returns:
         log: Logger object with colored logs installed
     """
