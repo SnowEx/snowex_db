@@ -51,8 +51,9 @@ def test_get_encapsulated(args, kwargs):
     ('Time (seconds)', '()', 'Time '),
     ('Name "Surveyor"', '"', 'Name '),
     # test for mm and comments exchange
-    ('grain_size (mm), comments', '()', 'grain_size , comments'),
-     )
+    ('grain_size (mm), comments', '()', 'grain_size , comments')
+    ])
+
 def test_strip_encapsulated(s, encaps, expected):
     """
     Test where we can remove chars in a string

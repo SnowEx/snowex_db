@@ -5,7 +5,7 @@
 # SMP Serial Number: 19
 # Original Total Samples:  242000
 # Data Subsampled To: Every 1000th
-Original Index,Depth (mm),Force (N)
+# Original Index,Depth (mm),Force (N)
 999,4.1,0.053
 1999,8.3,0.053
 2999,12.4,0.055
