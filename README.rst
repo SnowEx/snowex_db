@@ -6,11 +6,11 @@ Welcome to the SnowEx Database
     :target: https://snowex_db.readthedocs.io/en/latest/?badge=latest
     :alt: Documentation Status
 
-.. image:: https://img.shields.io/github/workflow/status/SnowEx/snowex_db/snowex_db
+.. image:: https://img.shields.io/github/workflow/status/SnowEx/snowex_db/snowex%20database%20testing
     :target: https://github.com/SnowEx/snowex_db/actions/workflows/main.yml
     :alt: Testing Status
 
-.. image:: https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/micahjohnson150/2034019acc40a963bd02d2fcbb31c5a9/raw/snowex_db_heads_master.json
+.. image:: https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/micahjohnson150/2034019acc40a963bd02d2fcbb31c5a9/raw/snowex_db_heads_main.json
     :alt: code coverage
 
 
