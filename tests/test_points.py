@@ -1,6 +1,6 @@
 import datetime
 
-from snowex_db.data import PointData
+from snowexsql.data import PointData
 from snowex_db.upload import PointDataCSV
 
 from .sql_test_base import TableTestBase, pytest_generate_tests

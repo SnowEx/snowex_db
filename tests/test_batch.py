@@ -6,7 +6,7 @@ import pytz
 from sqlalchemy import func
 
 from snowex_db.batch import *
-from snowex_db.data import ImageData, LayerData, SiteData
+from snowexsql.data import ImageData, LayerData, SiteData
 
 from .sql_test_base import TableTestBase, pytest_generate_tests
 

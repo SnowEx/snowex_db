@@ -7,7 +7,7 @@ from geoalchemy2.elements import WKTElement
 from rasterio.warp import Resampling, calculate_default_transform, reproject
 
 
-def reproject_point_in_dict(info, is_northern=True, zone_number=12):
+def reproject_point_in_dict(info, is_northern=True, zone_number=None):
     """
     Searches the info dictionary and converts from lat long to northing easting
     and vice versa if either are missing.
@@ -15,6 +15,8 @@ def reproject_point_in_dict(info, is_northern=True, zone_number=12):
     Args:
         info: Dictionary containing key northing/easting or latitude longitude
         is_northern: Boolean for which hemisphere this data is in
+        zone_number: Integer for the utm zone to enforce, otherwise let utm
+                    figure it out
 
     Returns:
         result: Dictionary containing all previous information plus a coordinates

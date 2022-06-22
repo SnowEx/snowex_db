@@ -5,7 +5,7 @@ import numpy as np
 import pytz
 import os
 
-from snowex_db.data import LayerData
+from snowexsql.data import LayerData
 from snowex_db.upload import UploadProfileData
 
 from .sql_test_base import TableTestBase, pytest_generate_tests

@@ -700,8 +700,11 @@ class DataHeader(object):
         info = manage_utm_zone(info)
 
         # Convert lat/long to utm and vice versa if either exist
+        original_zone = info['utm_zone']
         info = reproject_point_in_dict(
-            info, is_northern=self.northern_hemisphere, zone_number=info['utm_zone'])
+            info, is_northern=self.northern_hemisphere)
+        if info['utm_zone'] != original_zone and original_zone is not None:
+            self.log.warning(f'Overwriting UTM zone in the header from {original_zone} to {info["utm_zone"]}')
 
         # Check for point data which will contain this in the data not the
         # header
