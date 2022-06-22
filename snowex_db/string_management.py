@@ -72,7 +72,7 @@ def remap_data_names(original, rename_map):
 
     Args:
         original: list/dictionary of names and values that may need remapping
-        rename: Dictionary mapping names (keys) {old: new}
+        rename_map: Dictionary mapping names (keys) {old: new}
 
     Returns:
         new: List/dictionary containing the names remapped
@@ -104,12 +104,15 @@ def remap_data_names(original, rename_map):
         new = []
 
         for i, v in enumerate(original):
-
             if v in remap_keys:
                 new.append(rename_map[v])
 
-            elif v[-2] == '_' and v[0:-2] in remap_keys:
-                new.append(v.replace(v[0:-2], rename_map[v[0:-2]]))
+            # Manage multi samples
+            elif len(v) > 2 and '_' in v:
+                if v[-2] == '_' and v[0:-2] in remap_keys:
+                    new.append(v.replace(v[0:-2], rename_map[v[0:-2]]))
+                else:
+                    new.append(v)
             else:
                 new.append(v)
     else:
@@ -249,3 +252,52 @@ def kw_in_here(kw, d, case_sensitive=True):
 
     truth = [True for c in d_keys if k in c]
     return len(truth) > 0
+
+
+def get_alpha_ratio(str_line, encapsulator='""'):
+    """
+    Calculates the ratio of characters to numbers and
+    potentially ignore things encapsulated
+
+    Args:
+        str_line: String to evaluate
+        encapsulator: chars that encapsulate strings to be ignored
+
+    Returns:
+        ratio: float ratio of number of letter to number of numbers
+    """
+
+    line = str_line
+    # Remove any quoted text
+    if encapsulator:
+        line = strip_encapsulated(str_line, encapsulator='""')
+    n_alpha = len([c for c in line if c.isalpha()])
+    n_numeric = len([c for c in line if c.isnumeric()])
+
+    if n_numeric == 0:
+        ratio = 1
+    else:
+        ratio = n_alpha / n_numeric
+
+    return ratio
+
+
+def line_is_header(str_line, header_sep=',', header_indicator='#', previous_alpha_ratio=None, expected_columns=None):
+    """
+    Determine is line 1 is a header line
+    """
+    # Definitive indication of a header line
+    if header_indicator:
+        return header_indicator == str_line[0]
+
+    # No immediate answer so build confidence
+    matches = []
+    if previous_alpha_ratio:
+        ratio = get_alpha_ratio(str_line)
+        matches.append(ratio >= previous_alpha_ratio)
+
+    if header_sep:
+        line = strip_encapsulated(str_line, encapsulator='()')
+        matches.append(len(line.split(header_sep)) == expected_columns)
+
+    return matches.count(True) > matches.count(False)

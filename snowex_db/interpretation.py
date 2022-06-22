@@ -149,6 +149,24 @@ def convert_cardinal_to_degree(cardinal):
     return degrees
 
 
+def manage_utm_zone(info):
+    """
+    Maanage the nuance of having a utm zone string sometimes and
+    then not being in the keys at all. If the utm_zone is in the
+    dictionary then convert it to an integer. Otherwise add with
+    assign None
+
+    Args:
+        info: Dictionary potentially carrying utm_zone
+    Returns:
+        info: Dictionary containing utm_zone
+    """
+    if 'utm_zone' in info.keys():
+        info['utm_zone'] = int(''.join([c for c in info['utm_zone'] if c.isnumeric()]))
+    else:
+        info['utm_zone'] = None
+    return info
+
 def add_date_time_keys(data, in_timezone=None, out_timezone='MST'):
     """
     Convert string info from a date/time keys in a dictionary to date and time
@@ -384,3 +402,4 @@ def get_InSar_flight_comment(data_name, desc):
 
     result = comment.format(*times)
     return result
+

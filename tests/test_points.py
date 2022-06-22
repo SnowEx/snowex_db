@@ -130,6 +130,7 @@ class TestGPRPointData(PointsBase):
         ]
     }
 
+
 class TestPoleDepthData(PointsBase):
     dt = datetime.date(2020, 2, 1)
 

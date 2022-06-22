@@ -7,7 +7,9 @@ from snowex_db.string_management import *
     ('Dielectric Constant A', 'dielectric_constant_a'),
     ('Specific surface area (m^2/kg)', 'specific_surface_area'),
     # Ensure we remove a csv byte order mark in latin encoding
-    ("ï»¿Camera", "camera")]
+    ("ï»¿Camera", "camera"),
+    (' Temperature \n', 'temperature')
+]
     )
 def test_standardize_key(in_str, expected):
     """
@@ -49,7 +51,8 @@ def test_get_encapsulated(args, kwargs):
     ('Time (seconds)', '()', 'Time '),
     ('Name "Surveyor"', '"', 'Name '),
     # test for mm and comments exchange
-    ('grain_size (mm), comments', '()', 'grain_size , comments')])
+    ('grain_size (mm), comments', '()', 'grain_size , comments'),
+     )
 def test_strip_encapsulated(s, encaps, expected):
     """
     Test where we can remove chars in a string
@@ -91,3 +94,51 @@ def test_kw_in_here(args, kwargs, expected):
     Tests we can find key words in list keys, case in/sensitive test
     """
     assert kw_in_here(*args, **kwargs) == expected
+
+
+@pytest.mark.parametrize("str_line, encapsulator, expected", [
+    # Test simple 50/50
+    ("1A", None, 1),
+    # Use the ignore encapsulator
+    ('1"A"', '""', 0),
+    # Check for the div by zero
+    ('A', None, 1),
+
+])
+def test_get_alpha_ratio(str_line, encapsulator, expected):
+    result = get_alpha_ratio(str_line, encapsulator=encapsulator)
+    assert result == expected
+
+
+@pytest.mark.parametrize("line, header_sep, header_indicator, previous_alpha_ratio, expected_columns, expected", [
+    # Test using a header indicator is the end all.
+    ("# flags, ", None, '#', None, None, True),
+    ("flags, ", None, '#', None, None, False),
+
+    # Simple looking for 2 columns
+    ("# flags, ", ',', None, None, 2, True),
+    # Test with a real entry from stratigraphy which has lots of chars
+    ("35.0,33.0,< 1 mm,DF,F,D,NaN", ',', '#', 7, 0.5, False),
+    # Test a complicated string with encapsulation right after a normal header
+    ('107.0,85.0,< 1 mm,FC,4F,D,"Variable."', ',', '#', 7, 1, False),
+
+])
+def test_line_is_header(line, header_sep, header_indicator, previous_alpha_ratio, expected_columns, expected):
+    result = line_is_header(line, header_sep, header_indicator, previous_alpha_ratio, expected_columns)
+    assert result == expected
+
+
+@pytest.mark.parametrize("original, rename_map, expected", [
+    # simple rename
+    (['avg_density'], {'avg_density': 'density'}, ['density']),
+    # No matches, so retain original info
+    (['avg_density'], {'dummy': 'dummy_1'}, ['avg_density']),
+    # Test dictionary replacement
+    ({'surveyors': 'MJ'}, {'surveyors': 'observers'}, {'observers': 'MJ'}),
+    # Test plain string replacement
+    ('twt', {'twt': 'two_way_travel'}, 'two_way_travel'),
+
+])
+def test_remap_data_names(original, rename_map, expected):
+    result = remap_data_names(original, rename_map)
+    assert result == expected

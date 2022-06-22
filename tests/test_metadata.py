@@ -1,7 +1,6 @@
 """
 Test all things from the metadata.py file
 """
-import datetime
 from os.path import abspath, dirname, join
 
 import numpy as np
@@ -25,8 +24,9 @@ info = {'site_name': 'Grand Mesa',
         }
 
 
-class DataHeaderTestBase():
+class DataHeaderTestBase:
     depth_is_metadata = True
+    kwargs = {}
 
     def setup_class(self):
         """
@@ -40,7 +40,7 @@ class DataHeaderTestBase():
         """
 
         data = abspath(join(dirname(__file__), 'data'))
-        self.header = DataHeader(join(data, self.file), depth_is_metadata=self.depth_is_metadata)
+        self.header = DataHeader(join(data, self.file), depth_is_metadata=self.depth_is_metadata, **self.kwargs)
         self.name = self.file.split('.')[0]
 
     def assert_header_attribute(self, attr):
@@ -395,3 +395,27 @@ class TestReadInSarAnnotation():
 
         # Assert the data type is expected
         assert dtype == type(expected)
+
+
+class TestHardHeader(DataHeaderTestBase):
+    kwargs = {'epsg': 26913}
+
+    def setup_class(self):
+        self.file = 'hard_header.csv'
+        self.data_names = ['temperature']
+        self.columns = ['depth'] + self.data_names
+        self.multi_sample_profiles = []
+        self.info = dict(site_name='East River',
+                         site_id='Forest 14',
+                         date=datetime.date(2020, 2, 1),
+                         time=datetime.time(13, 0, tzinfo=pytz.timezone('MST')),
+                         utm_zone=13,
+                         easting=328570.77309727005,
+                         northing=4310748.280792163,
+                         latitude=38.92892,
+                         longitude=-106.97768,
+                         flags=None)
+
+        # Depth (cm),Temperature (deg C)
+
+        super().setup_class(self)
