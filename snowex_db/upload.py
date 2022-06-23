@@ -224,7 +224,7 @@ class PointDataCSV(object):
     units = {'depth': 'cm', 'two_way_travel': 'ns', 'swe': 'mm',
              'density': 'kg/m^3'}
 
-    # Class attributes to apply
+    # Class attributes to apply defaults
     defaults = {'debug': True, 'incoming_tz': 'MST'}
 
     def __init__(self, filename, **kwargs):
@@ -346,15 +346,6 @@ class PointDataCSV(object):
                 objects.append(d)
             session.bulk_save_objects(objects)
             session.commit()
-        # # Error reporting
-        # if len(self.errors) > 0:
-        #     self.log.error(
-        #         '{} points failed to upload.'.format(len(self.errors)))
-        #     self.log.error('The following point indicies failed with '
-        #                    'their corresponding errors:')
-        #
-        #     for e in self.errors:
-        #         self.log.error('\t{} - {}'.format(e[0], e[1]))
 
     def add_one(self, session, row):
         """
@@ -517,7 +508,7 @@ class UploadRaster(object):
     """
 
     defaults = {
-        'epsg': 26912,
+        'epsg': None,
         'no_data': None,
         'use_s3': True  # boolean whether or not we're storing files in S3
     }

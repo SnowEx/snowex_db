@@ -337,7 +337,7 @@ class DataHeader(object):
     # Defaults to keywords arguments
     defaults = {'in_timezone': 'MST',
                 'out_timezone': 'MST',
-                'epsg': 26912,
+                'epsg': None,
                 'header_sep': ',',
                 'northern_hemisphere': True,
                 'depth_is_metadata': True}
@@ -705,6 +705,13 @@ class DataHeader(object):
             info, is_northern=self.northern_hemisphere)
         if info['utm_zone'] != original_zone and original_zone is not None:
             self.log.warning(f'Overwriting UTM zone in the header from {original_zone} to {info["utm_zone"]}')
+        self.epsg = info['epsg']
+
+        if self.epsg is None:
+            raise RuntimeError("EPSG was not determined from the header nor was it "
+                               "passed as a kwarg to uploader. If there is no "
+                               "projection information in the file please "
+                               "prescribe an epsg value")
 
         # Check for point data which will contain this in the data not the
         # header

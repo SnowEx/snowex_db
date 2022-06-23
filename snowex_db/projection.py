@@ -52,6 +52,8 @@ def reproject_point_in_dict(info, is_northern=True, zone_number=None):
         result['latitude'] = lat
         result['longitude'] = long
 
+    # Assuming NAD83
+    result['epsg'] = int(f"269{result['utm_zone']}")
     return result
 
 

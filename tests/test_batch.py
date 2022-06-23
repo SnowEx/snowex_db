@@ -224,8 +224,6 @@ class TestUploadUAVSARBatch(TableTestBase):
         # Test we have two dates for the insar amplitude overapasses
         'test_unique_count': [dict(data_name='insar amplitude', attribute_to_count='date', expected_count=2), ]
     }
-
-
     def test_uavsar_date(self):
         """
         Github actions is failing on a test pulling 1 of 2 uavsar dates. This is likely because the dates are not in
@@ -243,7 +241,6 @@ class TestUploadUAVSARBatch(TableTestBase):
         ('interferogram real', ['duration', 'overpass', '1st', '2nd', 'polarization', 'dem']),
         ('interferogram imaginary', ['duration', 'overpass', '1st', '2nd', 'polarization', 'dem']),
     ])
-
     def test_description_generation(self, data_name, kw):
         """
         Asserts each kw is found in the description of the data

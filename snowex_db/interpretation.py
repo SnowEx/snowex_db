@@ -163,8 +163,14 @@ def manage_utm_zone(info):
     """
     if 'utm_zone' in info.keys():
         info['utm_zone'] = int(''.join([c for c in info['utm_zone'] if c.isnumeric()]))
+        info['epsg'] = int(f"269{info['utm_zone']}")
+    elif 'epsg' in info.keys():
+        if info['epsg'] is not None:
+            info['utm_zone'] = int(str(info['epsg'])[-2:])
     else:
         info['utm_zone'] = None
+        info['epsg'] = None
+
     return info
 
 def add_date_time_keys(data, in_timezone=None, out_timezone='MST'):
