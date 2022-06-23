@@ -1,4 +1,6 @@
-
+"""
+Script to upload the Snowex Time Series pits
+"""
 
 import glob
 from os.path import abspath, join
@@ -8,8 +10,11 @@ from snowex_db.batch import UploadProfileBatch
 
 
 def main():
-
-    # Obtain a list of Grand mesa pits
+    """
+    Currenltly based on the preliminary downloaded zip which has not been submitted yet.
+    Folder name is SNEX20_TS_SP_preliminary_v3
+    """
+    # Point to the downloaded data from
     data_dir = abspath('../download/data/SNEX20_TS_SP_preliminary_v3/')
     # read in the descriptor file
     desc_df = pd.read_csv(join(data_dir, 'SNEX20_TS_SP_Summary_Environment_v01.csv'))
