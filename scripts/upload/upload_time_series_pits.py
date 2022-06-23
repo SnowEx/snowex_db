@@ -10,7 +10,7 @@ from snowex_db.batch import UploadProfileBatch
 def main():
 
     # Obtain a list of Grand mesa pits
-    data_dir = abspath('../download/data/run_all/')
+    data_dir = abspath('../download/data/SNEX20_TS_SP_preliminary_v3/')
     # read in the descriptor file
     desc_df = pd.read_csv(join(data_dir, 'SNEX20_TS_SP_Summary_Environment_v01.csv'))
     errors = 0
@@ -41,9 +41,9 @@ def main():
             debug=False, doi=None)
         b.push()
         error_msg += b.errors
-    for f,m in error_msg:
+    for f, m in error_msg:
         print(f)
-    return len(errors)
+    return len(error_msg)
 
 
 if __name__ == '__main__':
