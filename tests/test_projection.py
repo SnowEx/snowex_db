@@ -24,7 +24,10 @@ from snowex_db.projection import *
      {'easting': 743766.480, 'northing': 4321444.155}),
     # Confirm we force the zone to zone 12
     ({'latitude': 39.097464, 'longitude': -107.862476}, 12,
-     {'northing': 4332280.1658, 'easting': 771338.607, "utm_zone": 12})
+     {'northing': 4332280.1658, 'easting': 771338.607, "utm_zone": 12}),
+    ({"utm_zone": "10N", "easting": "757215", "northing": "4288778", "latitude": "38.71025", "longitude": ""}, None,
+     {"utm_zone": 10, "easting": 757215.0, "northing": 4288778.0, "latitude": 38.71025, "longitude": -120.041884,
+      'epsg': 26910}),
 ])
 def test_reproject_point_in_dict(info, utm_zone, expected):
     """

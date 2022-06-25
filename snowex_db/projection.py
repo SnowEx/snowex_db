@@ -23,14 +23,17 @@ def reproject_point_in_dict(info, is_northern=True, zone_number=None):
                 reprojected counter part
     """
     result = info.copy()
-    keys = result.keys()
 
     # Convert any coords to numbers
     for c in ['northing', 'easting', 'latitude', 'longitude']:
         if c in result.keys():
-            result[c] = float(result[c])
+            try:
+                result[c] = float(result[c])
+            except Exception:
+                del result[c]
 
-    if 'latitude' in keys:
+    keys = result.keys()
+    if all([k in keys for k in ['latitude', 'longitude']]):
         easting, northing, utm_zone, letter = utm.from_latlon(
             result['latitude'],
             result['longitude'],  force_zone_number=zone_number)
@@ -39,7 +42,7 @@ def reproject_point_in_dict(info, is_northern=True, zone_number=None):
         result['utm_zone'] = utm_zone
 
     # Convert UTM coordinates to Lat long or vice versa for database storage
-    elif 'northing' in keys:
+    elif all([k in keys for k in ['northing', 'easting', 'utm_zone']]):
 
         if isinstance(result['utm_zone'], str):
             result['utm_zone'] = \
