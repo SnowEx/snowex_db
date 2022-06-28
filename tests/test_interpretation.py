@@ -34,8 +34,8 @@ this_day = date(year=2020, month=1, day=1)
 this_time = time(hour=0, tzinfo=mst)
 
 
-@pytest.mark.parametrize("data, in_tz, expected_date, expected_time",
-                         [({'date/time': '2020-01-01-00:00'}, None, this_day, this_time),
+@pytest.mark.parametrize("data, in_tz, expected_date, expected_time",[
+                          ({'date/time': '2020-01-01-00:00'}, None, this_day, this_time),
                           ({'date/local_time': '2020-01-01-00:00'}, None, this_day, this_time),
                           ({'date': '2020-01-01', 'time': '00:00'}, None, this_day, this_time),
                           # Test converting of the UTC GPR format which assumes the input tz is UTC
@@ -49,7 +49,9 @@ this_time = time(hour=0, tzinfo=mst)
                           ({'Date&Time': '1/27/2020 11:00'}, 'US/Mountain', date(year=2020, month=1, day=27),
                            time(hour=11, tzinfo=mst)),
                           ({'date': '1/27/2020'}, None, date(year=2020, month=1, day=27),
-                           time(hour=0))
+                           time(hour=0)),
+                          ({'date/local standard time': '2019-12-20T13:00'}, 'US/Pacific', date(2019, 12, 20),
+                           time(hour=14, minute=0, tzinfo=mst)),
                           ])
 def test_add_date_time_keys(data, in_tz, expected_date, expected_time):
     """

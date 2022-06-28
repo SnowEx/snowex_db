@@ -2,7 +2,6 @@
 Test all things from the metadata.py file
 """
 from os.path import abspath, dirname, join
-
 import numpy as np
 import pandas as pd
 import pytest
@@ -406,6 +405,31 @@ class TestHardHeader(DataHeaderTestBase):
         self.columns = ['depth'] + self.data_names
         self.multi_sample_profiles = []
         self.info = dict(site_name='East River',
+                         site_id='Forest 14',
+                         date=datetime.date(2020, 2, 1),
+                         time=datetime.time(13, 0, tzinfo=pytz.timezone('MST')),
+                         utm_zone=13,
+                         easting=328570.77309727005,
+                         northing=4310748.280792163,
+                         latitude=38.92892,
+                         longitude=-106.97768,
+                         flags=None)
+
+        # Depth (cm),Temperature (deg C)
+
+        super().setup_class(self)
+
+
+class TestPerimeter(DataHeaderTestBase):
+    kwargs = {}
+    depth_is_metadata = False
+
+    def setup_class(self):
+        self.file = 'perimeters.csv'
+        self.data_names = ['depth']
+        self.columns = ['depth'] + self.data_names
+        self.multi_sample_profiles = []
+        self.info = dict(site_name='American River Basin',
                          site_id='Forest 14',
                          date=datetime.date(2020, 2, 1),
                          time=datetime.time(13, 0, tzinfo=pytz.timezone('MST')),

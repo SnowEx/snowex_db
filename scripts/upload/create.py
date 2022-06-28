@@ -22,9 +22,12 @@ def main(overwrite=False, db='snowex', credentials='./credentials.json'):
     if overwrite:
         initialize(engine)
         log.warning('Database cleared!\n')
-        sql = "CREATE USER snow WITH PASSWORD 'hackweek';"
-        engine.execute(sql)
-        engine.execute("GRANT USAGE ON SCHEMA public TO snow;")
+        try:
+            sql = "CREATE USER snow WITH PASSWORD 'hackweek';"
+            engine.execute(sql)
+            engine.execute("GRANT USAGE ON SCHEMA public TO snow;")
+        except Exception as e:
+            print(e)
 
         for t in ['sites', 'points', 'layers', 'images']:
 

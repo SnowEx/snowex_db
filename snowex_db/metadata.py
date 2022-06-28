@@ -324,7 +324,8 @@ class DataHeader(object):
               'avgdensity': 'density',
               'avg_density': 'density',
               'dielectric_constant': 'permittivity',
-              'flag': 'flags'
+              'flag': 'flags',
+              'hs': 'depth'
               }
 
     # Known possible profile types anything not in here will throw an error
@@ -703,8 +704,10 @@ class DataHeader(object):
         original_zone = info['utm_zone']
         info = reproject_point_in_dict(
             info, is_northern=self.northern_hemisphere)
+
         if info['utm_zone'] != original_zone and original_zone is not None:
             self.log.warning(f'Overwriting UTM zone in the header from {original_zone} to {info["utm_zone"]}')
+
         self.epsg = info['epsg']
 
         if self.epsg is None:

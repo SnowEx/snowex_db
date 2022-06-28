@@ -163,3 +163,28 @@ class TestPoleDepthData(PointsBase):
         """
         result = self.session.query(PointData.equipment).filter(PointData.date==datetime.date(2020, 1, 27)).all()
         assert 'camera id = W1B' == result[0][0]
+
+
+class TestPerimeterDepthData(PointsBase):
+    dt = datetime.date(2019, 12, 20)
+
+    args = ['perimeters.csv']
+    kwargs = dict(in_timezone='US/Mountain', out_timezone='US/Mountain',
+                  depth_is_metadata=False,)
+    params = {
+        'test_count': [
+            # Test that we uploaded 14 records
+            dict(data_name='depth', expected_count=9)
+        ],
+
+        'test_value': [
+            # Test the actual value of the dataset
+            dict(data_name='depth', attribute_to_check='value', filter_attribute='date', filter_value=dt,
+                 expected=121),
+        ],
+
+        'test_unique_count': [
+            # Test we have 3 unique dates
+            dict(data_name='depth', attribute_to_count='pit_id', expected_count=1)
+        ]
+    }
