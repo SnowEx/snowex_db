@@ -314,6 +314,7 @@ class DataHeader(object):
               'deq': 'equivalent_diameter',
               'operator': 'observers',
               'surveyors': 'observers',
+              'observer': 'observers',
               'total_snow_depth': 'total_depth',
               'smp_serial_number': 'instrument',
               'lat': 'latitude',
