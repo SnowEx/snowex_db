@@ -32,7 +32,7 @@ def main():
         site_name=site_name,
         observers='Catherine Breen, Cassie Lumbrazo',
         instrument='camera',
-        in_timezone='MST',
+        in_timzone='MST',
         epsg=26912,
         doi=None)
 

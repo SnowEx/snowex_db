@@ -36,7 +36,7 @@ def main():
             depth_is_metadata=False,
             units='cm',
             site_name=site_name,
-            timezone=timezone,
+            in_timzone=timezone,
             epsg=26913,
             doi="https://doi.org/10.5067/WKC6VFMT7JTF")
 
