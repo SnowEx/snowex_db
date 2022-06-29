@@ -69,8 +69,7 @@ if __name__ == '__main__':
              'Example: -vsi AWS_ACCESS_KEY_ID=<key> AWS_SECRET_ACCESS_KEY=<key>'
     )
     parser.add_argument(
-        '-p', '--public', dest='public', type=bool,
-        action="store_true",
+        '-p', '--public', dest='public', action="store_true",
         help='Add this flag if the database is meant to be accessed outside '
              'localhost. Defualt is fals'
     )
