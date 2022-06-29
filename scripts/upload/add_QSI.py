@@ -89,7 +89,8 @@ def main():
         'observers': 'QSI',
         'instrument': 'lidar',
         'site_name': 'Grand Mesa',
-        'units': 'meters'
+        'units': 'meters',
+        'in_timezone': 'MST'
     }
 
     # descriptions of the two flights

@@ -227,14 +227,14 @@ class PointDataCSV(object):
              'density': 'kg/m^3'}
 
     # Class attributes to apply defaults
-    defaults = {'debug': True, 'incoming_tz': 'MST'}
+    defaults = {'debug': True, 'incoming_tz': None}
 
     def __init__(self, filename, **kwargs):
         """
         Args:
             filename: Path to a csv of data to upload as point data
             debug: Boolean indicating whether to print out debug info
-            incoming_tz: Pytz valid timezone for the incoming data
+            in_timezone: Pytz valid timezone for the incoming data
         """
 
         self.log = get_logger(__name__)
@@ -245,6 +245,7 @@ class PointDataCSV(object):
         # Use the files creation date as the date accessed for NSIDC citation
         self.date_accessed = get_file_creation_date(filename)
 
+        # NOTE: This will error if in_timzone is not provided
         self.hdr = DataHeader(filename, **self.kwargs)
         self.df = self._read(filename)
 
@@ -279,7 +280,7 @@ class PointDataCSV(object):
         else:
             # date/time was provided in the data
             df = df.apply(lambda data: add_date_time_keys(
-                data, in_timezone=self.incoming_tz), axis=1)
+                data, in_timezone=self.in_timezone), axis=1)
 
 
         # 1. Only submit valid columns to the DB

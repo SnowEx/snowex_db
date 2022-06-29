@@ -33,7 +33,9 @@ def main():
     b = UploadProfileBatch(
         filenames=profiles,
         debug=True,
-        doi="https://doi.org/10.5067/DUD2VZEVBJ7S")
+        doi="https://doi.org/10.5067/DUD2VZEVBJ7S",
+        in_timezone='MST'
+    )
     b.push()
 
     return len(b.errors)

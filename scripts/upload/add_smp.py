@@ -50,8 +50,8 @@ def main():
         # Constant metadata
         'site_name': 'Grand Mesa',
         'units': 'Newtons',
-        'in_timezone': 'UTC',
-        'out_timezone': 'MST',
+        'in_timzone': 'UTC',
+        'out_timezone': 'UTC',
         'instrument': 'snowmicropen',
         'header_sep': ':',
         'doi': 'https://doi.org/10.5067/ZYW6IHFRYDSE',

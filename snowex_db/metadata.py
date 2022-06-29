@@ -86,7 +86,7 @@ def read_InSar_annotation(ann_file):
         for timing in ['start', 'stop']:
             key = '{} time of acquisition for pass {}'.format(timing, pass_num)
             dt = pd.to_datetime(data[key]['value'])
-            dt = dt.astimezone(pytz.timezone('MST'))
+            dt = dt.astimezone(pytz.timezone('UTC'))
             data[key]['value'] = dt
 
     return data
@@ -338,8 +338,7 @@ class DataHeader(object):
                             'manual_wetness', 'two_way_travel', 'depth', 'swe']
 
     # Defaults to keywords arguments
-    defaults = {'in_timezone': 'MST',
-                'out_timezone': 'MST',
+    defaults = {'out_timezone': 'UTC',
                 'epsg': None,
                 'header_sep': ',',
                 'northern_hemisphere': True,
@@ -364,6 +363,13 @@ class DataHeader(object):
 
         self.extra_header = assign_default_kwargs(
             self, kwargs, self.defaults, leave=['epsg'])
+
+        # Validate that an intentionally good in timezone was given
+        in_timezone = kwargs.get('in_timezone')
+        if in_timezone is None or "local" in in_timezone.lower():
+            raise ValueError("A valid in_timezone was not provided")
+        else:
+            self.in_timezone = in_timezone
 
         self.log.info('Interpreting metadata in {}'.format(filename))
 

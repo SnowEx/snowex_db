@@ -28,7 +28,9 @@ def main():
         sites,
         epsg=26912,
         debug=False,
-        doi="https://doi.org/10.5067/DUD2VZEVBJ7S")
+        doi="https://doi.org/10.5067/DUD2VZEVBJ7S",
+        in_timezone='MST'
+    )
 
     # Submit site details to the db
     b.push()

@@ -57,7 +57,7 @@ def test_add_date_time_keys(data, in_tz, expected_date, expected_time):
     """
     Test that the date and time keys can be added from various scenarios
     """
-    d = add_date_time_keys(data, in_timezone=in_tz, out_timezone='US/Mountain')
+    d = add_date_time_keys(data, in_timezone=in_tz, out_timezone='UTC')
     assert d['date'] == expected_date
     assert d['time'] == expected_time
 
@@ -110,10 +110,10 @@ def test_avg_from_multi_sample(layer, name, expected):
 
 
 @pytest.mark.parametrize('data_name, expected', [
-    ('amplitude of pass 1', 'Overpass Duration: 2020-01-01 10:00:00 - 2020-01-01 12:00:00 (MST)'),
+    ('amplitude of pass 1', 'Overpass Duration: 2020-01-01 10:00:00 - 2020-01-01 12:00:00 (UTC)'),
     ('correlation',
-     '1st Overpass Duration: 2020-01-01 10:00:00 - 2020-01-01 12:00:00 (MST), 2nd Overpass Duration 2020-02-01 '
-     '10:00:00 - 2020-02-01 12:00:00 (MST)'),
+     '1st Overpass Duration: 2020-01-01 10:00:00 - 2020-01-01 12:00:00 (UTC), 2nd Overpass Duration 2020-02-01 '
+     '10:00:00 - 2020-02-01 12:00:00 (UTC)'),
 
 ])
 def test_get_InSar_flight_comment(data_name, expected):

@@ -52,7 +52,8 @@ def main():
         'site_name': 'Grand Mesa',
         'units': None,  # Add from the Annotation file
         'description': '',  # Added from the annotation file
-        'doi': "https://asf.alaska.edu/doi/uavsar/#R0ARICRBAKYE"
+        'doi': "https://asf.alaska.edu/doi/uavsar/#R0ARICRBAKYE",
+        'in_timezone': 'MST'
     }
 
     # Expand the paths
