@@ -56,7 +56,8 @@ def main():
             'instrument': instrument,
             'tiled': True,
             'type': dtype,
-            'doi': 'https://doi.org/10.3133/fs20203062'
+            'doi': 'https://doi.org/10.3133/fs20203062',
+            'in_timezone': 'MST'
             }
 
     # Grab all the geotiff,

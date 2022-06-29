@@ -24,7 +24,8 @@ def main():
               'description': '50m product',
               'tiled': True,
               'epsg': 26912,
-              'no_data': -9999
+              'no_data': -9999,
+              'in_timezone': 'MST'
               }
     # Build a list of uploaders and then execute them
     uploaders = []

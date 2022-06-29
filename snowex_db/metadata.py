@@ -618,7 +618,6 @@ class DataHeader(object):
             elif k and not value:
                 data[k] = None
 
-        # TODO: This is where we would need to work out in_timezone
         # If there is not header data then don't bother (useful for point data)
         if data:
             data = add_date_time_keys(
