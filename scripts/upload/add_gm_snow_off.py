@@ -34,7 +34,7 @@ def main():
     epsg = 26912
 
     # Metadata
-    surveyors = 'USGS'
+    observers = 'USGS'
     instrument = 'lidar'
     site_name = 'Grand Mesa'
     units = 'meters'  # Add from the Annotation file
@@ -52,7 +52,7 @@ def main():
             'description': desc,
             'units': units,
             'epsg': epsg,
-            'surveyors': surveyors,
+            'observers': observers,
             'instrument': instrument,
             'tiled': True,
             'type': dtype,

@@ -3,7 +3,7 @@ Script is used to confirm uploads to the db were successful
 """
 
 from snowexsql.db import get_db
-from snowex_db.data import SiteData, PointData, LayerData, ImageData
+from snowexsql.data import SiteData, PointData, LayerData, ImageData
 import pytest
 
 @pytest.fixture(scope='session')
@@ -15,7 +15,7 @@ def session():
 
 
 
-@pytest.mark.parametrize('surveyor, datatype, expected_tiles', [
+@pytest.mark.parametrize('observer, datatype, expected_tiles', [
     # 50m swe product for grand mesa
     ('ASO Inc.', 'swe', 2),
     # 3m depth product for a 2 day flight
@@ -23,12 +23,12 @@ def session():
     # USGS Snow off DEM
     ('USGS', 'DEM', 1713),
 ])
-def test_imagedata_uploads(session, surveyor, datatype, expected_tiles):
+def test_imagedata_uploads(session, observer, datatype, expected_tiles):
     """
     Check the number of tiles in the DB is what is expected
     """
     qry = session.query(ImageData.raster).filter(ImageData.type == datatype)
-    ntiles = qry.filter(ImageData.surveyors == surveyor).count()
+    ntiles = qry.filter(ImageData.observers == observer).count()
     assert ntiles == expected_tiles
 
 @pytest.mark.parametrize('data_type, expected', [

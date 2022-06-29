@@ -56,7 +56,7 @@ class TestUploadProfileBatch(TableTestBase):
         'test_count': [dict(data_name='hand_hardness', expected_count=5),
                        dict(data_name='temperature', expected_count=5)],
         'test_value': [
-            dict(data_name='hand_hardness', attribute_to_check='surveyors', filter_attribute='depth', filter_value=17,
+            dict(data_name='hand_hardness', attribute_to_check='observers', filter_attribute='depth', filter_value=17,
                  expected=None),
             dict(data_name='hand_hardness', attribute_to_check='comments', filter_attribute='depth', filter_value=17,
                  expected='Cups')],
@@ -167,7 +167,7 @@ class TestUploadRasterBatch(TableTestBase):
     """
     args = [['be_gm1_0287/w001001x.adf', 'be_gm1_0328/w001001x.adf']]
     kwargs = {
-        'type': 'dem', 'surveyors': 'QSI',
+        'type': 'dem', 'observers': 'QSI',
         'units': 'meters',
         'epsg': 26912,
         'use_s3': False
@@ -177,7 +177,7 @@ class TestUploadRasterBatch(TableTestBase):
 
     params = {
         'test_count': [dict(data_name='dem', expected_count=32)],
-        'test_value': [dict(data_name='dem', attribute_to_check='surveyors', filter_attribute='id', filter_value=1,
+        'test_value': [dict(data_name='dem', attribute_to_check='observers', filter_attribute='id', filter_value=1,
                             expected='QSI'),
                        dict(data_name='dem', attribute_to_check='units', filter_attribute='id', filter_value=1,
                             expected='meters'),
@@ -192,12 +192,12 @@ class TestUploadUAVSARBatch(TableTestBase):
     Test test the UAVSAR uploader by providing one ann file which should upload
     all of the uavsar images.
     """
-    surveyors = 'UAVSAR team, JPL'
+    observers = 'UAVSAR team, JPL'
     # Upload all uav
     d = join(dirname(__file__), 'data', 'uavsar')
     args = [['uavsar.ann']]
     kwargs = {
-        'surveyors': surveyors,
+        'observers': observers,
         'epsg': 26912,
         'geotiff_dir': d,
         'instrument': 'UAVSAR, L-band InSAR',
@@ -214,12 +214,12 @@ class TestUploadUAVSARBatch(TableTestBase):
                        dict(data_name='insar interferogram imaginary', expected_count=9)],
 
         'test_value': [
-            dict(data_name='insar interferogram imaginary', attribute_to_check='surveyors', filter_attribute='units',
+            dict(data_name='insar interferogram imaginary', attribute_to_check='observers', filter_attribute='units',
                  filter_value='Linear Power and Phase in Radians', expected='UAVSAR team, JPL'),
-            dict(data_name='insar interferogram real', attribute_to_check='units', filter_attribute='surveyors',
-                 filter_value=surveyors, expected='Linear Power and Phase in Radians'),
-            dict(data_name='insar correlation', attribute_to_check='instrument', filter_attribute='surveyors',
-                 filter_value=surveyors, expected='UAVSAR, L-band InSAR'),
+            dict(data_name='insar interferogram real', attribute_to_check='units', filter_attribute='observers',
+                 filter_value=observers, expected='Linear Power and Phase in Radians'),
+            dict(data_name='insar correlation', attribute_to_check='instrument', filter_attribute='observers',
+                 filter_value=observers, expected='UAVSAR, L-band InSAR'),
             ],
         # Test we have two dates for the insar amplitude overapasses
         'test_unique_count': [dict(data_name='insar amplitude', attribute_to_count='date', expected_count=2), ]

@@ -84,7 +84,7 @@ Ground Penetrating Radar (GPR)
 * Original data downloaded from NSIDC at https://n5eil01u.ecs.nsidc.org/SNOWEX/SNEX20_BSU_GPR.001/
 * The system is made by Sensors & Software, pulse EKKO Pro (pE) is the model,
   multi-polarization 1 GHz GPR
-* Tate Meehan was the surveyor for all BSU GPR data
+* Tate Meehan was the observer for all BSU GPR data
 * Column Time is HHMMSS.sss (24 hour Zulu time of day with the colons removed.)
 * Uploaded to the DB: two_way_travel, depth, density, and swe
 

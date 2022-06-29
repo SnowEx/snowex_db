@@ -226,8 +226,8 @@ class SMPMeasurementLog(object):
                     names
         """
         new_df = df.copy()
-        new_df['surveyors'] = \
-            new_df['surveyors'].apply(lambda x: self.observer_map[x])
+        new_df['observers'] = \
+            new_df['observers'].apply(lambda x: self.observer_map[x])
         return new_df
 
     def interpret_sample_strategy(self, df):
@@ -312,8 +312,8 @@ class DataHeader(object):
               'notes': 'site_notes',
               'sample_top_height': 'depth',
               'deq': 'equivalent_diameter',
-              'operator': 'surveyors',
-              'observer': 'surveyors',
+              'operator': 'observers',
+              'surveyors': 'observers',
               'total_snow_depth': 'total_depth',
               'smp_serial_number': 'instrument',
               'lat': 'latitude',
@@ -710,15 +710,15 @@ class DataHeader(object):
 
         self.epsg = info['epsg']
 
-        if self.epsg is None:
-            raise RuntimeError("EPSG was not determined from the header nor was it "
-                               "passed as a kwarg to uploader. If there is no "
-                               "projection information in the file please "
-                               "prescribe an epsg value")
-
         # Check for point data which will contain this in the data not the
         # header
         if not is_point_data(self.columns):
+            if self.epsg is None:
+                raise RuntimeError("EPSG was not determined from the header nor was it "
+                                   "passed as a kwarg to uploader. If there is no "
+                                   "projection information in the file please "
+                                   "prescribe an epsg value")
+
             info = add_geom(info, self.epsg)
 
         # If columns or info does not have coordinates raise an error

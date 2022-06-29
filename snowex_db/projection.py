@@ -9,8 +9,9 @@ from rasterio.warp import Resampling, calculate_default_transform, reproject
 
 def reproject_point_in_dict(info, is_northern=True, zone_number=None):
     """
-    Searches the info dictionary and converts from lat long to northing easting
-    and vice versa if either are missing.
+    Add/ensure that northing, easting, utm_zone, latitude, longitude and epsg code
+    are in the metadata. Default to always project the lat long (if provided) to
+    the northing and easting.
 
     Args:
         info: Dictionary containing key northing/easting or latitude longitude
@@ -33,6 +34,7 @@ def reproject_point_in_dict(info, is_northern=True, zone_number=None):
                 del result[c]
 
     keys = result.keys()
+    # Use lat/long first
     if all([k in keys for k in ['latitude', 'longitude']]):
         easting, northing, utm_zone, letter = utm.from_latlon(
             result['latitude'],
@@ -41,7 +43,7 @@ def reproject_point_in_dict(info, is_northern=True, zone_number=None):
         result['northing'] = northing
         result['utm_zone'] = utm_zone
 
-    # Convert UTM coordinates to Lat long or vice versa for database storage
+    # Secondarily use the utm to add lat long
     elif all([k in keys for k in ['northing', 'easting', 'utm_zone']]):
 
         if isinstance(result['utm_zone'], str):
@@ -55,8 +57,14 @@ def reproject_point_in_dict(info, is_northern=True, zone_number=None):
         result['latitude'] = lat
         result['longitude'] = long
 
-    # Assuming NAD83
-    result['epsg'] = int(f"269{result['utm_zone']}")
+    # Assuming NAD83, add epsg code
+    if 'utm_zone' in result.keys():
+        if result['utm_zone'] is not None:
+            result['epsg'] = int(f"269{result['utm_zone']}")
+    else:
+        result['utm_zone'] = None
+        result['epsg'] = None
+
     return result
 
 

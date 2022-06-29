@@ -20,7 +20,7 @@ def main():
 
     # Typical kwargs
     kwargs = {'instrument': 'lidar',
-              'surveyors': 'ASO Inc.',
+              'observers': 'ASO Inc.',
               'description': '50m product',
               'tiled': True,
               'epsg': 26912,

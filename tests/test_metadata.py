@@ -204,7 +204,7 @@ class TestSSAHeader(DataHeaderTestBase):
         self.info = info.copy()
         self.info['instrument'] = 'IS3-SP-11-01F'
         self.info['profile_id'] = 'N/A'
-        self.info['surveyors'] = 'Juha Lemmetyinen'
+        self.info['observers'] = 'Juha Lemmetyinen'
         self.info['timing'] = 'N/A'
         self.info['site_notes'] = 'layer at 15 and 20 cm had exact same SSA'
         self.info['total_depth'] = '80'
@@ -219,7 +219,7 @@ class TestSiteDetailsHeader(DataHeaderTestBase):
         self.columns = None
         self.multi_sample_profiles = []
         self.info = info.copy()
-        self.info['surveyors'] = "Chris Hiemstra, Hans Lievens"
+        self.info['observers'] = "Chris Hiemstra, Hans Lievens"
         self.info['weather_description'] = 'Sunny, cold, gusts'
         self.info['ground_roughness'] = 'rough, rocks in places'
         self.info['precip'] = None
@@ -325,18 +325,18 @@ class TestSMPMeasurementLog():
         self.df = self.smp_log.df
 
     @pytest.mark.parametrize('column, index, expected', [
-        ('surveyors', -1, 'HP Marshall'),
-        ('surveyors', 0, 'Ioanna Merkouriadi'),
+        ('observers', -1, 'HP Marshall'),
+        ('observers', 0, 'Ioanna Merkouriadi'),
     ])
     def test_value(self, column, index, expected):
         """
-        Test surveyorss initials are renamed correctly
+        Test observerss initials are renamed correctly
         """
         assert self.df[column].iloc[index] == expected
 
     @pytest.mark.parametrize("count_column, expected_count", [
-        # Assert there are 2 surveyors listed in the log
-        ('surveyors', 2),
+        # Assert there are 2 observers listed in the log
+        ('observers', 2),
         # Assert there are two dates in the log
         ('date', 2),
         # Assert there is 4 suffixes in the log (e.g. all of them)
@@ -344,7 +344,7 @@ class TestSMPMeasurementLog():
     ])
     def test_unique_count(self, count_column, expected_count):
         """
-        Test surveyorss initials are renamed correctly
+        Test observerss initials are renamed correctly
         """
         assert len((self.df[count_column]).unique()) == expected_count
 
@@ -430,15 +430,15 @@ class TestPerimeter(DataHeaderTestBase):
         self.columns = ['depth'] + self.data_names
         self.multi_sample_profiles = []
         self.info = dict(site_name='American River Basin',
-                         site_id='Forest 14',
-                         date=datetime.date(2020, 2, 1),
+                         site_id='Caples Lake',
+                         date=datetime.date(2019, 12,20),
                          time=datetime.time(13, 0, tzinfo=pytz.timezone('MST')),
-                         utm_zone=13,
-                         easting=328570.77309727005,
-                         northing=4310748.280792163,
-                         latitude=38.92892,
-                         longitude=-106.97768,
-                         flags=None)
+                         utm_zone=10,
+                         easting=757215.9386982679,
+                         northing=4288786.9467831645,
+                         latitude=38.71033,
+                         longitude=-120.04187,
+                         flags="BDG, MW")
 
         # Depth (cm),Temperature (deg C)
 

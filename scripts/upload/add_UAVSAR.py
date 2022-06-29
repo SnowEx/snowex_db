@@ -47,7 +47,7 @@ def main():
         'epsg': 26912,
 
         # Metadata
-        'surveyors': 'UAVSAR team, JPL',
+        'observers': 'UAVSAR team, JPL',
         'instrument': 'UAVSAR, L-band InSAR',
         'site_name': 'Grand Mesa',
         'units': None,  # Add from the Annotation file

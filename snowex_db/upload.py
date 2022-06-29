@@ -358,27 +358,7 @@ class PointDataCSV(object):
                 objects.append(d)
             session.bulk_save_objects(objects)
             session.commit()
-
-    def add_one(self, session, row):
-        """
-        Uploads one point
-        """
-        # Create the data structure to pass into the interacting class
-        # attributes
-        data = row.copy()
-
-        # Add geometry
-        data['geom'] = WKTElement(
-            'POINT({} {})'.format(
-                data['easting'],
-                data['northing']),
-            srid=self.hdr.info['epsg'])
-
-        # Create db interaction, pass data as kwargs to class submit data
-        sd = PointData(**data)
-        session.add(sd)
-        session.commit()
-        self.points_uploaded += 1
+            self.points_uploaded = len(objects)
 
 
 class COGHandler:
