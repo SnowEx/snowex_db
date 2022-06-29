@@ -321,6 +321,7 @@ class DataHeader(object):
               'long': 'longitude',
               'lon': 'longitude',
               'twt': 'two_way_travel',
+              'utmzone': 'utm_zone',
               'measurement_tool': 'instrument',
               'avgdensity': 'density',
               'avg_density': 'density',
@@ -451,7 +452,7 @@ class DataHeader(object):
             if i == 0:
                 previous = get_alpha_ratio(lines[i])
             else:
-                previous = get_alpha_ratio(lines[i-1])
+                previous = get_alpha_ratio(lines[i - 1])
 
             if line_is_header(l, expected_columns=n_columns,
                               header_indicator=header_indicator,

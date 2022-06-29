@@ -272,28 +272,38 @@ class PointDataCSV(object):
 
         # Add date and time keys
         self.log.info('Adding date and time to metadata...')
-        # date/time was provided in the data
-        if 'date' in df.columns:
-            df = df.apply(lambda data: add_date_time_keys(
-                data, in_timezone=self.incoming_tz), axis=1)
         # Date/time was only provided in the header
-        elif 'date' in self.hdr.info.keys():
+        if 'date' in self.hdr.info.keys() and 'date' not in df.columns:
             df['date'] = self.hdr.info['date']
             df['time'] = self.hdr.info['time']
+        else:
+            # date/time was provided in the data
+            df = df.apply(lambda data: add_date_time_keys(
+                data, in_timezone=self.incoming_tz), axis=1)
+
 
         # 1. Only submit valid columns to the DB
         self.log.info('Adding valid keyword arguments to metadata...')
         valid = get_table_attributes(PointData)
 
         # 2. Add northing/Easting/latitude/longitude if necessary
-        proj_columns = ['northing', 'easting', 'latitude', 'longitude', 'utm_zone']
+        proj_columns = ['northing', 'easting', 'latitude', 'longitude']
         if any(k in df.columns for k in proj_columns):
             self.log.info('Adding UTM Northing/Easting to data...')
             df = df.apply(lambda row: reproject_point_in_dict(row), axis=1)
+
         # Use header projection info
         elif any(k in self.hdr.info.keys() for k in proj_columns):
             for k in proj_columns:
                 df[k] = self.hdr.info[k]
+
+        # Add geometry
+        df['geom'] = df.apply(lambda row: WKTElement(
+            'POINT({} {})'.format(
+                row['easting'],
+                row['northing']),
+                srid=self.hdr.info['epsg']), axis=1)
+
 
         # 2. Add all kwargs that were valid
         for v in valid:
@@ -309,7 +319,7 @@ class PointDataCSV(object):
         drops = \
             [c for c in df.columns if c not in valid and c not in self.hdr.data_names]
         self.log.info(
-            'Dropping {} as they are not valid on the database...'.format(
+            'Dropping {} as they are not valid columns in the database...'.format(
                 ', '.join(drops)))
         df = df.drop(columns=drops)
 
@@ -336,29 +346,22 @@ class PointDataCSV(object):
 
         df = df.drop(columns=self.hdr.data_names)
 
-        # Add geometry
-        df['geom'] = df.apply(lambda row: WKTElement(
-            'POINT({} {})'.format(
-                row['easting'],
-                row['northing']),
-                srid=self.hdr.info['epsg']), axis=1)
-
         return df
 
     def submit(self, session):
         # Loop through all the entries and add them to the db
         for pt in self.hdr.data_names:
+            objects = []
             df = self.build_data(pt)
             self.log.info('Submitting {} points of {} to the database...'.format(
-                len(self.df.index), pt))
+                len(df.index), pt))
 
-            objects = []
             for i, row in df.iterrows():
                 d = PointData(**row)
                 objects.append(d)
             session.bulk_save_objects(objects)
             session.commit()
-            self.points_uploaded = len(objects)
+            self.points_uploaded += len(objects)
 
 
 class COGHandler:
