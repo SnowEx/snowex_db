@@ -248,10 +248,6 @@ def add_date_time_keys(data, in_timezone=None, out_timezone='UTC'):
 
             d = d.astimezone(out_tz)
 
-            # Remove them
-            # for v in ['utcyear', 'utcdoy', 'utctod']:
-            #     del data[v]
-
         else:
             raise ValueError(
                 'Data is missing date/time info!\n{}'.format(data))
