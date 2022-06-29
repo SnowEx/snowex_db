@@ -6,9 +6,14 @@ import glob
 from os.path import abspath, join
 import pandas as pd
 
-from snowex_db.batch import UploadProfileBatch
+from snowex_db.batch import UploadProfileBatch, UploadSiteDetailsBatch
 from snowex_db.upload import PointDataCSV
 from snowexsql.db import get_db
+
+tz_map = {'US/Pacific': ['CA', 'NV', 'WA'],
+          'US/Mountain': ['CO', 'ID', 'NM', 'UT', 'MT'],
+          }
+
 
 def main():
     """
@@ -28,6 +33,9 @@ def main():
     site_ids = desc_df['PitID'].unique()
 
     for site_id in site_ids:
+        abbrev = site_id[0:2]
+        tz = [k for k, states in tz_map.items() if abbrev in states][0]
+
         # Grab all the csvs in the pits folder
         filenames = glob.glob(join(data_dir, 'pits', f'{site_id}*/*.csv'))
 
@@ -43,14 +51,23 @@ def main():
         # Submit all profiles associated with pit at a time
         b = UploadProfileBatch(
             filenames=profiles,
-            debug=debug, doi=doi)
+            debug=debug, doi=doi,
+            in_timezone=tz)
         b.push()
         error_msg += b.errors
+
+        # Upload the site details
+        sd = UploadSiteDetailsBatch(filenames=sites,
+                                    debug=debug,
+                                    doi=doi,
+                                    in_timezone=tz)
+        sd.push()
+        error_msg += sd.errors
 
         # Submit all perimeters as point data
         engine, session = get_db('localhost/snowex', credentials='credentials.json')
         for fp in perimeter_depths:
-            pcsv = PointDataCSV(fp, doi=doi, debug=debug, depth_is_metadata=False)
+            pcsv = PointDataCSV(fp, doi=doi, debug=debug, depth_is_metadata=False, in_timezone=tz)
             pcsv.submit(session)
         session.close()
 
