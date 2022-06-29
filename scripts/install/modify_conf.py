@@ -71,7 +71,7 @@ if __name__ == '__main__':
     parser.add_argument(
         '-p', '--public', dest='public', action="store_true",
         help='Add this flag if the database is meant to be accessed outside '
-             'localhost. Defualt is fals'
+             'localhost. Defualt is false'
     )
 
     args = parser.parse_args()
@@ -80,7 +80,7 @@ if __name__ == '__main__':
     if vsi_opts:
         extra_opts["postgis.gdal_vsi_options"] = " ".join(vsi_opts)
     if args.public:
-        extra_opts["listen_address"] = "'*'"
+        extra_opts["listen_addresses"] = "'*'"
 
     conf_updates = {'shared_buffers': '500MB',
                     'work_mem': "3000MB",
