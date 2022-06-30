@@ -86,7 +86,7 @@ def main():
         ############################### Idaho - Lowman ####################################
         # Make adjustments to metadata for lowman files
         data['site_name'] = 'idaho'
-        data['epsg'] = 29611
+        data['epsg'] = 26911
 
         # Grab all the lowman and reynolds annotation files
         ann_files = glob.glob(join(downloads, 'lowman_*.ann'))
@@ -109,7 +109,7 @@ def main():
         ############################## Idaho - Reynolds ####################################
         # Make adjustments to metadata for lowman files
         data['site_name'] = 'idaho'
-        data['epsg'] = 29611
+        data['epsg'] = 26911
 
         # Grab all the lowman and reynolds annotation files
         ann_files = glob.glob(join(downloads, 'silver_*.ann'))
