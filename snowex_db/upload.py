@@ -227,7 +227,8 @@ class PointDataCSV(object):
              'density': 'kg/m^3'}
 
     # Class attributes to apply defaults
-    defaults = {'debug': True, 'incoming_tz': None}
+    defaults = {'debug': True,
+                'in_timezone': None}
 
     def __init__(self, filename, **kwargs):
         """
@@ -246,7 +247,7 @@ class PointDataCSV(object):
         self.date_accessed = get_file_creation_date(filename)
 
         # NOTE: This will error if in_timzone is not provided
-        self.hdr = DataHeader(filename, **self.kwargs)
+        self.hdr = DataHeader(filename, in_timezone=kwargs['in_timezone'], **self.kwargs)
         self.df = self._read(filename)
 
         # Performance tracking
@@ -281,7 +282,6 @@ class PointDataCSV(object):
             # date/time was provided in the data
             df = df.apply(lambda data: add_date_time_keys(
                 data, in_timezone=self.in_timezone), axis=1)
-
 
         # 1. Only submit valid columns to the DB
         self.log.info('Adding valid keyword arguments to metadata...')

@@ -32,8 +32,8 @@ class TestConversionsOnDB(DBSetup):
 
         # Upload some point data
         fname = join(self.data_dir, 'depths.csv')
-        csv = PointDataCSV(fname, depth_is_metadata=False, units='cm', site_name='Grand Mesa',
-                           epsg=26912)
+        csv = PointDataCSV(fname, epsg=26912, depth_is_metadata=False, units='cm', site_name='Grand Mesa',
+                           in_timezone='US/Mountain')
         csv.submit(self.session)
 
     def test_points_to_geopandas(self):
@@ -107,7 +107,6 @@ class TestConversionsOnDB(DBSetup):
 
         # Confirm value count
         assert df['id'].count() == 16
-
 
     def test_raster_to_rasterio(self):
         """

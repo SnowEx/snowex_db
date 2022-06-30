@@ -17,7 +17,7 @@ class TestUploadSiteDetailsBatch(TableTestBase):
     """
 
     args = [['site_5S21.csv', 'site_details.csv']]
-    kwargs = {'epsg': 26912}
+    kwargs = {'epsg': 26912, 'in_timezone': 'US/Mountain'}
     UploaderClass = UploadSiteDetailsBatch
     TableClass = SiteData
     count_attribute = 'site_id'
@@ -48,7 +48,7 @@ class TestUploadProfileBatch(TableTestBase):
     """
 
     args = [['stratigraphy.csv', 'temperature.csv']]
-    kwargs = {'timezone': 'UTC'}
+    kwargs = {'in_timezone': 'UTC'}
     UploaderClass = UploadProfileBatch
     TableClass = LayerData
 
@@ -103,6 +103,7 @@ class TestUploadLWCProfileBatch(TableTestBase):
     """
 
     args = [['LWC.csv', 'LWC2.csv']]
+    kwargs = {'in_timezone': 'US/Mountain'}
     UploaderClass = UploadProfileBatch
     TableClass = LayerData
 
@@ -231,7 +232,7 @@ class TestUploadUAVSARBatch(TableTestBase):
         date is being checked.
         """
         results = self.session.query(func.min(ImageData.date)).filter(ImageData.type == 'insar amplitude').all()
-        assert results[0][0] == datetime.date(2020, 1, 31)
+        assert results[0][0] == datetime.date(2020, 2, 1)
 
     @pytest.mark.parametrize("data_name, kw", [
         # Check the single pass products have a few key words

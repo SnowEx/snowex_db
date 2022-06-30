@@ -338,7 +338,9 @@ class DataHeader(object):
                             'manual_wetness', 'two_way_travel', 'depth', 'swe']
 
     # Defaults to keywords arguments
-    defaults = {'out_timezone': 'UTC',
+    defaults = {
+                'in_timezone': None,
+                'out_timezone': 'UTC',
                 'epsg': None,
                 'header_sep': ',',
                 'northern_hemisphere': True,
