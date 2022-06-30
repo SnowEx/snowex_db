@@ -125,7 +125,7 @@ def resample_batch(filenames, output, downsample,
 
     # Loop over all the files, name them using the same name just using a
     # different folder
-    for f in filenames:
+    for f in filenames[:20]:
         base_f = basename(f)
 
         log.info('Resampling {}'.format(base_f))
@@ -154,11 +154,14 @@ def resample_batch(filenames, output, downsample,
             # Add a header for the fact this data is subsampled
             header.append(
                 '# Data Subsampled To: Every {:d}th\n'.format(downsample))
+            # Add a header of column names with a # in front
+            header.append('# ' + ', '.join(new_df.columns) + '\n')
+
             lines = ''.join(header)
             fp.write(lines)
             fp.close()
 
-        new_df.to_csv(out_f, index_label='Original Index', mode='a')
+        new_df.to_csv(out_f, index_label='Original Index', mode='a', header=False)
 
 
 def main():
