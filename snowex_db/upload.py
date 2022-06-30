@@ -246,7 +246,7 @@ class PointDataCSV(object):
         # Use the files creation date as the date accessed for NSIDC citation
         self.date_accessed = get_file_creation_date(filename)
 
-        # NOTE: This will error if in_timzone is not provided
+        # NOTE: This will error if in_timezone is not provided
         self.hdr = DataHeader(filename, in_timezone=kwargs['in_timezone'], **self.kwargs)
         self.df = self._read(filename)
 

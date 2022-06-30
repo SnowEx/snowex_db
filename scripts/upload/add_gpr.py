@@ -28,7 +28,7 @@ def main():
         'site_name': 'Grand Mesa',
         'observers': 'Tate Meehan',
         'instrument': 'pulse EKKO Pro multi-polarization 1 GHz GPR',
-        'in_timzone': 'UTC',
+        'in_timezone': 'UTC',
         'out_timezone': 'UTC',
         'epsg': 26912,
         'doi': 'https://doi.org/10.5067/Q2LFK0QSVGS2'
