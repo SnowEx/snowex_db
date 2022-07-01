@@ -91,7 +91,7 @@ range of data.
 
 This table contains the following columns:
 
-* bottom_depth
+* bottom_depth - Total snowpack depth in centimeters
 * comments
 * date - Date data was collected
 * depth - Depth in centimeters in the snowpack that the data was collected
