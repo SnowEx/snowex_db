@@ -96,7 +96,7 @@ This table contains the following columns:
 * date - Date data was collected
 * depth - Depth in the snowpack that the data was collected (centimeters, negative from the surface)
 * easting - UTM projected coordinate in the east direction in meters
-* elevation - Elevation at the site or acquisition in meters
+* elevation - Elevation at the site of acquisition in meters
 * geom - GIS software friendly version of the coordinates of where the data was collected in UTM.
 * id - Unique identifier that is automatically assigned when uploaded
 * instrument - Name of the instrument used to collect the data
