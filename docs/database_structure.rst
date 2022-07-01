@@ -103,9 +103,9 @@ This table contains the following columns:
 * latitude - Geographic northing coordinate of the acquisition location in degrees
 * longitude - Geographic westing coordinate of the acquisition location in degrees
 * northing - Northing coordinate projected in UTM in meters
-* sample_a - 1 of potentially three samples that could have been taken for this measurement, e.g. density
-* sample_b - 1 of potentially three samples that could have been taken for this measurement, e.g. density
-* sample_c - 1 of potentially three samples that could have been taken for this measurement, e.g. density
+* sample_a - first of potentially three samples that could have been taken for this measurement, e.g. density
+* sample_b - second of potentially three samples that could have been taken for this measurement, e.g. density
+* sample_c - third of potentially three samples that could have been taken for this measurement, e.g. density
 * site_id - Unique identifier to pit location
 * site_name - Name describing the general survey area ( e.g. Grand Mesa)
 * surveyors - Names of the people performing the acquisition
