@@ -18,12 +18,12 @@ class TestStratigraphyProfile(TableTestBase):
     """
 
     args = ['stratigraphy.csv']
-    kwargs = {'timezone': 'MST'}
+    kwargs = {'in_timezone': 'MST'}
     UploaderClass = UploadProfileData
     TableClass = LayerData
     dt = datetime.datetime(
-        2020, 2, 5, 13, 30, 0, 0,
-        pytz.timezone('MST')
+        2020, 2, 5, 20, 30, 0, 0,
+        pytz.timezone('UTC')
     )
 
     params = {
@@ -88,10 +88,10 @@ class TestDensityProfile(TableTestBase):
     """
 
     args = ['density.csv']
-    kwargs = {'timezone': 'MST'}
+    kwargs = {'in_timezone': 'MST'}
     UploaderClass = UploadProfileData
     TableClass = LayerData
-    dt = datetime.datetime(2020, 2, 5, 13, 30, 0, 0, pytz.FixedOffset(-360))
+    dt = datetime.datetime(2020, 2, 5, 20, 30, 0, 0, pytz.utc)
 
     params = {
         'test_count': [dict(data_name='density', expected_count=4)],
@@ -126,10 +126,10 @@ class TestLWCProfile(TableTestBase):
     """
 
     args = ['LWC.csv']
-    kwargs = {'timezone': 'MST'}
+    kwargs = {'in_timezone': 'MST'}
     UploaderClass = UploadProfileData
     TableClass = LayerData
-    dt = datetime.datetime(2020, 2, 5, 13, 30, 0, 0,  pytz.FixedOffset(-360))
+    dt = datetime.datetime(2020, 2, 5, 20, 30, 0, 0,  pytz.utc)
 
     params = {
         'test_count': [dict(data_name='permittivity', expected_count=4)],
@@ -158,10 +158,10 @@ class TestLWCProfileB(TableTestBase):
     """
 
     args = ['LWC2.csv']
-    kwargs = {'timezone': 'MST'}
+    kwargs = {'in_timezone': 'MST'}
     UploaderClass = UploadProfileData
     TableClass = LayerData
-    dt = datetime.datetime(2020, 3, 12, 14, 45, 0, 0, pytz.FixedOffset(-360))
+    dt = datetime.datetime(2020, 3, 12, 21, 45, 0, 0, pytz.utc)
 
     params = {
         'test_count': [dict(data_name='permittivity', expected_count=8)],
@@ -203,10 +203,10 @@ class TestTemperatureProfile(TableTestBase):
     """
 
     args = ['temperature.csv']
-    kwargs = {'timezone': 'MST'}
+    kwargs = {'in_timezone': 'MST'}
     UploaderClass = UploadProfileData
     TableClass = LayerData
-    dt = datetime.datetime(2020, 2, 5, 13, 40, 0, 0, pytz.FixedOffset(-360))
+    dt = datetime.datetime(2020, 2, 5, 20, 40, 0, 0, pytz.utc)
 
     params = {
         'test_count': [dict(data_name='temperature', expected_count=5)],
@@ -231,10 +231,10 @@ class TestSSAProfile(TableTestBase):
     """
 
     args = ['SSA.csv']
-    kwargs = {'timezone': 'MST'}
+    kwargs = {'in_timezone': 'MST'}
     UploaderClass = UploadProfileData
     TableClass = LayerData
-    dt = datetime.datetime(2020, 2, 5, 13, 40, 0, 0,  pytz.FixedOffset(-360))
+    dt = datetime.datetime(2020, 2, 5, 20, 40, 0, 0,  pytz.utc)
 
     params = {
         'test_count': [dict(data_name='reflectance', expected_count=16)],
@@ -267,10 +267,10 @@ class TestSMPProfile(TableTestBase):
     """
 
     args = ['S06M0874_2N12_20200131.CSV']
-    kwargs = {'timezone': 'UTC', 'units': 'Newtons', 'header_sep': ':', 'instrument': 'snowmicropen'}
+    kwargs = {'in_timezone': 'UTC', 'units': 'Newtons', 'header_sep': ':', 'instrument': 'snowmicropen'}
     UploaderClass = UploadProfileData
     TableClass = LayerData
-    dt = datetime.datetime(2020, 1, 31, 22, 42, 14, 0, pytz.FixedOffset(-420))
+    dt = datetime.datetime(2020, 1, 31, 22, 42, 14, 0, pytz.utc)
 
     params = {
         'test_count': [dict(data_name='force', expected_count=154)],
@@ -312,10 +312,10 @@ class TestEmptyProfile(TableTestBase):
     """
 
     args = ['empty_data.csv']
-    kwargs = {'timezone': 'MST'}
+    kwargs = {'in_timezone': 'MST'}
     UploaderClass = UploadProfileData
     TableClass = LayerData
-    dt = datetime.datetime(2020, 2, 5, 13, 40, 0, 0,  pytz.FixedOffset(-360))
+    dt = datetime.datetime(2020, 2, 5, 18, 40, 0, 0,  pytz.utc)
 
     params = {'test_count': [dict(data_name='hand_hardness', expected_count=0)],
               'test_value': [dict(data_name='hand_hardness', attribute_to_check='value', filter_attribute='depth',

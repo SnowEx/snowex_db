@@ -31,31 +31,33 @@ def test_cardinal_to_degrees_value_error():
 
 mst = pytz.timezone('US/Mountain')
 this_day = date(year=2020, month=1, day=1)
-this_time = time(hour=0, tzinfo=mst)
+this_time = time(hour=7, tzinfo=pytz.utc)
 
 
-@pytest.mark.parametrize("data, in_tz, expected_date, expected_time",
-                         [({'date/time': '2020-01-01-00:00'}, None, this_day, this_time),
-                          ({'date/local_time': '2020-01-01-00:00'}, None, this_day, this_time),
-                          ({'date': '2020-01-01', 'time': '00:00'}, None, this_day, this_time),
-                          # Test converting of the UTC GPR format which assumes the input tz is UTC
-                          ({'utcyear': 2020, 'utcdoy': 1, 'utctod': '070000.00'}, None, this_day, this_time),
-                          # Test handling the milli seconds
-                          ({'utcyear': 2019, 'utcdoy': 35, 'utctod': 214317.222}, None, date(year=2019, month=2, day=4),
-                           time(hour=14, minute=43, second=17, microsecond=222000, tzinfo=mst)),
-                          # Test parsing of the new GPR data time on NSIDC
-                          ({'date': '012820', 'time': '161549.557'}, 'UTC', date(year=2020, month=1, day=28),
-                           time(hour=9, minute=15, second=49, microsecond=557000, tzinfo=mst)),
-                          ({'Date&Time': '1/27/2020 11:00'}, 'US/Mountain', date(year=2020, month=1, day=27),
-                           time(hour=11, tzinfo=mst)),
-                          ({'date': '1/27/2020'}, None, date(year=2020, month=1, day=27),
-                           time(hour=0))
-                          ])
+@pytest.mark.parametrize("data, in_tz, expected_date, expected_time", [
+    ({'date/time': '2020-01-01-00:00'}, 'US/Mountain', this_day, this_time),
+    ({'date/local_time': '2020-01-01-00:00'}, 'US/Mountain', this_day, this_time),
+    ({'date': '2020-01-01', 'time': '00:00'}, 'US/Mountain', this_day, this_time),
+    # Test converting of the UTC GPR format which assumes the input tz is UTC
+    ({'utcyear': 2020, 'utcdoy': 1, 'utctod': '070000.00'}, 'UTC', this_day, this_time),
+    # Test handling the milli seconds
+    ({'utcyear': 2019, 'utcdoy': 35, 'utctod': 214317.222}, 'UTC', date(year=2019, month=2, day=4),
+     time(hour=21, minute=43, second=17, microsecond=222000, tzinfo=pytz.UTC)),
+    # Test parsing of the new GPR data time on NSIDC
+    ({'date': '012820', 'time': '161549.557'}, 'UTC', date(year=2020, month=1, day=28),
+     time(hour=16, minute=15, second=49, microsecond=557000, tzinfo=pytz.UTC)),
+    ({'Date&Time': '1/27/2020 11:00'}, 'US/Mountain', date(year=2020, month=1, day=27),
+     time(hour=18, tzinfo=pytz.utc)),
+    ({'date': '1/27/2020'}, 'US/Pacific', date(year=2020, month=1, day=27),
+     time(hour=8, tzinfo=pytz.utc)),
+    ({'date/local standard time': '2019-12-20T13:00'}, 'US/Pacific', date(2019, 12, 20),
+     time(hour=21, minute=0, tzinfo=pytz.utc)),
+])
 def test_add_date_time_keys(data, in_tz, expected_date, expected_time):
     """
     Test that the date and time keys can be added from various scenarios
     """
-    d = add_date_time_keys(data, in_timezone=in_tz, out_timezone='US/Mountain')
+    d = add_date_time_keys(data, in_timezone=in_tz, out_timezone='UTC')
     assert d['date'] == expected_date
     assert d['time'] == expected_time
 
@@ -108,10 +110,10 @@ def test_avg_from_multi_sample(layer, name, expected):
 
 
 @pytest.mark.parametrize('data_name, expected', [
-    ('amplitude of pass 1', 'Overpass Duration: 2020-01-01 10:00:00 - 2020-01-01 12:00:00 (MST)'),
+    ('amplitude of pass 1', 'Overpass Duration: 2020-01-01 10:00:00 - 2020-01-01 12:00:00 (UTC)'),
     ('correlation',
-     '1st Overpass Duration: 2020-01-01 10:00:00 - 2020-01-01 12:00:00 (MST), 2nd Overpass Duration 2020-02-01 '
-     '10:00:00 - 2020-02-01 12:00:00 (MST)'),
+     '1st Overpass Duration: 2020-01-01 10:00:00 - 2020-01-01 12:00:00 (UTC), 2nd Overpass Duration 2020-02-01 '
+     '10:00:00 - 2020-02-01 12:00:00 (UTC)'),
 
 ])
 def test_get_InSar_flight_comment(data_name, expected):
@@ -139,4 +141,3 @@ def test_get_InSar_flight_comment(data_name, expected):
 def test_manage_utm_zone(info, expected_zone):
     result = manage_utm_zone(info)
     assert result['utm_zone'] == expected_zone
-

@@ -135,7 +135,7 @@ def test_line_is_header(line, header_sep, header_indicator, previous_alpha_ratio
     # No matches, so retain original info
     (['avg_density'], {'dummy': 'dummy_1'}, ['avg_density']),
     # Test dictionary replacement
-    ({'surveyors': 'MJ'}, {'surveyors': 'observers'}, {'observers': 'MJ'}),
+    ({'observers': 'MJ'}, {'observers': 'observers'}, {'observers': 'MJ'}),
     # Test plain string replacement
     ('twt', {'twt': 'two_way_travel'}, 'two_way_travel'),
 

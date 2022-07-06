@@ -10,12 +10,12 @@ import glob
 from os import listdir
 from os.path import abspath, basename, join, relpath
 
-from snowex_db.batch import UploadProfileBatch
+from snowex_db.batch import UploadProfileBatch, UploadSiteDetailsBatch
 
 
 def main():
-
-    errors = 0
+    debug = True
+    doi = "https://doi.org/10.5067/DUD2VZEVBJ7S"
 
     # Obtain a list of Grand mesa pits
     data_dir = abspath('../download/data/SNOWEX/SNEX20_GM_SP.001')
@@ -26,17 +26,29 @@ def main():
     # Grab all the site details files
     sites = glob.glob(join(data_dir, '*/*site*.csv'))
     summaries = glob.glob(join(data_dir, '*/*Summary*.csv'))
+
     # Remove the site details from the total file list to get only the
     profiles = list(set(filenames) - set(sites) - set(summaries))
 
-    # Submit all profiles associated with pit at a time
+    # Submit all profiles
     b = UploadProfileBatch(
         filenames=profiles,
-        debug=True,
-        doi="https://doi.org/10.5067/DUD2VZEVBJ7S")
+        debug=debug,
+        doi=doi,
+        in_timezone='MST'
+    )
     b.push()
 
-    return len(b.errors)
+    # Upload all the site data
+    s = UploadSiteDetailsBatch(
+        sites,
+        debug=debug,
+        doi=doi,
+        in_timezone='MST'
+    )
+    s.push()
+
+    return len(b.errors) + len(s.errors)
 
 
 if __name__ == '__main__':

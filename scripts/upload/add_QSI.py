@@ -86,10 +86,11 @@ def main():
         'epsg': 26912,
 
         # Add these attributes to the db entry
-        'surveyors': 'QSI',
+        'observers': 'QSI',
         'instrument': 'lidar',
         'site_name': 'Grand Mesa',
-        'units': 'meters'
+        'units': 'meters',
+        'in_timezone': 'MST'
     }
 
     # descriptions of the two flights

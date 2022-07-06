@@ -21,7 +21,9 @@ def main():
     b = UploadProfileBatch(
         filenames,
         debug=False,
-        doi="https://doi.org/10.5067/SNMM6NGGKWIT")
+        doi="https://doi.org/10.5067/SNMM6NGGKWIT",
+        in_timezone='MST'
+    )
 
     # Submit to the db
     b.push()

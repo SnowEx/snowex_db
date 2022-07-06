@@ -86,7 +86,7 @@ def read_InSar_annotation(ann_file):
         for timing in ['start', 'stop']:
             key = '{} time of acquisition for pass {}'.format(timing, pass_num)
             dt = pd.to_datetime(data[key]['value'])
-            dt = dt.astimezone(pytz.timezone('MST'))
+            dt = dt.astimezone(pytz.timezone('UTC'))
             data[key]['value'] = dt
 
     return data
@@ -226,8 +226,8 @@ class SMPMeasurementLog(object):
                     names
         """
         new_df = df.copy()
-        new_df['surveyors'] = \
-            new_df['surveyors'].apply(lambda x: self.observer_map[x])
+        new_df['observers'] = \
+            new_df['observers'].apply(lambda x: self.observer_map[x])
         return new_df
 
     def interpret_sample_strategy(self, df):
@@ -312,19 +312,22 @@ class DataHeader(object):
               'notes': 'site_notes',
               'sample_top_height': 'depth',
               'deq': 'equivalent_diameter',
-              'operator': 'surveyors',
-              'observer': 'surveyors',
+              'operator': 'observers',
+              'surveyors': 'observers',
+              'observer': 'observers',
               'total_snow_depth': 'total_depth',
               'smp_serial_number': 'instrument',
               'lat': 'latitude',
               'long': 'longitude',
               'lon': 'longitude',
               'twt': 'two_way_travel',
+              'utmzone': 'utm_zone',
               'measurement_tool': 'instrument',
               'avgdensity': 'density',
               'avg_density': 'density',
               'dielectric_constant': 'permittivity',
-              'flag': 'flags'
+              'flag': 'flags',
+              'hs': 'depth'
               }
 
     # Known possible profile types anything not in here will throw an error
@@ -335,9 +338,10 @@ class DataHeader(object):
                             'manual_wetness', 'two_way_travel', 'depth', 'swe']
 
     # Defaults to keywords arguments
-    defaults = {'in_timezone': 'MST',
-                'out_timezone': 'MST',
-                'epsg': 26912,
+    defaults = {
+                'in_timezone': None,
+                'out_timezone': 'UTC',
+                'epsg': None,
                 'header_sep': ',',
                 'northern_hemisphere': True,
                 'depth_is_metadata': True}
@@ -361,6 +365,13 @@ class DataHeader(object):
 
         self.extra_header = assign_default_kwargs(
             self, kwargs, self.defaults, leave=['epsg'])
+
+        # Validate that an intentionally good in timezone was given
+        in_timezone = kwargs.get('in_timezone')
+        if in_timezone is None or "local" in in_timezone.lower():
+            raise ValueError("A valid in_timezone was not provided")
+        else:
+            self.in_timezone = in_timezone
 
         self.log.info('Interpreting metadata in {}'.format(filename))
 
@@ -449,7 +460,7 @@ class DataHeader(object):
             if i == 0:
                 previous = get_alpha_ratio(lines[i])
             else:
-                previous = get_alpha_ratio(lines[i-1])
+                previous = get_alpha_ratio(lines[i - 1])
 
             if line_is_header(l, expected_columns=n_columns,
                               header_indicator=header_indicator,
@@ -703,12 +714,21 @@ class DataHeader(object):
         original_zone = info['utm_zone']
         info = reproject_point_in_dict(
             info, is_northern=self.northern_hemisphere)
+
         if info['utm_zone'] != original_zone and original_zone is not None:
             self.log.warning(f'Overwriting UTM zone in the header from {original_zone} to {info["utm_zone"]}')
+
+        self.epsg = info['epsg']
 
         # Check for point data which will contain this in the data not the
         # header
         if not is_point_data(self.columns):
+            if self.epsg is None:
+                raise RuntimeError("EPSG was not determined from the header nor was it "
+                                   "passed as a kwarg to uploader. If there is no "
+                                   "projection information in the file please "
+                                   "prescribe an epsg value")
+
             info = add_geom(info, self.epsg)
 
         # If columns or info does not have coordinates raise an error

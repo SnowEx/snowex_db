@@ -2,7 +2,6 @@
 Test all things from the metadata.py file
 """
 from os.path import abspath, dirname, join
-
 import numpy as np
 import pandas as pd
 import pytest
@@ -10,7 +9,7 @@ import pytz
 
 from snowex_db.metadata import *
 
-dt = datetime.datetime(2020, 2, 5, 13, 30, 0, 0, pytz.timezone('MST'))
+dt = datetime.datetime(2020, 2, 5, 20, 30, 0, 0, pytz.timezone('UTC'))
 info = {'site_name': 'Grand Mesa',
         'site_id': '1N20',
         'pit_id': 'COGM1N20_20200205',
@@ -26,7 +25,7 @@ info = {'site_name': 'Grand Mesa',
 
 class DataHeaderTestBase:
     depth_is_metadata = True
-    kwargs = {}
+    kwargs = {'in_timezone': 'US/Mountain'}
 
     def setup_class(self):
         """
@@ -147,7 +146,7 @@ class TestLWCHeaderB(DataHeaderTestBase):
     Class for testing the other type of LWC headers that contain two multi sampled
     profiles.
     """
-    dt = datetime.datetime(2020, 3, 12, 14, 45, 0, 0, pytz.timezone('MST'))
+    dt = datetime.datetime(2020, 3, 12, 20, 45, 0, 0, pytz.timezone('UTC'))
 
     info = {
         'site_name': 'Grand Mesa',
@@ -196,7 +195,7 @@ class TestTemperatureHeader(DataHeaderTestBase):
 
 class TestSSAHeader(DataHeaderTestBase):
     def setup_class(self):
-        dt = datetime.datetime(2020, 2, 5, 13, 40, 0, 0, pytz.timezone('MST'))
+        dt = datetime.datetime(2020, 2, 5, 20, 40, 0, 0, pytz.timezone('UTC'))
 
         self.file = 'SSA.csv'
         self.data_names = ['specific_surface_area', 'reflectance', 'sample_signal', 'equivalent_diameter']
@@ -205,7 +204,7 @@ class TestSSAHeader(DataHeaderTestBase):
         self.info = info.copy()
         self.info['instrument'] = 'IS3-SP-11-01F'
         self.info['profile_id'] = 'N/A'
-        self.info['surveyors'] = 'Juha Lemmetyinen'
+        self.info['observers'] = 'Juha Lemmetyinen'
         self.info['timing'] = 'N/A'
         self.info['site_notes'] = 'layer at 15 and 20 cm had exact same SSA'
         self.info['total_depth'] = '80'
@@ -220,7 +219,7 @@ class TestSiteDetailsHeader(DataHeaderTestBase):
         self.columns = None
         self.multi_sample_profiles = []
         self.info = info.copy()
-        self.info['surveyors'] = "Chris Hiemstra, Hans Lievens"
+        self.info['observers'] = "Chris Hiemstra, Hans Lievens"
         self.info['weather_description'] = 'Sunny, cold, gusts'
         self.info['ground_roughness'] = 'rough, rocks in places'
         self.info['precip'] = None
@@ -269,7 +268,7 @@ class TestGPRHeader(DataHeaderTestBase):
     def setup_class(self):
         self.file = 'gpr.csv'
         self.data_names = ['density', 'depth', 'swe', 'two_way_travel']
-        self.columns = ['utcyear', 'utcdoy', 'utctod', 'utmzone', 'easting',
+        self.columns = ['utcyear', 'utcdoy', 'utctod', 'utm_zone', 'easting',
                         'northing', 'elevation', 'avgvelocity'] + self.data_names
 
         self.multi_sample_profiles = []
@@ -298,7 +297,7 @@ class TestSMPHeader(DataHeaderTestBase):
         self.name = self.file.split('.')[0]
 
         self.dt = datetime.datetime(
-            2020, 2, 1, 16, 16, 49, 0, pytz.timezone('MST')
+            2020, 2, 1, 23, 16, 49, 0, pytz.timezone('UTC')
         )
 
         self.info = {'date': self.dt.date(),
@@ -326,18 +325,18 @@ class TestSMPMeasurementLog():
         self.df = self.smp_log.df
 
     @pytest.mark.parametrize('column, index, expected', [
-        ('surveyors', -1, 'HP Marshall'),
-        ('surveyors', 0, 'Ioanna Merkouriadi'),
+        ('observers', -1, 'HP Marshall'),
+        ('observers', 0, 'Ioanna Merkouriadi'),
     ])
     def test_value(self, column, index, expected):
         """
-        Test surveyorss initials are renamed correctly
+        Test observerss initials are renamed correctly
         """
         assert self.df[column].iloc[index] == expected
 
     @pytest.mark.parametrize("count_column, expected_count", [
-        # Assert there are 2 surveyors listed in the log
-        ('surveyors', 2),
+        # Assert there are 2 observers listed in the log
+        ('observers', 2),
         # Assert there are two dates in the log
         ('date', 2),
         # Assert there is 4 suffixes in the log (e.g. all of them)
@@ -345,7 +344,7 @@ class TestSMPMeasurementLog():
     ])
     def test_unique_count(self, count_column, expected_count):
         """
-        Test surveyorss initials are renamed correctly
+        Test observerss initials are renamed correctly
         """
         assert len((self.df[count_column]).unique()) == expected_count
 
@@ -398,7 +397,7 @@ class TestReadInSarAnnotation():
 
 
 class TestHardHeader(DataHeaderTestBase):
-    kwargs = {'epsg': 26913}
+    kwargs = {'epsg': 26913, 'in_timezone': 'MST'}
 
     def setup_class(self):
         self.file = 'hard_header.csv'
@@ -408,13 +407,38 @@ class TestHardHeader(DataHeaderTestBase):
         self.info = dict(site_name='East River',
                          site_id='Forest 14',
                          date=datetime.date(2020, 2, 1),
-                         time=datetime.time(13, 0, tzinfo=pytz.timezone('MST')),
+                         time=datetime.time(20, 0, tzinfo=pytz.timezone('UTC')),
                          utm_zone=13,
                          easting=328570.77309727005,
                          northing=4310748.280792163,
                          latitude=38.92892,
                          longitude=-106.97768,
                          flags=None)
+
+        # Depth (cm),Temperature (deg C)
+
+        super().setup_class(self)
+
+
+class TestPerimeter(DataHeaderTestBase):
+    kwargs = {'in_timezone': 'US/Pacific'}
+    depth_is_metadata = False
+
+    def setup_class(self):
+        self.file = 'perimeters.csv'
+        self.data_names = ['depth']
+        self.columns = ['depth'] + self.data_names
+        self.multi_sample_profiles = []
+        self.info = dict(site_name='American River Basin',
+                         site_id='Caples Lake',
+                         date=datetime.date(2019, 12, 20),
+                         time=datetime.time(21, 0, tzinfo=pytz.timezone('UTC')),
+                         utm_zone=10,
+                         easting=757215.9386982679,
+                         northing=4288786.9467831645,
+                         latitude=38.71033,
+                         longitude=-120.04187,
+                         flags="BDG, MW")
 
         # Depth (cm),Temperature (deg C)
 

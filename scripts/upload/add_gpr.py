@@ -26,10 +26,10 @@ def main():
 
         # Constant Metadata for the GPR data
         'site_name': 'Grand Mesa',
-        'surveyors': 'Tate Meehan',
+        'observers': 'Tate Meehan',
         'instrument': 'pulse EKKO Pro multi-polarization 1 GHz GPR',
         'in_timezone': 'UTC',
-        'out_timezone': 'MST',
+        'out_timezone': 'UTC',
         'epsg': 26912,
         'doi': 'https://doi.org/10.5067/Q2LFK0QSVGS2'
     }

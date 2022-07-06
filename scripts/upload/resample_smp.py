@@ -16,10 +16,9 @@ Usage:
 import glob
 import shutil
 from os import mkdir
-from os.path import abspath, basename, isdir, join
-
-#import matplotlib.pyplot as plt
+from os.path import abspath, basename, isdir, join, isfile
 import pandas as pd
+import argparse
 
 from snowex_db.utilities import get_logger, read_n_lines
 
@@ -115,6 +114,7 @@ def resample_batch(filenames, output, downsample,
     log = get_logger('SMP Resample')
 
     if clean_on_start:
+        log.warning(f'Removing {output}')
         shutil.rmtree(output)
 
     if not isdir(output):
@@ -127,52 +127,66 @@ def resample_batch(filenames, output, downsample,
     # different folder
     for f in filenames:
         base_f = basename(f)
-
-        log.info('Resampling {}'.format(base_f))
-
-        # Open the file for the header and grab it as a list
-        header = read_n_lines(f, header_pos)
-
-        # Open the file as a dataframe excluding the header
-        df = open_df(f, header_pos=header_pos)
-
-        # Grab every 100th sample
-        new_df = subsample(df, downsample)
-
-        # Reduce the precision of the original data without much effect
-        new_df = new_df.round({'Depth (mm)': 1, 'Force (N)': 3})
         out_f = join(output, base_f)
 
-        # Write out the original header add some information
-        with open(out_f, 'w') as fp:
+        if not isfile(out_f):
+            log.info('Resampling {}'.format(base_f))
 
-            # Rename the original total samples
-            original_samples = header[-1].split(":")[-1]
-            header[-1] = '# Original Total Samples: {}'.format(
-                original_samples)
+            # Open the file for the header and grab it as a list
+            header = read_n_lines(f, header_pos)
 
-            # Add a header for the fact this data is subsampled
-            header.append(
-                '# Data Subsampled To: Every {:d}th\n'.format(downsample))
-            lines = ''.join(header)
-            fp.write(lines)
-            fp.close()
+            # Open the file as a dataframe excluding the header
+            df = open_df(f, header_pos=header_pos)
 
-        new_df.to_csv(out_f, index_label='Original Index', mode='a')
+            # Grab every 100th sample
+            new_df = subsample(df, downsample)
+
+            # Reduce the precision of the original data without much effect
+            new_df = new_df.round({'Depth (mm)': 1, 'Force (N)': 3})
+
+            # Write out the original header add some information
+            with open(out_f, 'w') as fp:
+
+                # Rename the original total samples
+                original_samples = header[-1].split(":")[-1]
+                header[-1] = '# Original Total Samples: {}'.format(
+                    original_samples)
+
+                # Add a header for the fact this data is subsampled
+                header.append(
+                    '# Data Subsampled To: Every {:d}th\n'.format(downsample))
+                # Add a header of column names with a # in front
+                header.append('# ' + ', '.join(new_df.columns) + '\n')
+
+                lines = ''.join(header)
+                fp.write(lines)
+                fp.close()
+                new_df.to_csv(out_f, index_label='Original Index', mode='a', header=False)
+
+        else:
+            log.info('Skipping {} already resampled.'.format(base_f))
 
 
 def main():
 
+    parser = argparse.ArgumentParser(description='Script to resample the smp profiles')
+
+    parser.add_argument('--overwrite', dest='overwrite', action='store_true',
+                        help='Whether or not to bypass the overwriting prompt and auto overwrite everything.')
+    parser.add_argument('--downsample', dest='downsample', default=100,
+                        help='N points to resample the smp profile to')
+
+    args = parser.parse_args()
+
     # comparison flag produces the figures to show the impact of the resampling
     making_comparison = False
-    downsample = 100
     header_pos = 6
     log = get_logger('SMP Resample')
     log.info('Preparing to resample smp profiles for uploading...')
 
     # Obtain a list of Grand mesa smp files
     directory = abspath('../download/data/SNOWEX/SNEX20_SMP.001')
-    filenames = glob.glob(join(directory, '*/*.CSV'))
+    filenames = glob.glob(join(directory, '2020*/*.CSV'))
 
     # Are we making the plot to show the comparison of the effects?
     if making_comparison:
@@ -181,28 +195,24 @@ def main():
     else:
         # output location
         output = join(directory, 'csv_resampled')
+        overwrite = False
 
-        if isdir(output):
-            ans = input('\nWARNING! You are about overwrite {} previously resampled files '
-                        'located at {}!\nPress Y to continue and any other '
-                        'key to abort: '.format(len(filenames), output))
+        # Prompt user if not using overwrite flag and the output folder exists.
+        if isdir(output) and not args.overwrite:
+            ans = input('\nWould you like to overwrite {} files in {} ? (Y/N)\n'.format(len(filenames), output))
+            overwrite = ans.lower() == 'y'
 
-            if ans.lower() == 'y':
-                resample_batch(
-                    filenames,
-                    output,
-                    downsample,
-                    header_pos=header_pos)
-            else:
-                log.warning(
-                    'Skipping resample and overwriting of resampled files...')
-        else:
-            mkdir(output)
-            resample_batch(
-                filenames,
-                output,
-                downsample,
-                header_pos=header_pos)
+        # Skip prompt if using overwrite flag and files exist
+        elif args.overwrite:
+            overwrite = args.overwrite
+
+        # Resample if any logic resulted in (re)writing files
+        resample_batch(
+            filenames,
+            output,
+            args.downsample,
+            header_pos=header_pos,
+            clean_on_start=overwrite)
 
 
 if __name__ == '__main__':

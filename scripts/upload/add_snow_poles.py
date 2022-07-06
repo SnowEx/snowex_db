@@ -30,7 +30,7 @@ def main():
         depth_is_metadata=False,
         units='cm',
         site_name=site_name,
-        surveyors='Catherine Breen, Cassie Lumbrazo',
+        observers='Catherine Breen, Cassie Lumbrazo',
         instrument='camera',
         in_timezone='MST',
         epsg=26912,

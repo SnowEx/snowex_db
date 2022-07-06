@@ -209,7 +209,9 @@ class UploadProfileData:
             else:
                 self.log.warning('File contains header but no data which is sometimes expected. Skipping db submission.')
 
-        self.log.debug('Profile Submitted!\n')
+        if self.data_names:
+            if not df.empty:
+                self.log.debug('Profile Submitted!\n')
 
 
 class PointDataCSV(object):
@@ -224,15 +226,16 @@ class PointDataCSV(object):
     units = {'depth': 'cm', 'two_way_travel': 'ns', 'swe': 'mm',
              'density': 'kg/m^3'}
 
-    # Class attributes to apply
-    defaults = {'debug': True, 'incoming_tz': 'MST'}
+    # Class attributes to apply defaults
+    defaults = {'debug': True,
+                'in_timezone': None}
 
     def __init__(self, filename, **kwargs):
         """
         Args:
             filename: Path to a csv of data to upload as point data
             debug: Boolean indicating whether to print out debug info
-            incoming_tz: Pytz valid timezone for the incoming data
+            in_timezone: Pytz valid timezone for the incoming data
         """
 
         self.log = get_logger(__name__)
@@ -243,7 +246,8 @@ class PointDataCSV(object):
         # Use the files creation date as the date accessed for NSIDC citation
         self.date_accessed = get_file_creation_date(filename)
 
-        self.hdr = DataHeader(filename, **self.kwargs)
+        # NOTE: This will error if in_timezone is not provided
+        self.hdr = DataHeader(filename, in_timezone=kwargs['in_timezone'], **self.kwargs)
         self.df = self._read(filename)
 
         # Performance tracking
@@ -270,17 +274,37 @@ class PointDataCSV(object):
 
         # Add date and time keys
         self.log.info('Adding date and time to metadata...')
-        df = df.apply(lambda data: add_date_time_keys(
-            data, in_timezone=self.incoming_tz), axis=1)
+        # Date/time was only provided in the header
+        if 'date' in self.hdr.info.keys() and 'date' not in df.columns:
+            df['date'] = self.hdr.info['date']
+            df['time'] = self.hdr.info['time']
+        else:
+            # date/time was provided in the data
+            df = df.apply(lambda data: add_date_time_keys(
+                data, in_timezone=self.in_timezone), axis=1)
 
         # 1. Only submit valid columns to the DB
         self.log.info('Adding valid keyword arguments to metadata...')
         valid = get_table_attributes(PointData)
 
-        # 2. Add northing/Easting if necessary
-        if 'easting' not in df.columns or 'northing' not in df.columns:
+        # 2. Add northing/Easting/latitude/longitude if necessary
+        proj_columns = ['northing', 'easting', 'latitude', 'longitude']
+        if any(k in df.columns for k in proj_columns):
             self.log.info('Adding UTM Northing/Easting to data...')
             df = df.apply(lambda row: reproject_point_in_dict(row), axis=1)
+
+        # Use header projection info
+        elif any(k in self.hdr.info.keys() for k in proj_columns):
+            for k in proj_columns:
+                df[k] = self.hdr.info[k]
+
+        # Add geometry
+        df['geom'] = df.apply(lambda row: WKTElement(
+            'POINT({} {})'.format(
+                row['easting'],
+                row['northing']),
+                srid=self.hdr.info['epsg']), axis=1)
+
 
         # 2. Add all kwargs that were valid
         for v in valid:
@@ -296,7 +320,7 @@ class PointDataCSV(object):
         drops = \
             [c for c in df.columns if c not in valid and c not in self.hdr.data_names]
         self.log.info(
-            'Dropping {} as they are not valid on the database...'.format(
+            'Dropping {} as they are not valid columns in the database...'.format(
                 ', '.join(drops)))
         df = df.drop(columns=drops)
 
@@ -323,59 +347,22 @@ class PointDataCSV(object):
 
         df = df.drop(columns=self.hdr.data_names)
 
-        # Add geometry
-        df['geom'] = df.apply(lambda row: WKTElement(
-            'POINT({} {})'.format(
-                row['easting'],
-                row['northing']),
-                srid=self.hdr.info['epsg']), axis=1)
-
         return df
 
     def submit(self, session):
         # Loop through all the entries and add them to the db
         for pt in self.hdr.data_names:
+            objects = []
             df = self.build_data(pt)
             self.log.info('Submitting {} points of {} to the database...'.format(
-                len(self.df.index), pt))
+                len(df.index), pt))
 
-            #bar = progressbar.ProgressBar(max_value=len(self.df.index))
-            objects = []
             for i, row in df.iterrows():
                 d = PointData(**row)
                 objects.append(d)
             session.bulk_save_objects(objects)
             session.commit()
-        # # Error reporting
-        # if len(self.errors) > 0:
-        #     self.log.error(
-        #         '{} points failed to upload.'.format(len(self.errors)))
-        #     self.log.error('The following point indicies failed with '
-        #                    'their corresponding errors:')
-        #
-        #     for e in self.errors:
-        #         self.log.error('\t{} - {}'.format(e[0], e[1]))
-
-    def add_one(self, session, row):
-        """
-        Uploads one point
-        """
-        # Create the data structure to pass into the interacting class
-        # attributes
-        data = row.copy()
-
-        # Add geometry
-        data['geom'] = WKTElement(
-            'POINT({} {})'.format(
-                data['easting'],
-                data['northing']),
-            srid=self.hdr.info['epsg'])
-
-        # Create db interaction, pass data as kwargs to class submit data
-        sd = PointData(**data)
-        session.add(sd)
-        session.commit()
-        self.points_uploaded += 1
+            self.points_uploaded += len(objects)
 
 
 class COGHandler:
@@ -517,7 +504,7 @@ class UploadRaster(object):
     """
 
     defaults = {
-        'epsg': 26912,
+        'epsg': None,
         'no_data': None,
         'use_s3': True  # boolean whether or not we're storing files in S3
     }

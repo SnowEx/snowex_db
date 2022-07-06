@@ -47,12 +47,13 @@ def main():
         'epsg': 26912,
 
         # Metadata
-        'surveyors': 'UAVSAR team, JPL',
+        'observers': 'UAVSAR team, JPL',
         'instrument': 'UAVSAR, L-band InSAR',
         'site_name': 'Grand Mesa',
         'units': None,  # Add from the Annotation file
         'description': '',  # Added from the annotation file
-        'doi': "https://asf.alaska.edu/doi/uavsar/#R0ARICRBAKYE"
+        'doi': "https://asf.alaska.edu/doi/uavsar/#R0ARICRBAKYE",
+        'in_timezone': 'MST'
     }
 
     # Expand the paths
@@ -85,7 +86,7 @@ def main():
         ############################### Idaho - Lowman ####################################
         # Make adjustments to metadata for lowman files
         data['site_name'] = 'idaho'
-        data['epsg'] = 29611
+        data['epsg'] = 26911
 
         # Grab all the lowman and reynolds annotation files
         ann_files = glob.glob(join(downloads, 'lowman_*.ann'))
@@ -108,7 +109,7 @@ def main():
         ############################## Idaho - Reynolds ####################################
         # Make adjustments to metadata for lowman files
         data['site_name'] = 'idaho'
-        data['epsg'] = 29611
+        data['epsg'] = 26911
 
         # Grab all the lowman and reynolds annotation files
         ann_files = glob.glob(join(downloads, 'silver_*.ann'))

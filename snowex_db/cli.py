@@ -10,7 +10,7 @@ def clear_dataset():
 
     # Add tool arguments
     parser = argparse.ArgumentParser(
-        description='Delete sections of the database by dataset name and surveyors')
+        description='Delete sections of the database by dataset name and observers')
     parser.add_argument('table_class', metavar='C', type=str, choices=['ImageData', 'SiteData', 'PointData', 'LayerData'],
                         help='TableClass name to query')
 
@@ -22,10 +22,10 @@ def clear_dataset():
         help='Names of the data to delete')
 
     parser.add_argument(
-        '--surveyors',
+        '--observers',
         '-s',
-        dest='surveyors',
-        help='Name of the surveyors to filter the data to delete')
+        dest='observers',
+        help='Name of the observers to filter the data to delete')
 
     parser.add_argument(
         '--date',
@@ -83,10 +83,10 @@ def clear_dataset():
                     args.types)))
         q = q.filter(TableClass.type.in_(args.types))
 
-    # Filter by surveyor
-    if args.surveyors is not None:
-        print('Filtering results to surveyors {}...'.format(args.surveyors))
-        q = q.filter(TableClass.surveyors == args.surveyors)
+    # Filter by observer
+    if args.observers is not None:
+        print('Filtering results to observers {}...'.format(args.observers))
+        q = q.filter(TableClass.observers == args.observers)
 
     # Filter by date
     if args.date is not None:

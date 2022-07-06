@@ -163,11 +163,18 @@ def manage_utm_zone(info):
     """
     if 'utm_zone' in info.keys():
         info['utm_zone'] = int(''.join([c for c in info['utm_zone'] if c.isnumeric()]))
+        info['epsg'] = int(f"269{info['utm_zone']}")
+    elif 'epsg' in info.keys():
+        if info['epsg'] is not None:
+            info['utm_zone'] = int(str(info['epsg'])[-2:])
     else:
         info['utm_zone'] = None
+        info['epsg'] = None
+
     return info
 
-def add_date_time_keys(data, in_timezone=None, out_timezone='MST'):
+
+def add_date_time_keys(data, in_timezone=None, out_timezone='UTC'):
     """
     Convert string info from a date/time keys in a dictionary to date and time
     objects and assign it back to the dictionary as date and time
@@ -192,7 +199,7 @@ def add_date_time_keys(data, in_timezone=None, out_timezone='MST'):
 
     # Otherwise assume incoming data is the same timezone
     else:
-        in_tz = out_tz
+        raise ValueError("We did not recieve a valid in_timezone")
 
     # Look for a single header entry for date and time.
     for k in data.keys():
@@ -240,10 +247,6 @@ def add_date_time_keys(data, in_timezone=None, out_timezone='MST'):
             in_timezone = None
 
             d = d.astimezone(out_tz)
-
-            # Remove them
-            # for v in ['utcyear', 'utcdoy', 'utctod']:
-            #     del data[v]
 
         else:
             raise ValueError(
@@ -372,7 +375,7 @@ def get_InSar_flight_comment(data_name, desc):
     Returns:
         comment: A comment for the database for the uavsar file uploaded
     """
-    tz_str = 'MST'
+    tz_str = 'UTC'
     tz = pytz.timezone(tz_str)
     blank = '{} time of acquisition for pass {}'
 
@@ -381,21 +384,22 @@ def get_InSar_flight_comment(data_name, desc):
     if 'amplitude' in data_name:
         pass_num = data_name.split(' ')[-1]
         passes = [pass_num]
-        comment = 'Overpass Duration: {} {} - {} {} (MST)'
+        comment = 'Overpass Duration: {} {} - {} {} (UTC)'
 
     # Build a comment for both flights
     else:
         # Start stop times
         passes = ['1', '2']
-        comment = '1st Overpass Duration: {} {} - {} {} (MST), '
-        comment += '2nd Overpass Duration {} {} - {} {} (MST)'
+        comment = '1st Overpass Duration: {} {} - {} {} (UTC), '
+        comment += '2nd Overpass Duration {} {} - {} {} (UTC)'
 
     # Format the comment strings given the overpasses,
     times = []
     for n in passes:
         for timing in ['start', 'stop']:
             key = blank.format(timing, n)
-            dt = desc[key]['value'].replace(tzinfo=tz)
+            # Convert comment to UTC time
+            dt = desc[key]['value'].tz_convert(tz)
 
             times.append(dt.date())
             times.append(dt.time())
