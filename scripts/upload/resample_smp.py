@@ -125,7 +125,7 @@ def resample_batch(filenames, output, downsample,
 
     # Loop over all the files, name them using the same name just using a
     # different folder
-    for f in filenames[:20]:
+    for f in filenames:
         base_f = basename(f)
 
         log.info('Resampling {}'.format(base_f))
