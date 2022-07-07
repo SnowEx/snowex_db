@@ -3,3 +3,4 @@ https://n5eil01u.ecs.nsidc.org/SNOWEX/SNEX20_BSU_GPR.001/
 https://n5eil01u.ecs.nsidc.org/SNOWEX/SNEX20_GM_SP.001/
 https://n5eil01u.ecs.nsidc.org/SNOWEX/SNEX20_SMP.001/
 https://n5eil01u.ecs.nsidc.org/SNOWEX/SNEX20_SD.001/
+https://daacdata.apps.nsidc.org/pub/DATASETS/nsidc0768_global_seasonal_snow_classification_v01/SnowClass_NA_300m_10.0arcsec_2021_v01.0.tif
