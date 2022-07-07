@@ -98,7 +98,7 @@ class UploadProfileData:
             df['depth'] = new_depth
 
             delta = abs(df['depth'].max() - df['depth'].min())
-            self.log.info('File contains {} profiles each with {} layers across '
+            self.log.info('File contains {} profiles each with {:,} layers across '
                           '{:0.2f} cm'.format(len(self.hdr.data_names), len(df), delta))
         return df
 
@@ -354,7 +354,7 @@ class PointDataCSV(object):
         for pt in self.hdr.data_names:
             objects = []
             df = self.build_data(pt)
-            self.log.info('Submitting {} points of {} to the database...'.format(
+            self.log.info('Submitting {:,} points of {} to the database...'.format(
                 len(df.index), pt))
 
             for i, row in df.iterrows():
@@ -543,7 +543,7 @@ class UploadRaster(object):
         if len(tiles) > 1:
             # -1 because the first element is not a
             self.log.info(
-                'Raster is split into {} tiles for uploading...'.format(
+                'Raster is split into {:,} tiles for uploading...'.format(
                     len(tiles)))
 
         # Allow for tiling, the first split is always psql statement we don't
