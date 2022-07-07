@@ -279,6 +279,26 @@ class TestGPRHeader(DataHeaderTestBase):
         super().setup_class(self)
 
 
+class TestUNMGPRHeader(DataHeaderTestBase):
+    """
+    Test the header information can be interpreted correctly in the UNM GPR data
+    """
+    depth_is_metadata = False
+
+    def setup_class(self):
+        self.file = 'unm_gpr.csv'
+        self.data_names = ['depth', 'swe', 'two_way_travel']
+        self.columns = ['date', 'time', 'utm_zone', 'easting', 'latitude','longitude',
+                        'northing', 'elevation', 'freq_mhz'] + self.data_names
+
+        self.multi_sample_profiles = []
+
+        # no header in the GPR file
+        self.info = {}
+
+        super().setup_class(self)
+
+
 class TestSMPHeader(DataHeaderTestBase):
     """
     Test interpreting an SMP header without a SMP Log file

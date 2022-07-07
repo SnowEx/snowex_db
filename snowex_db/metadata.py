@@ -332,7 +332,8 @@ class DataHeader(object):
               'swe_mm': 'swe',
               'depth_m': 'depth',
               'date_dd_mmm_yy': 'date',
-              'time_gmt': 'time'
+              'time_gmt': 'time',
+              'elev_m': 'elevation'
               }
 
     # Known possible profile types anything not in here will throw an error
