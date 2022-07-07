@@ -52,7 +52,11 @@ this_time = time(hour=7, tzinfo=pytz.utc)
      time(hour=8, tzinfo=pytz.utc)),
     ({'date/local standard time': '2019-12-20T13:00'}, 'US/Pacific', date(2019, 12, 20),
      time(hour=21, minute=0, tzinfo=pytz.utc)),
-    ({'date': '020620', 'time': 'nan'}, 'US/Mountain', date(2020, 2, 6), None)
+    # Test CSU GPR time
+    ({'date': '020620', 'time': 'nan'}, 'US/Mountain', date(2020, 2, 6), None),
+    # Test Mala GPR time
+    ({'date': '28-Jan-20', 'time': '16:07'}, 'UTC', date(2020, 1, 28), time(16,7,tzinfo=pytz.utc)),
+
 ])
 def test_add_date_time_keys(data, in_tz, expected_date, expected_time):
     """
