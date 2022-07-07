@@ -321,13 +321,19 @@ class DataHeader(object):
               'long': 'longitude',
               'lon': 'longitude',
               'twt': 'two_way_travel',
+              'twt_ns': 'two_way_travel',
               'utmzone': 'utm_zone',
               'measurement_tool': 'instrument',
               'avgdensity': 'density',
               'avg_density': 'density',
               'dielectric_constant': 'permittivity',
               'flag': 'flags',
-              'hs': 'depth'
+              'hs': 'depth',
+              'swe_mm': 'swe',
+              'depth_m': 'depth',
+              'date_dd_mmm_yy': 'date',
+              'time_gmt': 'time',
+              'elev_m': 'elevation'
               }
 
     # Known possible profile types anything not in here will throw an error
@@ -339,12 +345,12 @@ class DataHeader(object):
 
     # Defaults to keywords arguments
     defaults = {
-                'in_timezone': None,
-                'out_timezone': 'UTC',
-                'epsg': None,
-                'header_sep': ',',
-                'northern_hemisphere': True,
-                'depth_is_metadata': True}
+        'in_timezone': None,
+        'out_timezone': 'UTC',
+        'epsg': None,
+        'header_sep': ',',
+        'northern_hemisphere': True,
+        'depth_is_metadata': True}
 
     def __init__(self, filename, **kwargs):
         """

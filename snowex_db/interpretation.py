@@ -12,6 +12,7 @@ import pandas as pd
 import pytz
 
 from .utilities import get_logger
+from.string_management import parse_none
 
 
 def is_point_data(columns):
@@ -201,7 +202,7 @@ def add_date_time_keys(data, in_timezone=None, out_timezone='UTC'):
     else:
         raise ValueError("We did not recieve a valid in_timezone")
 
-    # Look for a single header entry for date and time.
+    # Look for a single header entry containing date and time.
     for k in data.keys():
         kl = k.lower()
         if 'date' in kl and 'time' in kl:
@@ -211,9 +212,18 @@ def add_date_time_keys(data, in_timezone=None, out_timezone='UTC'):
 
     # If we didn't find date/time combined.
     if d is None:
-        # Handle SMP data dates and times
+        # Handle data dates and times
         if 'date' in keys and 'time' in keys:
-            dstr = ' '.join([str(data['date']), str(data['time'])])
+            # Assume MMDDYY format
+            if len(data['date']) == 6:
+                dt = data['date']
+                # Put into YY-MM-DD
+                data['date'] = f'20{dt[-2:]}-{dt[0:2]}-{dt[2:4]}'
+                # Allow for nan time
+                data['time'] = parse_none(data['time'])
+
+            dstr = ' '.join([str(data[k]) for k in ['date', 'time']
+                            if data[k] is not None])
             d = pd.to_datetime(dstr)
         
         elif 'date' in keys:
@@ -260,7 +270,13 @@ def add_date_time_keys(data, in_timezone=None, out_timezone='UTC'):
         d.replace(tzinfo=out_tz)
 
     data['date'] = d.date()
-    data['time'] = d.timetz()
+
+    # Dont add time to a time that was nan or none
+    if 'time' not in data.keys():
+        data['time'] = d.timetz()
+    else:
+        if data['time'] is not None:
+            data['time'] = d.timetz()
 
     return data
 
