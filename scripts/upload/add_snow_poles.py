@@ -14,12 +14,8 @@ from snowex_db.upload import *
 
 
 def main():
-    # Site name
-    start = time.time()
-    site_name = 'Grand Mesa'
-
     # Read in the Grand Mesa Snow Depths Data
-    f = abspath('../download/data/SnowEx2020.snowdepth.snowstakes.alldepths_clean_v10.csv')
+    f = abspath('../download/data/SNOWEX/SNEX20_SD_TLI.001/2019.09.29/SNEX20_SD_TLI_clean.csv')
 
     # Start the Database
     db_name = 'localhost/snowex'
@@ -29,12 +25,12 @@ def main():
         f,
         depth_is_metadata=False,
         units='cm',
-        site_name=site_name,
-        observers='Catherine Breen, Cassie Lumbrazo',
+        site_name='Grand Mesa',
+        observers='Catherine Breen',
         instrument='camera',
         in_timezone='MST',
-        epsg=26912,
-        doi=None)
+        doi='https://doi.org/10.5067/14EU7OLF051V',
+        epsg=26912)
 
     csv.submit(session)
     errors = len(csv.errors)
