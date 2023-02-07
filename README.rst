@@ -23,6 +23,13 @@ Use at your own risk.  Data will change as it is QA/QC'd and the end goal is
 for all data in this database to be pulled from NSIDC.  The goal is for this
 to become a community database open to all.
 
+DOI
+---
+* SnowEx Hackweek 2022
+
+.. image:: https://zenodo.org/badge/DOI/10.5281/zenodo.7618108.svg
+   :target: https://doi.org/10.5281/zenodo.7618108
+   
 Features
 --------
 * Auto parse header information and include it in upload
