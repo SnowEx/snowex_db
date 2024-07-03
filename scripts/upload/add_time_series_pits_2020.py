@@ -43,7 +43,9 @@ def main():
     #   2019.10.24/SNEX20_TS_SP_20191024_1322_COFEJ2_data_LWC_v02.csv
 
     # Get all the date folders
-    unique_dt_olders = Path(data_dir).glob("20*.*.*")
+    unique_dt_olders = Path(
+        data_dir
+    ).expanduser().absolute().glob("20*.*.*")
     for udf in unique_dt_olders:
         # get all the csvs in the folder
         dt_folder_files = list(udf.glob("*.csv"))
@@ -73,17 +75,17 @@ def main():
 
             # Grab all the site details files
             sites = glob.glob(join(
-                data_dir, 'pits', f'*_{site_id}_*siteDetails*.csv'
+                str(udf), f'*_{site_id}_*siteDetails*.csv'
             ))
 
             # Grab all the perimeter depths and remove them for now.
             perimeter_depths = glob.glob(join(
-                data_dir, 'pits', f'*_{site_id}_*perimeterDepths*.csv'
+                str(udf), f'*_{site_id}_*perimeterDepths*.csv'
             ))
 
             # all non-gapped filled_density
             non_filled_density = glob.glob(join(
-                data_dir, 'pits', f'*_{site_id}_*_density_*.csv'
+                str(udf), f'*_{site_id}_*_density_*.csv'
             ))
 
             # Remove the site details from the total file list to get only the
