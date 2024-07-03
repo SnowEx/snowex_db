@@ -72,11 +72,6 @@ def main():
                 str(udf), f'*_{site_id}_*siteDetails*.csv'
             ))
 
-            # Grab all the perimeter depths and remove them for now.
-            perimeter_depths = glob.glob(join(
-                str(udf), f'*_{site_id}_*perimeterDepths*.csv'
-            ))
-
             # all non-gapped filled_density
             gap_filled_density = glob.glob(join(
                 str(udf), f'*_{site_id}_*_gapFilledDensity_*.csv'
@@ -84,7 +79,7 @@ def main():
 
             # Remove the site details from the total file list to get only the
             profiles = list(
-                set(filenames) - set(sites) - set(perimeter_depths) -
+                set(filenames) - set(sites) -
                 set(gap_filled_density)  # remove gap-filled denisty
             )
 
@@ -103,17 +98,6 @@ def main():
                                         in_timezone=tz)
             sd.push()
             error_msg += sd.errors
-
-            # Submit all perimeters as point data
-            with db_session(
-                'localhost/snowex', credentials='credentials.json'
-            ) as session:
-                for fp in perimeter_depths:
-                    pcsv = PointDataCSV(
-                        fp, doi=doi, debug=debug, depth_is_metadata=False,
-                        in_timezone=tz
-                    )
-                    pcsv.submit(session)
 
     for f, m in error_msg:
         print(f)
