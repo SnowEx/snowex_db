@@ -37,11 +37,6 @@ def main():
     data_dir = abspath('../download/data/SNOWEX/SNEX20_TS_SP.002/')
     error_msg = []
 
-    # OLD file name
-    #   pits/CAAMCL_20191220_1300/SNEX20_TS_SP_20191220_1300_CAAMCL_LWC_v01.csv
-    # NEW FILE NAME
-    #   2019.10.24/SNEX20_TS_SP_20191024_1322_COFEJ2_data_LWC_v02.csv
-
     # Get all the date folders
     unique_dt_olders = Path(
         data_dir
@@ -84,14 +79,14 @@ def main():
             ))
 
             # all non-gapped filled_density
-            non_filled_density = glob.glob(join(
-                str(udf), f'*_{site_id}_*_density_*.csv'
+            gap_filled_density = glob.glob(join(
+                str(udf), f'*_{site_id}_*_gapFilledDensity_*.csv'
             ))
 
             # Remove the site details from the total file list to get only the
             profiles = list(
                 set(filenames) - set(sites) - set(perimeter_depths) -
-                set(non_filled_density)  # remove non-gap-filled denisty
+                set(gap_filled_density)  # remove gap-filled denisty
             )
 
             # Submit all profiles associated with pit at a time
