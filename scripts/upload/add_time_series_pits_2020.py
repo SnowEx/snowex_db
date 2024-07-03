@@ -20,12 +20,17 @@ def main():
     Currenltly based on the preliminary downloaded zip which has not been submitted yet.
     Folder name is SNEX20_TS_SP_preliminary_v4
     """
+    # TODO: write script to clear out the timeseries pits
+    #       * maybe delete all pits and then add them back in
+    # TODO: fill in this DOI
     doi = None
     debug = True
 
     # Point to the downloaded data from
+    # TODO: update local path
     data_dir = abspath('../download/data/SNEX20_TS_SP_preliminary_v5/')
     # read in the descriptor file
+    # TODO: check this path
     desc_df = pd.read_csv(join(data_dir, 'SNEX20_TS_SP_Summary_Environment_v01.csv'))
     error_msg = []
 
