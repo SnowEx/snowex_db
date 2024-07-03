@@ -6,7 +6,6 @@ import os
 from subprocess import STDOUT, check_output
 from pathlib import Path
 import pandas as pd
-import progressbar
 from geoalchemy2.elements import RasterElement, WKTElement
 from os.path import basename, exists, join
 from os import makedirs, remove

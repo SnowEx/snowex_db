@@ -23,3 +23,5 @@ scripts/upload/test*.txt
 .idea/*
 scripts/download/data/*
 venv/
+
+credentials.json

@@ -23,9 +23,10 @@ def main(overwrite=False, db='snowex', credentials='./credentials.json'):
         initialize(engine)
         log.warning('Database cleared!\n')
         try:
-            sql = "CREATE USER snow WITH PASSWORD 'hackweek';"
-            engine.execute(sql)
-            engine.execute("GRANT USAGE ON SCHEMA public TO snow;")
+            with engine.connect() as connection:
+                connection.execute("CREATE USER snow WITH PASSWORD 'hackweek';")
+            with engine.connect() as connection:
+                connection.execute("GRANT USAGE ON SCHEMA public TO snow;")
         except Exception as e:
             print(e)
 
@@ -33,7 +34,8 @@ def main(overwrite=False, db='snowex', credentials='./credentials.json'):
 
             sql = f'GRANT SELECT ON {t} TO snow;'
             log.info(f'Adding read only permissions for table {t}...')
-            engine.execute(sql)
+            with engine.connect() as connection:
+                connection.execute(sql)
     else:
         log.warning('Aborted. Database has not been modified.\n')
 
