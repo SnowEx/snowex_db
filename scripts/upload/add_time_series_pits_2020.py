@@ -22,11 +22,12 @@ def main():
     Currenltly based on the preliminary downloaded zip which has not been submitted yet.
     Folder name is SNEX20_TS_SP_preliminary_v4
     """
+    db_name = 'localhost/snowex'
     # TODO: write script to clear out the timeseries pits
     #       * maybe delete all pits and then add them back in
-    # Version 2 DOI
-    # https://nsidc.org/data/snex20_ts_sp/versions/2
-    doi = "https://doi.org/10.5067/KZ43HVLZV6G4"
+    # Version 1 DOI
+    # https://nsidc.org/data/snex20_ts_sp/versions/1
+    doi = "https://doi.org/10.5067/POT9E0FFUUD1"
     debug = True
 
     # TODO: new header of
@@ -34,8 +35,14 @@ def main():
     #    Parameter Codes
 
     # Point to the downloaded data from
-    data_dir = abspath('../download/data/SNOWEX/SNEX20_TS_SP.002/')
+    data_dir = abspath('../download/data/SNOWEX/SNEX20_TS_SP.001/')
     error_msg = []
+
+    # Files to ignore
+    ignore_files = [
+        "SNEX20_TS_SP_Summary_Environment_v01.csv",
+        "SNEX20_TS_SP_Summary_SWE_v01.csv"
+    ]
 
     # Get all the date folders
     unique_dt_olders = Path(
@@ -44,13 +51,16 @@ def main():
     for udf in unique_dt_olders:
         # get all the csvs in the folder
         dt_folder_files = list(udf.glob("*.csv"))
-        all_file_names = [f.name for f in dt_folder_files]
         site_ids = []
         # Get the unique site ids for this date folder
         compiled = re.compile(
-            r'SNEX20_TS_SP_\d{8}_\d{4}_([a-zA-Z0-9]*)_data_.*_v02\.csv'
+            r'SNEX20_TS_SP_\d{8}_\d{4}_([a-zA-Z0-9]*)_data_.*_v01\.csv'
         )
-        for file_name in all_file_names:
+        for file_path in dt_folder_files:
+            file_name = file_path.name
+            if file_name in ignore_files:
+                print(f"Skipping {file_name}")
+                continue
             match = compiled.match(file_name)
             if match:
                 code = match.group(1)
@@ -91,24 +101,24 @@ def main():
 
             # Submit all profiles associated with pit at a time
             b = UploadProfileBatch(
-                filenames=profiles,
-                debug=debug, doi=doi,
-                in_timezone=tz)
+                filenames=profiles, debug=debug, doi=doi, in_timezone=tz,
+                db_name=db_name
+            )
             b.push()
             error_msg += b.errors
 
             # Upload the site details
-            sd = UploadSiteDetailsBatch(filenames=sites,
-                                        debug=debug,
-                                        doi=doi,
-                                        in_timezone=tz)
+            sd = UploadSiteDetailsBatch(
+                filenames=sites, debug=debug, doi=doi, in_timezone=tz,
+                db_name=db_name
+            )
             sd.push()
             error_msg += sd.errors
 
             # Submit all perimeters as point data
             with db_session(
-                'localhost/snowex', credentials='credentials.json'
-            ) as session:
+                db_name, credentials='credentials.json'
+            ) as (session, engine):
                 for fp in perimeter_depths:
                     pcsv = PointDataCSV(
                         fp, doi=doi, debug=debug, depth_is_metadata=False,
