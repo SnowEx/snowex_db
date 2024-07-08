@@ -62,10 +62,14 @@ class UploadProfileData:
             df: pd.dataframe contain csv data with standardized column names
         """
         # header=0 because docs say to if using skip rows and columns
-        df = pd.read_csv(profile_filename, header=0,
-                         skiprows=self.hdr.header_pos,
-                         names=self.hdr.columns,
-                         encoding='latin')
+        try:
+            df = pd.read_csv(
+                profile_filename, header=0, skiprows=self.hdr.header_pos,
+                names=self.hdr.columns, encoding='latin'
+            )
+        except pd.errors.ParserError as e:
+            LOG.error(e)
+            raise RuntimeError(f"Failed reading {profile_filename}")
 
         # Special SMP specific tasks
         depth_fmt = 'snow_height'

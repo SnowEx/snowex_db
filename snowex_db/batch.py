@@ -7,7 +7,7 @@ import glob
 import time
 from os.path import abspath, basename, expanduser, join
 
-from snowexsql.db import get_db
+from snowex_db import db_session
 from snowex_db.interpretation import get_InSar_flight_comment
 from snowex_db.metadata import (DataHeader, SMPMeasurementLog,
                                 read_InSar_annotation)
@@ -71,10 +71,6 @@ class BatchBase:
         self.errors = []
         self.uploaded = 0
 
-        # Grab db using credentials
-        self.log.info('Accessing Database {}'.format(self.db_name))
-        engine, self.session = get_db(self.db_name, credentials=self.credentials)
-
         self.log.info('Preparing to upload {} files...'.format(len(filenames)))
 
     def push(self):
@@ -111,8 +107,6 @@ class BatchBase:
             else:
                 self._push_one(f, **self.meta)
 
-        self.session.close()
-
         # Log the ending errors
         self.report(i + 1)
 
@@ -127,7 +121,9 @@ class BatchBase:
         d = self.UploaderClass(f, **kwargs)
 
         # Submit the data to the database
-        d.submit(self.session)
+        self.log.info('Accessing Database {}'.format(self.db_name))
+        with db_session(self.db_name, self.credentials) as (session, engine):
+            d.submit(session)
         self.uploaded += 1
 
     def report(self, files_attempted):
@@ -151,7 +147,6 @@ class BatchBase:
 
         self.log.info('Finished! Elapsed {:d}s\n'.format(
             int(time.time() - self.start)))
-        self.session.close()
 
 
 class UploadSiteDetailsBatch(BatchBase):
@@ -325,7 +320,12 @@ class UploadUAVSARBatch(BatchBase):
             d = self.UploaderClass(r, **meta)
 
             # Submit the data to the database
-            d.submit(self.session)
+            # Grab db using credentials
+            self.log.info('Accessing Database {}'.format(self.db_name))
+            with db_session(
+                    self.db_name, self.credentials
+            ) as (session, engine):
+                d.submit(session)
 
         # Uploaded set
         self.uploaded += 1
