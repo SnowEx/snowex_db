@@ -8,8 +8,6 @@ from os.path import abspath, join
 from pathlib import Path
 
 from snowex_db.batch import UploadProfileBatch, UploadSiteDetailsBatch
-from snowex_db.upload import PointDataCSV
-from snowex_db import db_session
 
 
 tz_map = {'US/Pacific': ['CA', 'NV', 'WA'],
@@ -19,18 +17,12 @@ tz_map = {'US/Pacific': ['CA', 'NV', 'WA'],
 
 def main():
     """
-    Currenltly based on the preliminary downloaded zip which has not been submitted yet.
-    Folder name is SNEX20_TS_SP_preliminary_v4
+    Snowex 2021 timeseries pits
     """
-    # TODO: write script to clear out the timeseries pits
-    #       * maybe delete all pits and then add them back in
+    db_name = 'localhost/snowex'
     # https://nsidc.org/data/snex21_ts_sp/versions/1
     doi = "https://doi.org/10.5067/QIANJYJGRWOV"
     debug = True
-
-    # TODO: new header of
-    #    Pit Comments
-    #    Parameter Codes
 
     # Point to the downloaded data from
     data_dir = abspath('../download/data/SNOWEX/SNEX21_TS_SP.001/')
@@ -85,17 +77,17 @@ def main():
 
             # Submit all profiles associated with pit at a time
             b = UploadProfileBatch(
-                filenames=profiles,
-                debug=debug, doi=doi,
-                in_timezone=tz)
+                filenames=profiles, debug=debug, doi=doi, in_timezone=tz,
+                db_name=db_name
+            )
             b.push()
             error_msg += b.errors
 
             # Upload the site details
-            sd = UploadSiteDetailsBatch(filenames=sites,
-                                        debug=debug,
-                                        doi=doi,
-                                        in_timezone=tz)
+            sd = UploadSiteDetailsBatch(
+                filenames=sites, debug=debug, doi=doi, in_timezone=tz,
+                db_name=db_name
+            )
             sd.push()
             error_msg += sd.errors
 
