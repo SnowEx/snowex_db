@@ -25,23 +25,19 @@ def main():
     db_name = 'localhost/snowex'
     # TODO: write script to clear out the timeseries pits
     #       * maybe delete all pits and then add them back in
-    # Version 1 DOI
-    # https://nsidc.org/data/snex20_ts_sp/versions/1
-    doi = "https://doi.org/10.5067/POT9E0FFUUD1"
+    # Version 2 DOI
+    # https://nsidc.org/data/snex20_ts_sp/versions/2
+    doi = "https://doi.org/10.5067/KZ43HVLZV6G4"
     debug = True
 
-    # TODO: new header of
-    #    Pit Comments
-    #    Parameter Codes
-
     # Point to the downloaded data from
-    data_dir = abspath('../download/data/SNOWEX/SNEX20_TS_SP.001/')
+    data_dir = abspath('../download/data/SNOWEX/SNEX20_TS_SP.002/')
     error_msg = []
 
     # Files to ignore
     ignore_files = [
-        "SNEX20_TS_SP_Summary_Environment_v01.csv",
-        "SNEX20_TS_SP_Summary_SWE_v01.csv"
+        "SNEX20_TS_SP_Summary_Environment_v02.csv",
+        "SNEX20_TS_SP_Summary_SWE_v02.csv"
     ]
 
     # Get all the date folders
@@ -54,7 +50,7 @@ def main():
         site_ids = []
         # Get the unique site ids for this date folder
         compiled = re.compile(
-            r'SNEX20_TS_SP_\d{8}_\d{4}_([a-zA-Z0-9]*)_data_.*_v01\.csv'
+            r'SNEX20_TS_SP_\d{8}_\d{4}_([a-zA-Z0-9]*)_data_.*_v02\.csv'
         )
         for file_path in dt_folder_files:
             file_name = file_path.name
@@ -88,21 +84,25 @@ def main():
                 str(udf), f'*_{site_id}_*perimeterDepths*.csv'
             ))
 
-            # all non-gapped filled_density
-            gap_filled_density = glob.glob(join(
+            # Use no-gap-filled density for the sole reason that
+            # Gap filled density for profiles where the scale was broken
+            # are just an empty file after the headers. We should
+            # Record that Nan density was collected for the profile
+            density_files = glob.glob(join(
                 str(udf), f'*_{site_id}_*_gapFilledDensity_*.csv'
             ))
 
             # Remove the site details from the total file list to get only the
             profiles = list(
                 set(filenames) - set(sites) - set(perimeter_depths) -
-                set(gap_filled_density)  # remove gap-filled denisty
+                set(density_files)  # remove non-gap-filled denisty
             )
 
             # Submit all profiles associated with pit at a time
             b = UploadProfileBatch(
                 filenames=profiles, debug=debug, doi=doi, in_timezone=tz,
-                db_name=db_name
+                db_name=db_name,
+                allow_split_lines=True  # Logic for split header lines
             )
             b.push()
             error_msg += b.errors
@@ -115,6 +115,8 @@ def main():
             sd.push()
             error_msg += sd.errors
 
+            # TODO: upload SWE file like the perimiter depths
+
             # Submit all perimeters as point data
             with db_session(
                 db_name, credentials='credentials.json'
@@ -122,7 +124,8 @@ def main():
                 for fp in perimeter_depths:
                     pcsv = PointDataCSV(
                         fp, doi=doi, debug=debug, depth_is_metadata=False,
-                        in_timezone=tz
+                        in_timezone=tz,
+                        allow_split_lines=True  # Logic for split header lines
                     )
                     pcsv.submit(session)
 
