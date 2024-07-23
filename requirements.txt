@@ -1,9 +1,10 @@
 wheel>0.34.0, <0.35.0
 snowexsql>=0.4.1, <0.5.0
 snowmicropyn
-matplotlib>=3.2.2, <3.3.0
+matplotlib>=3.2.2
 moto==3.1.11
 coloredlogs>=14.0
 progressbar2>=3.51.3
 rasterio>=1.1.5
 boto3>=1.23.7,<1.24
+insitupy==0.1.0

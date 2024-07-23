@@ -5,10 +5,10 @@ to describing data.
 
 from os.path import basename
 import pandas as pd
-
+from insitupy.campaigns.metadata import MetaDataParser
 from snowexsql.db import get_table_attributes
-
 from snowexsql.data import SiteData
+
 from .interpretation import *
 from .projection import add_geom, reproject_point_in_dict
 from .string_management import *
@@ -429,78 +429,6 @@ class DataHeader(object):
                     result.append(c)
         return result
 
-    def parse_column_names(self, lines):
-        """
-        A flexible mnethod that attempts to find and standardize column names
-        for csv data. Looks for a comma separated line with N entries == to the
-        last line in the file. If an entry is found with more commas than the
-        last line then we use that. This allows us to have data that doesn't
-        have all the commas in the data (SSA typically missing the comma for
-        veg unless it was notable)
-
-        Assumptions:
-
-        1. The last line in file is of representative csv data
-
-        2. The header is the last column that has more chars than numbers
-
-        Args:
-            lines: Complete list of strings from the file
-
-        Returns:
-            columns: list of column names
-        """
-
-        # Minimum column size should match the last line of data (Assumption
-        # #2)
-        n_columns = len(lines[-1].split(','))
-
-        # Use these to monitor if a larger column count is found
-        header_pos = 0
-        if lines[0][0] == '#':
-            header_indicator = '#'
-        else:
-            header_indicator = None
-
-        for i, l in enumerate(lines):
-            if i == 0:
-                previous = get_alpha_ratio(lines[i])
-            else:
-                previous = get_alpha_ratio(lines[i - 1])
-
-            if line_is_header(l, expected_columns=n_columns,
-                              header_indicator=header_indicator,
-                              previous_alpha_ratio=previous):
-                header_pos = i
-
-            if i > header_pos:
-                break
-
-        self.log.debug('Found end of header at line {}...'.format(header_pos))
-
-        # Parse the columns header based on the size of the last line
-        str_line = lines[header_pos]
-        # Remove units
-        for c in ['()', '[]']:
-            str_line = strip_encapsulated(str_line, c)
-
-        raw_cols = str_line.strip('#').split(',')
-        standard_cols = [standardize_key(c) for c in raw_cols]
-
-        # Rename any column names to more standard ones
-        columns = remap_data_names(standard_cols, self.rename)
-
-        # Determine the profile type
-        (self.data_names, self.multi_sample_profiles) = \
-            self.determine_data_names(columns)
-
-        self.data_names = remap_data_names(self.data_names, self.rename)
-
-        if self.multi_sample_profiles:
-            columns = self.rename_sample_profiles(columns, self.data_names)
-
-        return columns, header_pos
-
     def determine_data_names(self, raw_columns):
         """
         Determine the names of the data to be uploaded from the raw column
@@ -574,33 +502,25 @@ class DataHeader(object):
                                     read_csv
        """
 
-        with open(filename, encoding='latin') as fp:
-            lines = fp.readlines()
-            fp.close()
+        parser = MetaDataParser(
+            filename, timezone=self.in_timezone,
+            header_sep=self.header_sep
+        )
+        str_data, columns, header_pos = parser.find_header_info()
+        # Determine the profile type
+        (self.data_names, self.multi_sample_profiles) = \
+            self.determine_data_names(columns)
 
-        # Site description files have no need for column lists
-        if 'site' in filename.lower():
-            self.log.info('Parsing site description header...')
-            columns = None
-            header_pos = None
+        self.data_names = remap_data_names(self.data_names, self.rename)
 
-            # Site location parses all of the file
-
-        # Find the column names and where it is in the file
-        else:
-            columns, header_pos = self.parse_column_names(lines)
-            self.log.debug('Column Data found to be {} columns based on Line '
-                           '{}'.format(len(columns), header_pos))
-
-            # Only parse what we know if the header
-            lines = lines[0:header_pos]
-
-        # Clean up the lines from line returns to grab header info
-        lines = [ln.strip() for ln in lines]
-        str_data = " ".join(lines).split('#')
+        if self.multi_sample_profiles:
+            columns = self.rename_sample_profiles(columns, self.data_names)
+        self.log.debug('Column Data found to be {} columns based on Line '
+                       '{}'.format(len(columns), header_pos))
 
         # Keep track of the number of lines with # in it for data opening
-        self.length = len(str_data)
+        # TODO: what do we do here?
+        # self.length = len(str_data)
 
         # Key value pairs are separate by some separator provided.
         data = {}
