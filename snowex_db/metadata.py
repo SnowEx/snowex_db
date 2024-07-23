@@ -5,7 +5,7 @@ to describing data.
 
 from os.path import basename
 import pandas as pd
-from insitupy.campaigns.metadata import MetaDataParser
+from insitupy.campaigns.campaign import SnowExMetadataParser
 from snowexsql.db import get_table_attributes
 from snowexsql.data import SiteData
 
@@ -350,7 +350,9 @@ class DataHeader(object):
         'epsg': None,
         'header_sep': ',',
         'northern_hemisphere': True,
-        'depth_is_metadata': True}
+        'depth_is_metadata': True,
+        'allow_split_lines': False
+    }
 
     def __init__(self, filename, **kwargs):
         """
@@ -502,25 +504,28 @@ class DataHeader(object):
                                     read_csv
        """
 
-        parser = MetaDataParser(
+        parser = SnowExMetadataParser(
             filename, timezone=self.in_timezone,
-            header_sep=self.header_sep
+            header_sep=self.header_sep,
+            allow_split_lines=self.allow_split_lines
         )
-        str_data, columns, header_pos = parser.find_header_info()
-        # Determine the profile type
-        (self.data_names, self.multi_sample_profiles) = \
-            self.determine_data_names(columns)
+        str_data, standard_cols, header_pos = parser.find_header_info()
 
-        self.data_names = remap_data_names(self.data_names, self.rename)
+        if standard_cols is not None:
+            # handle name remapping
+            columns = remap_data_names(standard_cols, self.rename)
+            # Determine the profile type
+            (self.data_names, self.multi_sample_profiles) = \
+                self.determine_data_names(columns)
 
-        if self.multi_sample_profiles:
-            columns = self.rename_sample_profiles(columns, self.data_names)
-        self.log.debug('Column Data found to be {} columns based on Line '
-                       '{}'.format(len(columns), header_pos))
+            self.data_names = remap_data_names(self.data_names, self.rename)
 
-        # Keep track of the number of lines with # in it for data opening
-        # TODO: what do we do here?
-        # self.length = len(str_data)
+            if self.multi_sample_profiles:
+                columns = self.rename_sample_profiles(columns, self.data_names)
+            self.log.debug('Column Data found to be {} columns based on Line '
+                           '{}'.format(len(columns), header_pos))
+        else:
+            columns = standard_cols
 
         # Key value pairs are separate by some separator provided.
         data = {}
