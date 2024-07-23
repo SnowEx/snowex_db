@@ -25,6 +25,10 @@ from .projection import reproject_point_in_dict
 LOG = logging.getLogger("snowex_db.upload")
 
 
+class DataValidationError(ValueError):
+    pass
+
+
 class UploadProfileData:
     """
     Class for submitting a single profile. Since layers are uploaded layer by layer this allows for submitting them
@@ -50,6 +54,36 @@ class UploadProfileData:
         # Use the files creation date as the date accessed for NSIDC citation
         self.date_accessed = get_file_creation_date(self.filename)
 
+    def _handle_force(self, df, profile_filename):
+        if 'force' in df.columns:
+            # Convert depth from mm to cm
+            df['depth'] = df['depth'].div(10)
+            is_smp = True
+            # Make the data negative from snow surface
+            depth_fmt = 'surface_datum'
+
+            # SMP serial number and original filename for provenance to the comment
+            f = basename(profile_filename)
+            serial_no = f.split('SMP_')[-1][1:3]
+
+            df['comments'] = f"fname = {f}, " \
+                             f"serial no. = {serial_no}"
+
+        return df
+
+    def _handle_flags(self, df):
+
+        if "flags" in df.columns:
+            # Max length of the flags column
+            max_len = LayerData.flags.type.length
+            df["flags"] = df["flags"].str.replace(" ", "")
+            str_len = df["flags"].str.len()
+            if any(str_len > max_len):
+                raise DataValidationError(
+                    f"Flag column is too long"
+                )
+        return df
+
     def _read(self, profile_filename):
         """
         Read in a profile file. Managing the number of lines to skip and
@@ -74,19 +108,8 @@ class UploadProfileData:
         # Special SMP specific tasks
         depth_fmt = 'snow_height'
         is_smp = False
-        if 'force' in df.columns:
-            # Convert depth from mm to cm
-            df['depth'] = df['depth'].div(10)
-            is_smp = True
-            # Make the data negative from snow surface
-            depth_fmt = 'surface_datum'
 
-            # SMP serial number and original filename for provenance to the comment
-            f = basename(profile_filename)
-            serial_no = f.split('SMP_')[-1][1:3]
-
-            df['comments'] = f"fname = {f}, " \
-                             f"serial no. = {serial_no}"
+        df = self._handle_force(df, profile_filename)
 
         if not df.empty:
             # Standardize all depth data
@@ -182,6 +205,8 @@ class UploadProfileData:
         if 'comments' in df.columns:
             df['comments'] = df['comments'].apply(
                 lambda x: x.strip(' ') if isinstance(x, str) else x)
+
+        self._handle_flags(df)
 
         return df
 
