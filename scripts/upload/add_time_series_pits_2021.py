@@ -28,6 +28,12 @@ def main():
     data_dir = abspath('../download/data/SNOWEX/SNEX21_TS_SP.001/')
     error_msg = []
 
+    # Files to ignore
+    ignore_files = [
+        "SNEX21_TS_SP_Summary_Environment_v01.csv",
+        "SNEX21_TS_SP_Summary_SWE_v01.csv"
+    ]
+
     # Get all the date folders
     unique_dt_olders = Path(
         data_dir
@@ -35,13 +41,17 @@ def main():
     for udf in unique_dt_olders:
         # get all the csvs in the folder
         dt_folder_files = list(udf.glob("*.csv"))
-        all_file_names = [f.name for f in dt_folder_files]
         site_ids = []
         # Get the unique site ids for this date folder
         compiled = re.compile(
             r'SNEX21_TS_SP_\d{8}_\d{4}_([a-zA-Z0-9]*)_data_.*_v01\.csv'
         )
-        for file_name in all_file_names:
+        for file_path in dt_folder_files:
+            file_name = file_path.name
+            if file_name in ignore_files:
+                print(f"Skipping {file_name}")
+                continue
+
             match = compiled.match(file_name)
             if match:
                 code = match.group(1)
@@ -64,21 +74,25 @@ def main():
                 str(udf), f'*_{site_id}_*siteDetails*.csv'
             ))
 
-            # all non-gapped filled_density
-            gap_filled_density = glob.glob(join(
+            # Use no-gap-filled density for the sole reason that
+            # Gap filled density for profiles where the scale was broken
+            # are just an empty file after the headers. We should
+            # Record that Nan density was collected for the profile
+            density_files = glob.glob(join(
                 str(udf), f'*_{site_id}_*_gapFilledDensity_*.csv'
             ))
 
             # Remove the site details from the total file list to get only the
             profiles = list(
                 set(filenames) - set(sites) -
-                set(gap_filled_density)  # remove gap-filled denisty
+                set(density_files)  # remove non-gap-filled denisty
             )
 
             # Submit all profiles associated with pit at a time
             b = UploadProfileBatch(
                 filenames=profiles, debug=debug, doi=doi, in_timezone=tz,
-                db_name=db_name
+                db_name=db_name,
+                allow_split_lines=True  # Logic for split header lines
             )
             b.push()
             error_msg += b.errors
@@ -86,7 +100,8 @@ def main():
             # Upload the site details
             sd = UploadSiteDetailsBatch(
                 filenames=sites, debug=debug, doi=doi, in_timezone=tz,
-                db_name=db_name
+                db_name=db_name,
+                allow_split_lines=True  # Logic for split header lines
             )
             sd.push()
             error_msg += sd.errors
