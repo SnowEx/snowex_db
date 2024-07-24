@@ -19,8 +19,7 @@ tz_map = {'US/Pacific': ['CA', 'NV', 'WA'],
 
 def main():
     """
-    Currenltly based on the preliminary downloaded zip which has not been submitted yet.
-    Folder name is SNEX20_TS_SP_preliminary_v4
+    Add 2020 timeseries pits
     """
     db_name = 'localhost/snowex'
     # TODO: write script to clear out the timeseries pits
