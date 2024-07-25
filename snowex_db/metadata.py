@@ -326,6 +326,7 @@ class DataHeader(object):
               'measurement_tool': 'instrument',
               'avgdensity': 'density',
               'avg_density': 'density',
+              'density_mean': 'density',
               'dielectric_constant': 'permittivity',
               'flag': 'flags',
               'hs': 'depth',
@@ -374,12 +375,20 @@ class DataHeader(object):
         self.extra_header = assign_default_kwargs(
             self, kwargs, self.defaults, leave=['epsg'])
 
-        # Validate that an intentionally good in timezone was given
-        in_timezone = kwargs.get('in_timezone')
-        if in_timezone is None or "local" in in_timezone.lower():
-            raise ValueError("A valid in_timezone was not provided")
+        # Use a row based timezone
+        if kwargs.get("row_based_timezone", False):
+            if kwargs.get('in_timezone'):
+                raise ValueError(
+                    "Cannot have row based and file based timezone"
+                )
+            self.in_timezone = None
         else:
-            self.in_timezone = in_timezone
+            # Validate that an intentionally good in timezone was given
+            in_timezone = kwargs.get('in_timezone')
+            if in_timezone is None or "local" in in_timezone.lower():
+                raise ValueError("A valid in_timezone was not provided")
+            else:
+                self.in_timezone = in_timezone
 
         self.log.info('Interpreting metadata in {}'.format(filename))
 

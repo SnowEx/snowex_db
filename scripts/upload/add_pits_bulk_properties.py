@@ -49,6 +49,16 @@ def main():
             skiprows=list(range(32)) + [33]
         )
         new_name = file_path.replace(".csv", "_modified.csv")
+        # Filter to columns we want (density, swe, etc)
+        columns = [
+            'Location', 'Site', 'PitID', 'Date/Local Standard Time', 'UTM Zone',
+            'Easting (m)', 'Northing (m)', 'Latitude (deg)', 'Longitude (deg)',
+            # 'Density A Mean (kg/m^3)', 'Density B Mean (kg/m^3)',
+            'Density Mean (kg/m^3)',
+            # 'SWE A (mm)', 'SWE B (mm)',
+            'SWE (mm)', 'HS (cm)', 'Flag'
+        ]
+        df = df.loc[:, columns]
         df.to_csv(new_name, index=False)
 
         # Submit SWE file data as point data
@@ -57,8 +67,10 @@ def main():
         ) as (session, engine):
             # TODO: tz based on points
             pcsv = PointDataCSV(
-                new_name, doi=doi, debug=debug, depth_is_metadata=False,
-                in_timezone="US/Mountain",
+                new_name, doi=doi, debug=debug,
+                depth_is_metadata=False,
+                row_based_crs=True,
+                row_based_timezone=True
             )
             pcsv.submit(session)
 

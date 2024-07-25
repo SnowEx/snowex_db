@@ -216,6 +216,7 @@ def add_date_time_keys(data, in_timezone=None, out_timezone='UTC'):
         raise ValueError("We did not recieve a valid in_timezone")
 
     # Look for a single header entry containing date and time.
+    # This would handle key of 'datetime'
     for k in data.keys():
         kl = k.lower()
         if 'date' in kl and 'time' in kl:
