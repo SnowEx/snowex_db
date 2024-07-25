@@ -9,21 +9,15 @@ from pathlib import Path
 
 import pandas as pd
 
-from snowex_db.batch import UploadProfileBatch, UploadSiteDetailsBatch
 from snowex_db.upload import PointDataCSV
 from snowex_db import db_session
-
-
-tz_map = {'US/Pacific': ['CA', 'NV', 'WA'],
-          'US/Mountain': ['CO', 'ID', 'NM', 'UT', 'MT'],
-          }
 
 
 def main():
     """
     Add bulk SWE, Depth, Density for 2020 and 2021 timeseires pits
     """
-    db_name = 'localhost/test'
+    db_name = 'localhost/snowex'
     debug = True
 
     # Point to the downloaded data from
@@ -53,9 +47,7 @@ def main():
         columns = [
             'Location', 'Site', 'PitID', 'Date/Local Standard Time', 'UTM Zone',
             'Easting (m)', 'Northing (m)', 'Latitude (deg)', 'Longitude (deg)',
-            # 'Density A Mean (kg/m^3)', 'Density B Mean (kg/m^3)',
             'Density Mean (kg/m^3)',
-            # 'SWE A (mm)', 'SWE B (mm)',
             'SWE (mm)', 'HS (cm)', 'Flag'
         ]
         df = df.loc[:, columns]
@@ -65,7 +57,6 @@ def main():
         with db_session(
             db_name, credentials='credentials.json'
         ) as (session, engine):
-            # TODO: tz based on points
             pcsv = PointDataCSV(
                 new_name, doi=doi, debug=debug,
                 depth_is_metadata=False,

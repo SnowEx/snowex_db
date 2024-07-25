@@ -357,7 +357,7 @@ class PointDataCSV(object):
                 'POINT({} {})'.format(
                     row['easting'],
                     row['northing']),
-                srid=f"EPSG:269{row['utm_zone']}"), axis=1)
+                srid=int(row['epsg'])), axis=1)
         else:
             # EPSG at the file level
             df['geom'] = df.apply(lambda row: WKTElement(
