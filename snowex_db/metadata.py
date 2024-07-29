@@ -338,11 +338,13 @@ class DataHeader(object):
               }
 
     # Known possible profile types anything not in here will throw an error
-    available_data_names = ['density', 'permittivity', 'lwc_vol', 'temperature',
-                            'force', 'reflectance', 'sample_signal',
-                            'specific_surface_area', 'equivalent_diameter',
-                            'grain_size', 'hand_hardness', 'grain_type',
-                            'manual_wetness', 'two_way_travel', 'depth', 'swe']
+    available_data_names = [
+        'density', 'permittivity', 'lwc_vol', 'temperature',
+        'force', 'reflectance', 'sample_signal',
+        'specific_surface_area', 'equivalent_diameter',
+        'grain_size', 'hand_hardness', 'grain_type',
+        'manual_wetness', 'two_way_travel', 'depth', 'swe',
+    ]
 
     # Defaults to keywords arguments
     defaults = {
@@ -406,7 +408,7 @@ class DataHeader(object):
 
     def submit(self, session):
         """
-        Submit meta data to the database as site info, Do not use on profile
+        Submit metadata to the database as site info, Do not use on profile
         headers. Only use on site_details files.
 
         Args:
