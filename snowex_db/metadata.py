@@ -337,15 +337,15 @@ class DataHeader(object):
               'elev_m': 'elevation',
               'rh_10ft': 'relative_humidity_10ft',
               'bp_kpa_avg': 'barometric_pressure',
-              'airtc_10ft_avg': 'air_temperature_10ft',
+              'airtc_10ft_avg': 'air_temp_10ft',
               'wsms_10ft_avg': 'wind_speed_10ft',
               'winddir_10ft_d1_wvt': 'wind_direction_10ft',
               'sup_avg': 'incoming_shortwave',
               'sdn_avg': 'outgoing_shortwave',
               'lupco_avg': 'incoming_longwave',
               'ldnco_avg': 'outgoing_longwave',
-              'soil_moisture_20cm': 'soil_moisture_20cm',
-              'soil_temperature_20cm': 'soil_temperature_20cm',
+              'sm_20cm_avg': 'soil_moisture_20cm',
+              'tc_20cm_avg': 'soil_temp_20cm',
               'snowdepthfilter(m)': 'depth'
               }
 
@@ -357,9 +357,9 @@ class DataHeader(object):
         'grain_size', 'hand_hardness', 'grain_type',
         'manual_wetness', 'two_way_travel', 'depth', 'swe',
         'relative_humidity_10ft', 'barometric_pressure',
-        'air_temperature_10ft', 'wind_speed_10ft', 'wind_direction_10ft',
+        'air_temp_10ft', 'wind_speed_10ft', 'wind_direction_10ft',
         'incoming_shortwave', 'outgoing_shortwave', 'incoming_longwave',
-        'outgoing_longwave', 'soil_moisture_20cm', 'soil_temperature_20cm'
+        'outgoing_longwave', 'soil_moisture_20cm', 'soil_temp_20cm'
     ]
 
     # Defaults to keywords arguments
@@ -389,6 +389,7 @@ class DataHeader(object):
             kwargs: keyword values to pass to the database as metadata
         """
         self.log = get_logger(__name__)
+        self._fname = filename
 
         self.extra_header = assign_default_kwargs(
             self, kwargs, self.defaults, leave=['epsg'])
