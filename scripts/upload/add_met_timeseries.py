@@ -12,6 +12,7 @@ User guide: https://nsidc.org/sites/default/files/documents/user-guide/snex_met-
 import glob
 import time
 from os.path import abspath, join
+from metloom.pointdata.snowex import SnowExMetInfo
 
 import pandas as pd
 from snowexsql.db import get_db
@@ -31,39 +32,77 @@ def main():
     # Start the Database
     db_name = 'localhost/test'
 
-    csvs = glob.glob(join(base, '*/*.csv'))
-
-    # Location mapping from the user guide
-    location_mapping = {
-        "GMSP": [39.05084, -108.06144],
-        "LSOS": [39.05225, -108.09792],
-        "ME": [39.10358, -107.88383],
-        "MM": [39.03954, -107.94174],
-        "MW": [39.03388, -108.21399],
-    }
-
+    # Variables we will use
     variable_unit_map = {
-        "RH_10ft": "percent",
-        "RH_20ft": "percent",
-        "BP_kPa_Avg": "kPa",
-        "AirTC_20ft_Avg": "degrees Celcius",
-        "AirTC_10ft_Avg": "degrees Celcius",
-        "WSms_20ft_Avg": "m/s",
-        "WSms_10ft_Avg": "m/s",
-        "WindDir_10ft_D1_WVT": "degrees",
-        "WindDir_20ft_D1_WVT": "degrees",
-        "SUp_Avg": "W/m^2",
-        "SDn_Avg": "W/m^2",
-        "LUpCo_Avg": "W/m^2",
-        "LDnCo_Avg": "W/m^2",
-        "SM_5cm_Avg": None,
-        "SM_20cm_Avg": None,
-        "SM_50cm_Avg": None,
-        "TC_5cm_Avg": "degrees Celcius",
-        "TC_20cm_Avg": "degrees Celcius",
-        "TC_50cm_Avg": "degrees Celcius",
+        "RH_10ft": {
+            "units": "percent",
+            "notes": "Relative humidity measured at 10 ft tower level",
+            "instrument": "Campbell Scientific HC2S3"
+        },
+        # "RH_20ft": "percent",
+        "BP_kPa_Avg": {
+            "units": "kPa",
+            "notes": "Barometric pressure",
+            "instrument": "Campbell Scientific CS106",
+        },
+        # "AirTC_20ft_Avg": "degrees Celcius",
+        "AirTC_10ft_Avg": {
+            "units": "degrees Celcius",
+            "notes": "Air temperature measured at 10 ft tower level",
+            "instrument": "Campbell Scientific HC2S3"
+        },
+        # "WSms_20ft_Avg": "m/s",
+        "WSms_10ft_Avg": {
+            "units": "m/s",
+            "notes": "Vector mean wind speed measured at 10 ft tower level",
+            "instrument": "R.M. Young 05103",
+        },
+        "WindDir_10ft_D1_WVT": {
+            "units": "degrees",
+            "notes": "Vector mean wind direction measured at 10 ft tower level",
+            "instrument": "R.M. Young 05103",
+        },
+        # "WindDir_20ft_D1_WVT": "degrees",
+        "SUp_Avg": {
+            "units": "W/m^2",
+            "notes": "Shortwave radiation measured with upward-facing sensor",
+            "instrument": "Kipp and Zonnen CNR4",
+        },
+        "SDn_Avg": {
+            "units": "W/m^2",
+            "notes": "Shortwave radiation measured with downward-facing sensor",
+            "instrument": "Kipp and Zonnen CNR4",
+        },
+        "LUpCo_Avg": {
+            "units": "W/m^2",
+            "notes": "Longwave radiation measured with upward-facing sensor",
+            "instrument": "Kipp and Zonnen CNR4",
+        },
+        "LDnCo_Avg": {
+            "units": "W/m^2",
+            "notes": "Longwave radiation measured with downward-facing sensor",
+            "instrument": "Kipp and Zonnen CNR4",
+        },
+        # "SM_5cm_Avg": None,
+        "SM_20cm_Avg": {
+            "units": None,
+            "notes": "Soil moisture measured at 10 cm below the soil",
+            "instrument": "Stevens Water Hydraprobe II",
+        },
+        # "SM_50cm_Avg": None,
+        # "TC_5cm_Avg": "degrees Celcius",
+        "TC_20cm_Avg": {
+            "units": "degrees Celcius",
+            "notes": "Soil temperature measured at 10 cm below the soil",
+            "instrument": "Stevens Water Hydraprobe II",
+        },
+        # "TC_50cm_Avg": "degrees Celcius",
         # "DistanceSensToGnd(m)",
-        "SnowDepthFilter(m)": "m"
+        "SnowDepthFilter(m)": {
+            "units": "m",
+            "notes": "Temperature corrected, derived snow surface height (filtered)",
+            "instrument": "Campbell Scientific SR50A",
+        },
     }
 
     errors = 0
@@ -71,30 +110,26 @@ def main():
             db_name, credentials='credentials.json'
     ) as (session, engine):
 
-        for f in csvs:
-            # find the point relative to the file
-            point_id = f.split("Met_")[-1].split("_final")[0]
-            # get location info from the point id
-            lat, lon = location_mapping[point_id]
-
+        for stn_obj in SnowExMetInfo:
+            f = join(base, stn_obj.path)
             # Read in the file
             df = pd.read_csv(f)
             # add location info
-            df["latitude"] = [lat] * len(df)
-            df["longitude"] = [lon] * len(df)
+            df["latitude"] = [stn_obj.latitude] * len(df)
+            df["longitude"] = [stn_obj.longitude] * len(df)
             df = df.set_index("TIMESTAMP")
-            # TODO: what do we do with site_id? is MM the site id?
-            #   we can add it as "site" to the df if it is
-            df["site"] = [point_id] * len(df)
-
-            # TODO: how do we handle to different heights?
-            #  use layer data?
+            # SITE ID - use station id
+            df["site"] = [stn_obj.station_id] * len(df)
+            df["observer"] = ["P. Houser"] * len(df)
 
             # Split variables into their own files
-            for v, unit in variable_unit_map.items():
+            for v, info in variable_unit_map.items():
+                unit = info["units"]
+
                 df_cut = df.loc[
                     :, [v, "latitude", "longitude", "site"]
                 ]
+                df_cut["instrument"] = [info["instrument"]] * len(df_cut)
 
                 new_f = f.replace(".csv", f"local_mod_{v}.csv")
                 df_cut.to_csv(new_f, index_label="datetime")
