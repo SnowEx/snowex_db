@@ -6,6 +6,8 @@ to describing data.
 from os.path import basename
 import pandas as pd
 from insitupy.campaigns.campaign import SnowExMetadataParser
+from insitupy.campaigns.variables import SnowExProfileVariables, \
+    MeasurementDescription
 from snowexsql.db import get_table_attributes
 from snowexsql.data import SiteData
 
@@ -156,9 +158,14 @@ class SMPMeasurementLog(object):
         str_cols = remap_data_names(str_cols, DataHeader.rename)
 
         dtype = {k: str for k in str_cols}
-        df = pd.read_csv(filename, header=header_pos, names=str_cols,
-                         usecols=range(n_cols), encoding='latin',
-                         parse_dates=[0], dtype=dtype)
+        df = pd.read_csv(
+            filename, header=header_pos, names=str_cols,
+            usecols=range(n_cols), encoding='latin',
+            # parse_dates=[0],
+            dtype=dtype
+        )
+        # WHY IS THIS NEEDED?
+        df["date"] = pd.to_datetime(df["date"])
 
         # Insure all values are 4 digits. Seems like some were not by accident
         df['fname_sufix'] = df['fname_sufix'].apply(lambda v: v.zfill(4))
@@ -262,6 +269,94 @@ class SMPMeasurementLog(object):
         ind = self.df['fname_sufix'] == suffix
         meta = self.df.loc[ind]
         return meta.iloc[0].to_dict()
+
+
+class ExtendedSnowExProfileVariables(SnowExProfileVariables):
+    """
+    Extend variables to add a few relevant ones
+    """
+    DEPTH = MeasurementDescription(
+        "depth", "top or center depth of measurement",
+        [
+            "depth", "top", "sample_top_height", "hs",
+            "depth_m", 'snowdepthfilter(m)', 'snowdepthfilter',
+            'height'
+        ], True
+    )
+    PERMITTIVITY = MeasurementDescription(
+        "permittivity", "Permittivity",
+        ["permittivity_a", "permittivity_b", "permittivity",
+         'dielectric_constant', 'dielectric_constant_a',
+         'dielectric_constant_b']
+    )
+    IGNORE = MeasurementDescription(
+        "ignore", "Ignore this",
+        ["original_index", 'id', 'freq_mhz', 'camera', 'avgvelocity']
+    )
+    SAMPLE_SIGNAL = MeasurementDescription(
+        'sample_signal', "Sample Signal",
+        ['sample_signal']
+    )
+    FORCE = MeasurementDescription(
+        'force', "Force", ["force"]
+    )
+    REFLECTANCE = MeasurementDescription(
+        'reflectance', "Reflectance", ['reflectance']
+    )
+    SSA = MeasurementDescription(
+        'specific_surface_area', "Specific Surface Area",
+        ['specific_surface_area']
+    )
+    DATETIME = MeasurementDescription(
+        'datetime', "Combined date and time",
+        ["Date/Local Standard Time", "date/local_standard_time", "datetime",
+         "date&time"],
+        True
+    )
+    DATE = MeasurementDescription(
+        'date', "Measurement Date (only date column)",
+        ['date_dd_mmm_yy', 'date']
+    )
+    TIME = MeasurementDescription(
+        'time', "Measurement time",
+        ['time_gmt', 'time']
+    )
+    UTCYEAR = MeasurementDescription(
+        'utcyear', "UTC Year", ['utcyear']
+    )
+    UTCDOY = MeasurementDescription(
+        'utcdoy', "UTC day of year", ['utcdoy']
+    )
+    UTCTOD = MeasurementDescription(
+        'utctod', 'UTC Time of Day', ['utctod']
+    )
+    ELEVATION = MeasurementDescription(
+        'elevation', "Elevation",
+        ['elev_m', 'elevation']
+    )
+    EQUIPMENT = MeasurementDescription(
+        'equipment', "Equipment",
+        ['equipment']
+    )
+    VERSION_NUMBER = MeasurementDescription(
+        'version_number', "Version Number",
+        ['version_number']
+    )
+    NORTHING = MeasurementDescription(
+        'northing', "UTM Northing",
+        ['northing', 'utm_wgs84_northing']
+    )
+    EASTING = MeasurementDescription(
+        'easting', "UTM Easting",
+        ['easting', 'utm_wgs84_easting']
+    )
+
+
+class ExtendedSnowExMetadataParser(SnowExMetadataParser):
+    """
+    Extend the parser to update the extended varaibles
+    """
+    VARIABLES_CLASS = ExtendedSnowExProfileVariables
 
 
 class DataHeader(object):
@@ -513,7 +608,7 @@ class DataHeader(object):
                                     read_csv
        """
 
-        parser = SnowExMetadataParser(
+        parser = ExtendedSnowExMetadataParser(
             filename, timezone=self.in_timezone,
             header_sep=self.header_sep,
             allow_split_lines=self.allow_split_lines

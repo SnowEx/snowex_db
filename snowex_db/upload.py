@@ -110,7 +110,11 @@ class UploadProfileData:
         depth_fmt = 'snow_height'
         is_smp = False
 
-        df = self._handle_force(df, profile_filename)
+        if 'force' in df.columns:
+            df = self._handle_force(df, profile_filename)
+            is_smp = True
+            # Make the data negative from snow surface
+            depth_fmt = 'surface_datum'
 
         if not df.empty:
             # Standardize all depth data
@@ -173,7 +177,8 @@ class UploadProfileData:
 
         # Assign all meta data to every entry to the data frame
         for k, v in self.hdr.info.items():
-            df[k] = v
+            if not pd.isna(v):
+                df[k] = v
 
         df['type'] = data_name
         df['date_accessed'] = self.date_accessed

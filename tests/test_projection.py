@@ -4,7 +4,7 @@ from os.path import dirname, isdir, isfile, join
 
 import pytest
 from geoalchemy2.shape import to_shape
-from geoalchemy2.types import WKTElement
+from geoalchemy2.elements import WKTElement
 from numpy.testing import assert_almost_equal
 from rasterio.crs import CRS
 
