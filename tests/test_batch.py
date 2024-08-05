@@ -121,7 +121,10 @@ class TestUploadSMPBatch(TableTestBase):
     Test whether we can assign meta info from an smp log to 2 profiles
     """
     args = [['S19M1013_5S21_20200201.CSV', 'S06M0874_2N12_20200131.CSV']]
-    kwargs = {'in_timezone': 'UTC', 'smp_log_f': 'smp_log.csv', 'units': 'Newtons'}
+    kwargs = {
+        'in_timezone': 'UTC',
+        'smp_log_f': 'smp_log.csv',
+        'units': 'Newtons'}
     UploaderClass = UploadProfileBatch
     TableClass = LayerData
     attribute = 'depth'
