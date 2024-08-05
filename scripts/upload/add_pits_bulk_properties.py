@@ -32,6 +32,10 @@ def main():
         {
             "DOI": "https://doi.org/10.5067/QIANJYJGRWOV",
             "path": "SNEX21_TS_SP.001/2020.11.16/SNEX21_TS_SP_Summary_SWE_v01.csv"
+        },
+        {
+            "DOI": None,
+            "path": "../SNEX23_preliminary/Data/SnowEx23_SnowPits_AKIOP_Summary_SWE_v01.csv"
         }
     ]
     for info in path_details:
