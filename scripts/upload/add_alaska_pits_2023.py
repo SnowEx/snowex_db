@@ -22,7 +22,7 @@ def main():
     """
     Add 2020 timeseries pits
     """
-    db_name = 'localhost/snowex'
+    db_name = 'localhost/test'
     # Preliminary data
     doi = "None"
     debug = True
@@ -76,7 +76,7 @@ def main():
 
             # Use no-gap-filled density
             density_files = glob.glob(join(
-                str(udf), f'*_{site_id}_*_gapFilledDensity_*.csv'
+                str(udf), f'*_{site_id}_*_gapFilled_density*.csv'
             ))
 
             # Remove the site details from the total file list to get only the
@@ -90,7 +90,8 @@ def main():
                 filenames=profiles, debug=debug, doi=doi,
                 in_timezone=timezone,
                 db_name=db_name,
-                allow_split_lines=True  # Logic for split header lines
+                allow_split_lines=True,  # Logic for split header lines
+                header_sep=":"
             )
             b.push()
             error_msg += b.errors

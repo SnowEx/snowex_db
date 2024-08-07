@@ -283,6 +283,10 @@ class ExtendedSnowExProfileVariables(SnowExProfileVariables):
             'height'
         ], True
     )
+    SNOW_VOID = MeasurementDescription(
+        "snow_void", "Void depth in the snow measurement",
+        ["Snow Void"]
+    )
     PERMITTIVITY = MeasurementDescription(
         "permittivity", "Permittivity",
         ["permittivity_a", "permittivity_b", "permittivity",
@@ -397,6 +401,7 @@ class DataHeader(object):
     # Typical names we run into that need renaming
     rename = {'location': 'site_name',
               'top': 'depth',
+              'snow void': "snow_void",
               'height': 'depth',
               'bottom': 'bottom_depth',
               'site': 'site_id',
@@ -433,11 +438,14 @@ class DataHeader(object):
               }
 
     # Known possible profile types anything not in here will throw an error
-    available_data_names = ['density', 'permittivity', 'lwc_vol', 'temperature',
-                            'force', 'reflectance', 'sample_signal',
-                            'specific_surface_area', 'equivalent_diameter',
-                            'grain_size', 'hand_hardness', 'grain_type',
-                            'manual_wetness', 'two_way_travel', 'depth', 'swe']
+    available_data_names = [
+        'density', 'permittivity', 'lwc_vol', 'temperature',
+        'force', 'reflectance', 'sample_signal',
+        'specific_surface_area', 'equivalent_diameter',
+        'grain_size', 'hand_hardness', 'grain_type',
+        'manual_wetness', 'two_way_travel', 'depth', 'swe',
+        'snow_void'
+    ]
 
     # Defaults to keywords arguments
     defaults = {
@@ -493,8 +501,16 @@ class DataHeader(object):
         # Does our profile type have multiple samples
         self.multi_sample_profiles = []
 
+        # TODO: store length of file so we can check if
+        #   header len == file_len
+        self._has_empty_data = False
+        self._file_len = None
         # Read in the header into dictionary and list of columns names
+        # Sets _file_len
         info, self.columns, self.header_pos = self._read(filename)
+
+        # If the data portion is empty
+        self.data_is_empty = self._file_len == self.header_pos
 
         # Interpret any data needing interpretation e.g. aspect
         self.info = self.interpret_data(info)
@@ -614,6 +630,7 @@ class DataHeader(object):
             allow_split_lines=self.allow_split_lines
         )
         str_data, standard_cols, header_pos = parser.find_header_info()
+        self._file_len = parser.file_len
 
         if standard_cols is not None:
             # handle name remapping

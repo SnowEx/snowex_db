@@ -33,10 +33,12 @@ def main():
             "DOI": "https://doi.org/10.5067/QIANJYJGRWOV",
             "path": "SNEX21_TS_SP.001/2020.11.16/SNEX21_TS_SP_Summary_SWE_v01.csv"
         },
-        {
-            "DOI": None,
-            "path": "../SNEX23_preliminary/Data/SnowEx23_SnowPits_AKIOP_Summary_SWE_v01.csv"
-        }
+        # TODO: look into these more - the "void" info is important
+        #   we can add a new value type for this
+        # {
+        #     "DOI": None,
+        #     "path": "../SNEX23_preliminary/Data/SnowEx23_SnowPits_AKIOP_Summary_SWE_v01.csv"
+        # }
     ]
     for info in path_details:
         doi = info["DOI"]
@@ -48,6 +50,7 @@ def main():
         )
         new_name = file_path.replace(".csv", "_modified.csv")
         # Filter to columns we want (density, swe, etc)
+        # TODO: these columns may be different for the 2023 data
         columns = [
             'Location', 'Site', 'PitID', 'Date/Local Standard Time', 'UTM Zone',
             'Easting (m)', 'Northing (m)', 'Latitude (deg)', 'Longitude (deg)',
