@@ -285,7 +285,7 @@ class ExtendedSnowExProfileVariables(SnowExProfileVariables):
     )
     SNOW_VOID = MeasurementDescription(
         "snow_void", "Void depth in the snow measurement",
-        ["Snow Void"]
+        ["snow void", "snow_void"]
     )
     PERMITTIVITY = MeasurementDescription(
         "permittivity", "Permittivity",
