@@ -501,16 +501,8 @@ class DataHeader(object):
         # Does our profile type have multiple samples
         self.multi_sample_profiles = []
 
-        # TODO: store length of file so we can check if
-        #   header len == file_len
-        self._has_empty_data = False
-        self._file_len = None
         # Read in the header into dictionary and list of columns names
-        # Sets _file_len
         info, self.columns, self.header_pos = self._read(filename)
-
-        # If the data portion is empty
-        self.data_is_empty = self._file_len == self.header_pos
 
         # Interpret any data needing interpretation e.g. aspect
         self.info = self.interpret_data(info)
@@ -630,7 +622,6 @@ class DataHeader(object):
             allow_split_lines=self.allow_split_lines
         )
         str_data, standard_cols, header_pos = parser.find_header_info()
-        self._file_len = parser.file_len
 
         if standard_cols is not None:
             # handle name remapping
