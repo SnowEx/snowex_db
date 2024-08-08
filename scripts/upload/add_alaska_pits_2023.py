@@ -22,7 +22,7 @@ def main():
     """
     Add 2020 timeseries pits
     """
-    db_name = 'localhost/test'
+    db_name = 'localhost/snowex'
     # Preliminary data
     doi = "None"
     debug = True
