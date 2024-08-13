@@ -283,6 +283,10 @@ class ExtendedSnowExProfileVariables(SnowExProfileVariables):
             'height'
         ], True
     )
+    SNOW_VOID = MeasurementDescription(
+        "snow_void", "Void depth in the snow measurement",
+        ["snow void", "snow_void"]
+    )
     PERMITTIVITY = MeasurementDescription(
         "permittivity", "Permittivity",
         ["permittivity_a", "permittivity_b", "permittivity",
@@ -397,6 +401,7 @@ class DataHeader(object):
     # Typical names we run into that need renaming
     rename = {'location': 'site_name',
               'top': 'depth',
+              'snow void': "snow_void",
               'height': 'depth',
               'bottom': 'bottom_depth',
               'site': 'site_id',
@@ -455,6 +460,7 @@ class DataHeader(object):
         'air_temp_10ft', 'wind_speed_10ft', 'wind_direction_10ft',
         'incoming_shortwave', 'outgoing_shortwave', 'incoming_longwave',
         'outgoing_longwave', 'soil_moisture_20cm', 'soil_temp_20cm'
+        'snow_void'
     ]
 
     # Defaults to keywords arguments
