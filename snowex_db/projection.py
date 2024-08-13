@@ -39,8 +39,9 @@ def reproject_point_in_dict(info, is_northern=True, zone_number=None):
         easting, northing, utm_zone, letter = utm.from_latlon(
             result['latitude'],
             result['longitude'],  force_zone_number=zone_number)
-        result['easting'] = easting
-        result['northing'] = northing
+        # String representation should not be np.float64, so cast to float
+        result['easting'] = float(easting)
+        result['northing'] = float(northing)
         result['utm_zone'] = utm_zone
 
     # Secondarily use the utm to add lat long

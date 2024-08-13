@@ -3,6 +3,7 @@ Script used to create the database and tables for the first time
 """
 from snowexsql.db import get_db, initialize
 from snowex_db.utilities import get_logger
+from sqlalchemy import text as sqltext
 import argparse
 
 
@@ -23,17 +24,26 @@ def main(overwrite=False, db='snowex', credentials='./credentials.json'):
         initialize(engine)
         log.warning('Database cleared!\n')
         try:
-            sql = "CREATE USER snow WITH PASSWORD 'hackweek';"
-            engine.execute(sql)
-            engine.execute("GRANT USAGE ON SCHEMA public TO snow;")
+            with engine.connect() as connection:
+                # Autocommit so the user is created before granting access
+                connection = connection.execution_options(
+                    isolation_level="AUTOCOMMIT")
+                connection.execute(
+                    sqltext("CREATE USER snow WITH PASSWORD 'hackweek';")
+                )
+                connection.execute(
+                    sqltext("GRANT USAGE ON SCHEMA public TO snow;")
+                )
         except Exception as e:
-            print(e)
+            log.error("Failed on user creation")
+            raise e
 
         for t in ['sites', 'points', 'layers', 'images']:
 
             sql = f'GRANT SELECT ON {t} TO snow;'
             log.info(f'Adding read only permissions for table {t}...')
-            engine.execute(sql)
+            with engine.connect() as connection:
+                connection.execute(sqltext(sql))
     else:
         log.warning('Aborted. Database has not been modified.\n')
 

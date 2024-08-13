@@ -5,10 +5,12 @@ to describing data.
 
 from os.path import basename
 import pandas as pd
-
+from insitupy.campaigns.campaign import SnowExMetadataParser
+from insitupy.campaigns.variables import SnowExProfileVariables, \
+    MeasurementDescription
 from snowexsql.db import get_table_attributes
-
 from snowexsql.data import SiteData
+
 from .interpretation import *
 from .projection import add_geom, reproject_point_in_dict
 from .string_management import *
@@ -156,9 +158,14 @@ class SMPMeasurementLog(object):
         str_cols = remap_data_names(str_cols, DataHeader.rename)
 
         dtype = {k: str for k in str_cols}
-        df = pd.read_csv(filename, header=header_pos, names=str_cols,
-                         usecols=range(n_cols), encoding='latin',
-                         parse_dates=[0], dtype=dtype)
+        df = pd.read_csv(
+            filename, header=header_pos, names=str_cols,
+            usecols=range(n_cols), encoding='latin',
+            # parse_dates=[0],
+            dtype=dtype
+        )
+        # WHY IS THIS NEEDED?
+        df["date"] = pd.to_datetime(df["date"])
 
         # Insure all values are 4 digits. Seems like some were not by accident
         df['fname_sufix'] = df['fname_sufix'].apply(lambda v: v.zfill(4))
@@ -264,6 +271,98 @@ class SMPMeasurementLog(object):
         return meta.iloc[0].to_dict()
 
 
+class ExtendedSnowExProfileVariables(SnowExProfileVariables):
+    """
+    Extend variables to add a few relevant ones
+    """
+    DEPTH = MeasurementDescription(
+        "depth", "top or center depth of measurement",
+        [
+            "depth", "top", "sample_top_height", "hs",
+            "depth_m", 'snowdepthfilter(m)', 'snowdepthfilter',
+            'height'
+        ], True
+    )
+    SNOW_VOID = MeasurementDescription(
+        "snow_void", "Void depth in the snow measurement",
+        ["snow void", "snow_void"]
+    )
+    PERMITTIVITY = MeasurementDescription(
+        "permittivity", "Permittivity",
+        ["permittivity_a", "permittivity_b", "permittivity",
+         'dielectric_constant', 'dielectric_constant_a',
+         'dielectric_constant_b']
+    )
+    IGNORE = MeasurementDescription(
+        "ignore", "Ignore this",
+        ["original_index", 'id', 'freq_mhz', 'camera', 'avgvelocity']
+    )
+    SAMPLE_SIGNAL = MeasurementDescription(
+        'sample_signal', "Sample Signal",
+        ['sample_signal']
+    )
+    FORCE = MeasurementDescription(
+        'force', "Force", ["force"]
+    )
+    REFLECTANCE = MeasurementDescription(
+        'reflectance', "Reflectance", ['reflectance']
+    )
+    SSA = MeasurementDescription(
+        'specific_surface_area', "Specific Surface Area",
+        ['specific_surface_area']
+    )
+    DATETIME = MeasurementDescription(
+        'datetime', "Combined date and time",
+        ["Date/Local Standard Time", "date/local_standard_time", "datetime",
+         "date&time"],
+        True
+    )
+    DATE = MeasurementDescription(
+        'date', "Measurement Date (only date column)",
+        ['date_dd_mmm_yy', 'date']
+    )
+    TIME = MeasurementDescription(
+        'time', "Measurement time",
+        ['time_gmt', 'time']
+    )
+    UTCYEAR = MeasurementDescription(
+        'utcyear', "UTC Year", ['utcyear']
+    )
+    UTCDOY = MeasurementDescription(
+        'utcdoy', "UTC day of year", ['utcdoy']
+    )
+    UTCTOD = MeasurementDescription(
+        'utctod', 'UTC Time of Day', ['utctod']
+    )
+    ELEVATION = MeasurementDescription(
+        'elevation', "Elevation",
+        ['elev_m', 'elevation']
+    )
+    EQUIPMENT = MeasurementDescription(
+        'equipment', "Equipment",
+        ['equipment']
+    )
+    VERSION_NUMBER = MeasurementDescription(
+        'version_number', "Version Number",
+        ['version_number']
+    )
+    NORTHING = MeasurementDescription(
+        'northing', "UTM Northing",
+        ['northing', 'utm_wgs84_northing']
+    )
+    EASTING = MeasurementDescription(
+        'easting', "UTM Easting",
+        ['easting', 'utm_wgs84_easting']
+    )
+
+
+class ExtendedSnowExMetadataParser(SnowExMetadataParser):
+    """
+    Extend the parser to update the extended varaibles
+    """
+    VARIABLES_CLASS = ExtendedSnowExProfileVariables
+
+
 class DataHeader(object):
     """
     Class for managing information stored in files headers about a snow pit
@@ -302,6 +401,7 @@ class DataHeader(object):
     # Typical names we run into that need renaming
     rename = {'location': 'site_name',
               'top': 'depth',
+              'snow void': "snow_void",
               'height': 'depth',
               'bottom': 'bottom_depth',
               'site': 'site_id',
@@ -326,6 +426,7 @@ class DataHeader(object):
               'measurement_tool': 'instrument',
               'avgdensity': 'density',
               'avg_density': 'density',
+              'density_mean': 'density',
               'dielectric_constant': 'permittivity',
               'flag': 'flags',
               'hs': 'depth',
@@ -337,11 +438,14 @@ class DataHeader(object):
               }
 
     # Known possible profile types anything not in here will throw an error
-    available_data_names = ['density', 'permittivity', 'lwc_vol', 'temperature',
-                            'force', 'reflectance', 'sample_signal',
-                            'specific_surface_area', 'equivalent_diameter',
-                            'grain_size', 'hand_hardness', 'grain_type',
-                            'manual_wetness', 'two_way_travel', 'depth', 'swe']
+    available_data_names = [
+        'density', 'permittivity', 'lwc_vol', 'temperature',
+        'force', 'reflectance', 'sample_signal',
+        'specific_surface_area', 'equivalent_diameter',
+        'grain_size', 'hand_hardness', 'grain_type',
+        'manual_wetness', 'two_way_travel', 'depth', 'swe',
+        'snow_void'
+    ]
 
     # Defaults to keywords arguments
     defaults = {
@@ -350,7 +454,9 @@ class DataHeader(object):
         'epsg': None,
         'header_sep': ',',
         'northern_hemisphere': True,
-        'depth_is_metadata': True}
+        'depth_is_metadata': True,
+        'allow_split_lines': False
+    }
 
     def __init__(self, filename, **kwargs):
         """
@@ -372,12 +478,20 @@ class DataHeader(object):
         self.extra_header = assign_default_kwargs(
             self, kwargs, self.defaults, leave=['epsg'])
 
-        # Validate that an intentionally good in timezone was given
-        in_timezone = kwargs.get('in_timezone')
-        if in_timezone is None or "local" in in_timezone.lower():
-            raise ValueError("A valid in_timezone was not provided")
+        # Use a row based timezone
+        if kwargs.get("row_based_timezone", False):
+            if kwargs.get('in_timezone'):
+                raise ValueError(
+                    "Cannot have row based and file based timezone"
+                )
+            self.in_timezone = None
         else:
-            self.in_timezone = in_timezone
+            # Validate that an intentionally good in timezone was given
+            in_timezone = kwargs.get('in_timezone')
+            if in_timezone is None or "local" in in_timezone.lower():
+                raise ValueError("A valid in_timezone was not provided")
+            else:
+                self.in_timezone = in_timezone
 
         self.log.info('Interpreting metadata in {}'.format(filename))
 
@@ -428,78 +542,6 @@ class DataHeader(object):
                 elif c not in result and c[-2] != '_':
                     result.append(c)
         return result
-
-    def parse_column_names(self, lines):
-        """
-        A flexible mnethod that attempts to find and standardize column names
-        for csv data. Looks for a comma separated line with N entries == to the
-        last line in the file. If an entry is found with more commas than the
-        last line then we use that. This allows us to have data that doesn't
-        have all the commas in the data (SSA typically missing the comma for
-        veg unless it was notable)
-
-        Assumptions:
-
-        1. The last line in file is of representative csv data
-
-        2. The header is the last column that has more chars than numbers
-
-        Args:
-            lines: Complete list of strings from the file
-
-        Returns:
-            columns: list of column names
-        """
-
-        # Minimum column size should match the last line of data (Assumption
-        # #2)
-        n_columns = len(lines[-1].split(','))
-
-        # Use these to monitor if a larger column count is found
-        header_pos = 0
-        if lines[0][0] == '#':
-            header_indicator = '#'
-        else:
-            header_indicator = None
-
-        for i, l in enumerate(lines):
-            if i == 0:
-                previous = get_alpha_ratio(lines[i])
-            else:
-                previous = get_alpha_ratio(lines[i - 1])
-
-            if line_is_header(l, expected_columns=n_columns,
-                              header_indicator=header_indicator,
-                              previous_alpha_ratio=previous):
-                header_pos = i
-
-            if i > header_pos:
-                break
-
-        self.log.debug('Found end of header at line {}...'.format(header_pos))
-
-        # Parse the columns header based on the size of the last line
-        str_line = lines[header_pos]
-        # Remove units
-        for c in ['()', '[]']:
-            str_line = strip_encapsulated(str_line, c)
-
-        raw_cols = str_line.strip('#').split(',')
-        standard_cols = [standardize_key(c) for c in raw_cols]
-
-        # Rename any column names to more standard ones
-        columns = remap_data_names(standard_cols, self.rename)
-
-        # Determine the profile type
-        (self.data_names, self.multi_sample_profiles) = \
-            self.determine_data_names(columns)
-
-        self.data_names = remap_data_names(self.data_names, self.rename)
-
-        if self.multi_sample_profiles:
-            columns = self.rename_sample_profiles(columns, self.data_names)
-
-        return columns, header_pos
 
     def determine_data_names(self, raw_columns):
         """
@@ -574,33 +616,28 @@ class DataHeader(object):
                                     read_csv
        """
 
-        with open(filename, encoding='latin') as fp:
-            lines = fp.readlines()
-            fp.close()
+        parser = ExtendedSnowExMetadataParser(
+            filename, timezone=self.in_timezone,
+            header_sep=self.header_sep,
+            allow_split_lines=self.allow_split_lines
+        )
+        str_data, standard_cols, header_pos = parser.find_header_info()
 
-        # Site description files have no need for column lists
-        if 'site' in filename.lower():
-            self.log.info('Parsing site description header...')
-            columns = None
-            header_pos = None
+        if standard_cols is not None:
+            # handle name remapping
+            columns = remap_data_names(standard_cols, self.rename)
+            # Determine the profile type
+            (self.data_names, self.multi_sample_profiles) = \
+                self.determine_data_names(columns)
 
-            # Site location parses all of the file
+            self.data_names = remap_data_names(self.data_names, self.rename)
 
-        # Find the column names and where it is in the file
-        else:
-            columns, header_pos = self.parse_column_names(lines)
+            if self.multi_sample_profiles:
+                columns = self.rename_sample_profiles(columns, self.data_names)
             self.log.debug('Column Data found to be {} columns based on Line '
                            '{}'.format(len(columns), header_pos))
-
-            # Only parse what we know if the header
-            lines = lines[0:header_pos]
-
-        # Clean up the lines from line returns to grab header info
-        lines = [ln.strip() for ln in lines]
-        str_data = " ".join(lines).split('#')
-
-        # Keep track of the number of lines with # in it for data opening
-        self.length = len(str_data)
+        else:
+            columns = standard_cols
 
         # Key value pairs are separate by some separator provided.
         data = {}

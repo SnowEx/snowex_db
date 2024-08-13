@@ -6,12 +6,12 @@ import os
 from subprocess import STDOUT, check_output
 from pathlib import Path
 import pandas as pd
-import progressbar
 from geoalchemy2.elements import RasterElement, WKTElement
 from os.path import basename, exists, join
 from os import makedirs, remove
 import boto3
 import logging
+from timezonefinder import TimezoneFinder
 from snowexsql.db import get_table_attributes
 from snowexsql.data import ImageData, LayerData, PointData
 
@@ -24,6 +24,10 @@ from .projection import reproject_point_in_dict
 
 
 LOG = logging.getLogger("snowex_db.upload")
+
+
+class DataValidationError(ValueError):
+    pass
 
 
 class UploadProfileData:
@@ -51,26 +55,7 @@ class UploadProfileData:
         # Use the files creation date as the date accessed for NSIDC citation
         self.date_accessed = get_file_creation_date(self.filename)
 
-    def _read(self, profile_filename):
-        """
-        Read in a profile file. Managing the number of lines to skip and
-        adjusting column names
-
-        Args:
-            profile_filename: Filename containing the a manually measured
-                             profile
-        Returns:
-            df: pd.dataframe contain csv data with standardized column names
-        """
-        # header=0 because docs say to if using skip rows and columns
-        df = pd.read_csv(profile_filename, header=0,
-                         skiprows=self.hdr.header_pos,
-                         names=self.hdr.columns,
-                         encoding='latin')
-
-        # Special SMP specific tasks
-        depth_fmt = 'snow_height'
-        is_smp = False
+    def _handle_force(self, df, profile_filename):
         if 'force' in df.columns:
             # Convert depth from mm to cm
             df['depth'] = df['depth'].div(10)
@@ -84,6 +69,52 @@ class UploadProfileData:
 
             df['comments'] = f"fname = {f}, " \
                              f"serial no. = {serial_no}"
+
+        return df
+
+    def _handle_flags(self, df):
+
+        if "flags" in df.columns:
+            # Max length of the flags column
+            max_len = LayerData.flags.type.length
+            df["flags"] = df["flags"].str.replace(" ", "")
+            str_len = df["flags"].str.len()
+            if any(str_len > max_len):
+                raise DataValidationError(
+                    f"Flag column is too long"
+                )
+        return df
+
+    def _read(self, profile_filename):
+        """
+        Read in a profile file. Managing the number of lines to skip and
+        adjusting column names
+
+        Args:
+            profile_filename: Filename containing the a manually measured
+                             profile
+        Returns:
+            df: pd.dataframe contain csv data with standardized column names
+        """
+        # header=0 because docs say to if using skip rows and columns
+        try:
+            df = pd.read_csv(
+                profile_filename, header=0, skiprows=self.hdr.header_pos,
+                names=self.hdr.columns, encoding='latin'
+            )
+        except pd.errors.ParserError as e:
+            LOG.error(e)
+            raise RuntimeError(f"Failed reading {profile_filename}")
+
+        # Special SMP specific tasks
+        depth_fmt = 'snow_height'
+        is_smp = False
+
+        if 'force' in df.columns:
+            df = self._handle_force(df, profile_filename)
+            is_smp = True
+            # Make the data negative from snow surface
+            depth_fmt = 'surface_datum'
 
         if not df.empty:
             # Standardize all depth data
@@ -146,7 +177,8 @@ class UploadProfileData:
 
         # Assign all meta data to every entry to the data frame
         for k, v in self.hdr.info.items():
-            df[k] = v
+            if not pd.isna(v):
+                df[k] = v
 
         df['type'] = data_name
         df['date_accessed'] = self.date_accessed
@@ -179,6 +211,8 @@ class UploadProfileData:
         if 'comments' in df.columns:
             df['comments'] = df['comments'].apply(
                 lambda x: x.strip(' ') if isinstance(x, str) else x)
+
+        self._handle_flags(df)
 
         return df
 
@@ -243,11 +277,22 @@ class PointDataCSV(object):
         # Assign defaults for this class
         self.kwargs = assign_default_kwargs(self, kwargs, self.defaults)
 
+        # Assign if details are row based (generally for the SWE files)
+        self._row_based_crs = self.kwargs.get("row_based_crs", False)
+        self._row_based_tz = self.kwargs.get("row_based_timezone", False)
+        if self._row_based_tz:
+            in_timezone = None
+        else:
+            in_timezone = kwargs['in_timezone']
+
         # Use the files creation date as the date accessed for NSIDC citation
         self.date_accessed = get_file_creation_date(filename)
 
         # NOTE: This will error if in_timezone is not provided
-        self.hdr = DataHeader(filename, in_timezone=kwargs['in_timezone'], **self.kwargs)
+        self.hdr = DataHeader(
+            filename, in_timezone=in_timezone,
+            **self.kwargs
+        )
         self.df = self._read(filename)
 
         # Performance tracking
@@ -279,9 +324,21 @@ class PointDataCSV(object):
             df['date'] = self.hdr.info['date']
             df['time'] = self.hdr.info['time']
         else:
-            # date/time was provided in the data
-            df = df.apply(lambda data: add_date_time_keys(
-                data, in_timezone=self.in_timezone), axis=1)
+            # date/time was provided in the
+            if self._row_based_tz:
+                # row based in timezone
+                df = df.apply(
+                    lambda data: add_date_time_keys(
+                        data,
+                        in_timezone=TimezoneFinder().timezone_at(
+                            lng=data['longitude'], lat=data['latitude']
+                        )
+                    ), axis=1
+                )
+            else:
+                # file based timezone
+                df = df.apply(lambda data: add_date_time_keys(
+                    data, in_timezone=self.in_timezone), axis=1)
 
         # 1. Only submit valid columns to the DB
         self.log.info('Adding valid keyword arguments to metadata...')
@@ -299,22 +356,33 @@ class PointDataCSV(object):
                 df[k] = self.hdr.info[k]
 
         # Add geometry
-        df['geom'] = df.apply(lambda row: WKTElement(
-            'POINT({} {})'.format(
-                row['easting'],
-                row['northing']),
+        if self._row_based_crs:
+            # EPSG at row level here (EPSG:269...)
+            df['geom'] = df.apply(lambda row: WKTElement(
+                'POINT({} {})'.format(
+                    row['easting'],
+                    row['northing']),
+                srid=int(row['epsg'])), axis=1)
+        else:
+            # EPSG at the file level
+            df['geom'] = df.apply(lambda row: WKTElement(
+                'POINT({} {})'.format(
+                    row['easting'],
+                    row['northing']),
                 srid=self.hdr.info['epsg']), axis=1)
-
 
         # 2. Add all kwargs that were valid
         for v in valid:
             if v in self.kwargs.keys():
                 df[v] = self.kwargs[v]
 
-        # Add a camera id to the description if camera is in the cols (For camera derived snow depths)
+        # Add a camera id to the description if camera is in the cols
+        # (For camera derived snow depths)
         if 'camera' in df.columns:
             self.log.info('Adding camera id to equipment column...')
-            df['equipment'] = df.apply(lambda row: f'camera id = {row["camera"]}', axis=1)
+            df['equipment'] = df.apply(
+                lambda row: f'camera id = {row["camera"]}', axis=1
+            )
 
         # 3. Remove columns that are not valid
         drops = \
@@ -356,7 +424,6 @@ class PointDataCSV(object):
             df = self.build_data(pt)
             self.log.info('Submitting {:,} points of {} to the database...'.format(
                 len(df.index), pt))
-
             for i, row in df.iterrows():
                 d = PointData(**row)
                 objects.append(d)
