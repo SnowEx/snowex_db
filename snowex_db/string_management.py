@@ -207,10 +207,10 @@ def parse_none(value):
 
     # If its a nan or none or the string is empty
     if isinstance(value, str):
-        if value.lower() in ['nan', 'none'] or not value:
+        if value.lower() in ['nan', 'none', '-9999', '-9999.0'] or not value:
             result = None
     elif isinstance(value, float):
-        if np.isnan(value):
+        if np.isnan(value) or value == -9999:
             result = None
 
     return result

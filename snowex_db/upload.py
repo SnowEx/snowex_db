@@ -183,11 +183,15 @@ class UploadProfileData:
         df['type'] = data_name
         df['date_accessed'] = self.date_accessed
 
+        # Manage nans and nones
+        for c in df.columns:
+            df[c] = df[c].apply(lambda x: parse_none(x))
+
         # Get the average if its multisample profile
         if data_name in self.multi_sample_profiles:
             kw = '{}_sample'.format(data_name)
             sample_cols = [c for c in df.columns if kw in c]
-            df['value'] = df[sample_cols].mean(axis=1).astype(str)
+            df['value'] = df[sample_cols].mean(axis=1, skipna=True).astype(str)
 
             # Replace the data_name sample columns with just sample
             for s in sample_cols:
@@ -202,10 +206,6 @@ class UploadProfileData:
         drop_cols = [
             c for c in df.columns if c not in self.expected_attributes]
         df = df.drop(columns=drop_cols)
-
-        # Manage nans and nones
-        for c in df.columns:
-            df[c] = df[c].apply(lambda x: parse_none(x))
 
         # Clean up comments a bit
         if 'comments' in df.columns:
