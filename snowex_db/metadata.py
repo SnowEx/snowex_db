@@ -459,7 +459,7 @@ class DataHeader(object):
         'relative_humidity_10ft', 'barometric_pressure',
         'air_temp_10ft', 'wind_speed_10ft', 'wind_direction_10ft',
         'incoming_shortwave', 'outgoing_shortwave', 'incoming_longwave',
-        'outgoing_longwave', 'soil_moisture_20cm', 'soil_temp_20cm'
+        'outgoing_longwave', 'soil_moisture_20cm', 'soil_temp_20cm',
         'snow_void'
     ]
 
