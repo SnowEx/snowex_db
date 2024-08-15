@@ -1,3 +1,4 @@
+import numpy as np
 import pytest
 from snowex_db.string_management import *
 
@@ -62,18 +63,25 @@ def test_strip_encapsulated(s, encaps, expected):
     assert r == expected
 
 
-def test_parse_none():
+@pytest.mark.parametrize('str_value, expected', [
+    # Expected nones
+    ('NaN', None),
+    ('NONE', None),
+    (-9999, None),  # integer case
+    ('-9999', None),
+    ('-9999.0', None),
+    (-9999.0, None),
+    (np.nan, None),
+    # Shouldn't modify anything
+    (10.5, 10.5),
+    ("Comment", "Comment"),
+])
+def test_parse_none(str_value, expected):
     """
     Test we can convert nones and nans to None and still pass through everything
     else.
     """
-    # Assert these are converted to None
-    for v in ['NaN', '', 'NONE', np.nan]:
-        assert parse_none(v) is None
-
-    # Assert these are unaffected by function
-    for v in [10.5, 'Comment']:
-        assert parse_none(v) == v
+    assert parse_none(str_value) == expected
 
 
 @pytest.mark.parametrize('args, kwargs, expected', [
