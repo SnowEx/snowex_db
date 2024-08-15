@@ -22,6 +22,7 @@ def main():
     Add 2020 timeseries pits
     """
     db_name = 'localhost/snowex'
+
     # Version 2 DOI
     # https://nsidc.org/data/snex20_ts_sp/versions/2
     doi = "https://doi.org/10.5067/KZ43HVLZV6G4"

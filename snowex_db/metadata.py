@@ -434,7 +434,19 @@ class DataHeader(object):
               'depth_m': 'depth',
               'date_dd_mmm_yy': 'date',
               'time_gmt': 'time',
-              'elev_m': 'elevation'
+              'elev_m': 'elevation',
+              'rh_10ft': 'relative_humidity_10ft',
+              'bp_kpa_avg': 'barometric_pressure',
+              'airtc_10ft_avg': 'air_temp_10ft',
+              'wsms_10ft_avg': 'wind_speed_10ft',
+              'winddir_10ft_d1_wvt': 'wind_direction_10ft',
+              'sup_avg': 'incoming_shortwave',
+              'sdn_avg': 'outgoing_shortwave',
+              'lupco_avg': 'incoming_longwave',
+              'ldnco_avg': 'outgoing_longwave',
+              'sm_20cm_avg': 'soil_moisture_20cm',
+              'tc_20cm_avg': 'soil_temp_20cm',
+              'snowdepthfilter(m)': 'depth'
               }
 
     # Known possible profile types anything not in here will throw an error
@@ -444,6 +456,10 @@ class DataHeader(object):
         'specific_surface_area', 'equivalent_diameter',
         'grain_size', 'hand_hardness', 'grain_type',
         'manual_wetness', 'two_way_travel', 'depth', 'swe',
+        'relative_humidity_10ft', 'barometric_pressure',
+        'air_temp_10ft', 'wind_speed_10ft', 'wind_direction_10ft',
+        'incoming_shortwave', 'outgoing_shortwave', 'incoming_longwave',
+        'outgoing_longwave', 'soil_moisture_20cm', 'soil_temp_20cm'
         'snow_void'
     ]
 
@@ -474,6 +490,7 @@ class DataHeader(object):
             kwargs: keyword values to pass to the database as metadata
         """
         self.log = get_logger(__name__)
+        self._fname = filename
 
         self.extra_header = assign_default_kwargs(
             self, kwargs, self.defaults, leave=['epsg'])
@@ -509,7 +526,7 @@ class DataHeader(object):
 
     def submit(self, session):
         """
-        Submit meta data to the database as site info, Do not use on profile
+        Submit metadata to the database as site info, Do not use on profile
         headers. Only use on site_details files.
 
         Args:
