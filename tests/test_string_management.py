@@ -67,6 +67,7 @@ def test_strip_encapsulated(s, encaps, expected):
     # Expected nones
     ('NaN', None),
     ('NONE', None),
+    (-9999, None),  # integer case
     ('-9999', None),
     ('-9999.0', None),
     (-9999.0, None),
