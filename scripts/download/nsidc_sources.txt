@@ -9,3 +9,5 @@ https://n5eil01u.ecs.nsidc.org/SNOWEX/SNEX20_SD_TLI.001/2019.09.29/SNEX20_SD_TLI
 https://n5eil01u.ecs.nsidc.org/SNOWEX/SNEX20_TS_SP.002/
 https://n5eil01u.ecs.nsidc.org/SNOWEX/SNEX21_TS_SP.001/
 https://n5eil01u.ecs.nsidc.org/SNOWEX/SNEX_Met.001/
+https://n5eil01u.ecs.nsidc.org/SNOWEX/SNEX23_Lidar.001/2022.10.24/SNEX23_Lidar_FLCF_CH_0.25M_20221024_V01.0.tif
+https://n5eil01u.ecs.nsidc.org/SNOWEX/SNEX23_Lidar.001/2023.03.11/SNEX23_Lidar_FLCF_SD_0.25M_20230311_V01.0.tif
