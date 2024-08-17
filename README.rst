@@ -36,7 +36,7 @@ Features
 * Interpret and upload csv, rasters, uavsar files,
 * Full provenance for download and upload
 * Manage Site, Point, Profile and Raster Data
-* PostgreSQL Database end point for researchers
+* Postgres SQL Database end point for researchers
 
 
 Installing
@@ -49,7 +49,7 @@ Mac OS
 
 First ensure you have following prerequisites:
 
-* Python3.7 +
+* Python3.8 +
 * HomeBrew
 
 Then to install the postgres database with postgis functionality run:
@@ -64,7 +64,7 @@ Ubuntu
 
 First ensure you have following prerequisites:
 
-* Python3.7 +
+* Python3.8 +
 * wget
 
 Then to install the postgres database with postgis functionality run:
@@ -121,7 +121,7 @@ Quickly test your installation by running:
 This will run a series of tests that create a small database and confirm
 that samples of the data sets references in `./scripts/upload` folder can be
 uploaded seamlessly. These tests can serve as a nice way to see how to
-interact with the database but also serve to confirm our reproduciblity.
+interact with the database but also serve to confirm our reproducibility.
 
 The goal of this project is to have high fidelity in data
 interpretation/submission to the database. To see the current
