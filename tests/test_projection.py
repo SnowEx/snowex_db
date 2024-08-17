@@ -25,7 +25,7 @@ from snowex_db.projection import *
     # Confirm we force the zone to zone 12
     ({'latitude': 39.097464, 'longitude': -107.862476}, 12,
      {'northing': 4332280.1658, 'easting': 771338.607, "utm_zone": 12}),
-    # Test Missing missing longitude
+    # Test missing longitude
     ({"utm_zone": "10N", "easting": "757215", "northing": "4288778", "latitude": "38.71025", "longitude": ""}, None,
      {"utm_zone": 10, "easting": 757215.0, "northing": 4288778.0, "latitude": 38.71025, "longitude": -120.041884,
       'epsg': 26910}, ),
@@ -34,6 +34,8 @@ from snowex_db.projection import *
      {"utm_zone": 10, "latitude": 38.71025, "longitude": -120.041884, 'epsg': 26910},),
     # Test moving past when nothing is provided
     ({}, None, {"utm_zone": None, 'epsg': None},),
+    # Test single digit zones.
+    ({'easting': 465058.37445, 'northing': 7193480.256156, 'utm_zone': 6}, None, {'epsg':26906})
 ])
 def test_reproject_point_in_dict(info, utm_zone, expected):
     """
