@@ -25,8 +25,8 @@ def main():
 
     coi = [c for c in df.columns if c != 'Notes']
 
-    # No time is a problem. Use 12 AKST == 9pm UTC
-    df['Time[HHMM]'] = '09:00'
+    # No time is a problem. Use 12 AKST == 9pm (21:00) UTC
+    df['Time[HHMM]'] = '21:00'
 
     # Write out the modified version
     df[coi].to_csv(modified, index=False)
