@@ -30,7 +30,7 @@ def main():
               'no_data': -9999,
               'in_timezone': 'AKST',
               'doi':'https://doi.org/10.5067/BV4D8RRU1H7U',
-              "site_name": "farmers loop/creamers field"
+              "site_name": "farmers-creamers"
               }
     # Build a list of uploaders and then execute them
     uploaders = []

@@ -37,7 +37,7 @@ def main():
         'depth_is_metadata': False,
 
         # Constant Metadata for the GPR data
-        'site_name': 'farmers loop/creamers field',
+        'site_name': 'farmers-creamers',
         'observers': 'Randall Bonnell',
         'instrument': 'pulseEkko pro 1 GHz GPR',
         'in_timezone': 'UTC',
