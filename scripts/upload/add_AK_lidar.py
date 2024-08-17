@@ -62,7 +62,7 @@ def main():
                                        type="canopy_height", units="meters", **kwargs))
 
     # Snow Depth
-    f =  reprojected.joinpath(reprojected, "SNEX23_Lidar_FLCF_SD_0.25M_20230311_V01.0.tif")
+    f = reprojected.joinpath("SNEX23_Lidar_FLCF_SD_0.25M_20230311_V01.0.tif")
     uploaders.append(UploadRasterBatch([f], date=date(2023, 3, 11),
                                        type="depth", units="meters", **kwargs))
 
