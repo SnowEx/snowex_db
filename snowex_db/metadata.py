@@ -336,7 +336,7 @@ class ExtendedSnowExProfileVariables(SnowExProfileVariables):
     )
     ELEVATION = MeasurementDescription(
         'elevation', "Elevation",
-        ['elev_m', 'elevation']
+        ['elev_m', 'elevation', 'elevationwgs84']
     )
     EQUIPMENT = MeasurementDescription(
         'equipment', "Equipment",

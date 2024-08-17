@@ -29,7 +29,7 @@ def main():
               'epsg': 26906, # Alaska is Zone 6
               'no_data': -9999,
               'in_timezone': 'AKST',
-              'doi':'10.5067/BV4D8RRU1H7U',
+              'doi':'https://doi.org/10.5067/BV4D8RRU1H7U',
               "site_name": "farmers loop/creamers field"
               }
     # Build a list of uploaders and then execute them

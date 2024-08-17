@@ -515,6 +515,7 @@ class COGHandler:
         if exists(self._cog_path):
             if self.use_s3:
                 self._key_name = join(self.s3_prefix, self._cog_path.name)
+                LOG.info(f'Uploading {self._cog_path} to {self.s3_bucket}/{self._key_name}')
                 s3 = boto3.resource('s3', region_name=self.AWS_REGION)
                 s3.meta.client.upload_file(
                     str(self._cog_path),  # local file
