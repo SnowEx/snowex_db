@@ -137,12 +137,17 @@ def test_get_InSar_flight_comment(data_name, expected):
     assert comment == expected
 
 
-@pytest.mark.parametrize("info, expected_zone", [
+@pytest.mark.parametrize("info, key, expected_zone", [
     # Test a string zone is used
-    ({'utm_zone': '12N'}, 12),
+    ({'utm_zone': '12N'}, 'utm_zone', 12),
     # Test utm_zone not provided
-    ({}, None),
+    ({}, 'utm_zone', None),
+    # Test single/double digit zones
+    ({'utm_zone': '6'}, 'epsg', 26906),
+    ({'utm_zone': '11'}, 'epsg', 26911),
+
 ])
-def test_manage_utm_zone(info, expected_zone):
+def test_manage_utm_zone(info, key, expected_zone):
     result = manage_utm_zone(info)
-    assert result['utm_zone'] == expected_zone
+    assert result[key] == expected_zone
+

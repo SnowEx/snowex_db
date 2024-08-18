@@ -165,7 +165,7 @@ def convert_cardinal_to_degree(cardinal):
 
 def manage_utm_zone(info):
     """
-    Maanage the nuance of having a utm zone string sometimes and
+    Manage the nuance of having a utm zone string sometimes and
     then not being in the keys at all. If the utm_zone is in the
     dictionary then convert it to an integer. Otherwise add with
     assign None
@@ -177,7 +177,7 @@ def manage_utm_zone(info):
     """
     if 'utm_zone' in info.keys():
         info['utm_zone'] = int(''.join([c for c in info['utm_zone'] if c.isnumeric()]))
-        info['epsg'] = int(f"269{info['utm_zone']}")
+        info['epsg'] = int(f"269{info['utm_zone']:02}")
     elif 'epsg' in info.keys():
         if info['epsg'] is not None:
             info['utm_zone'] = int(str(info['epsg'])[-2:])

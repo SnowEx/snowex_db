@@ -61,7 +61,7 @@ def reproject_point_in_dict(info, is_northern=True, zone_number=None):
     # Assuming NAD83, add epsg code
     if 'utm_zone' in result.keys():
         if result['utm_zone'] is not None:
-            result['epsg'] = int(f"269{result['utm_zone']}")
+            result['epsg'] = int(f"269{result['utm_zone']:02}")
     else:
         result['utm_zone'] = None
         result['epsg'] = None
