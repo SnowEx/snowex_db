@@ -24,7 +24,7 @@ def main():
     """
     db_name = 'localhost/snowex'
     # Preliminary data
-    doi = "None"
+    doi = "preliminary_alaska_pits"
     debug = True
     timezone = "US/Alaska"
 
@@ -35,7 +35,8 @@ def main():
     # Files to ignore
     ignore_files = [
         "SnowEx23_SnowPits_AKIOP_Summary_Environment_v01.csv",
-        "SnowEx23_SnowPits_AKIOP_Summary_SWE_v01.csv"
+        "SnowEx23_SnowPits_AKIOP_Summary_SWE_v01.csv",
+        "SnowEx23_SnowPits_AKIOP_Summary_SWE_v01_modified.csv"
     ]
 
     # Get all the date folders

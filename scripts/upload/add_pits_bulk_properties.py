@@ -35,7 +35,7 @@ def main():
         },
         # Preliminary data from 2023 Alask pits
         {
-            "DOI": None,
+            "DOI": "preliminary_alaska_pits",
             "path": "../SNEX23_preliminary/Data/SnowEx23_SnowPits_AKIOP_Summary_SWE_v01.csv"
         }
     ]

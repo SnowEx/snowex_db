@@ -35,7 +35,8 @@ def main():
     # Files to ignore
     ignore_files = [
         "SNEX20_TS_SP_Summary_Environment_v02.csv",
-        "SNEX20_TS_SP_Summary_SWE_v02.csv"
+        "SNEX20_TS_SP_Summary_SWE_v02.csv",
+        "SNEX20_TS_SP_Summary_SWE_v02_modified.csv"
     ]
 
     # Get all the date folders
