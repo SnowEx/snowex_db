@@ -301,18 +301,19 @@ class UploadProfileData(BaseUpload):
             session, MeasurementType, dict(name=measurement_type)
         )
 
+        filtered_kwargs = {
+            k: v for k, v in kwargs.items()
+            if k in self.expected_attributes
+        }
         object_kwargs = dict(
             instrument=instrument,
             doi=doi,
             measurement_type=measurement_obj,
-            **kwargs
+            **filtered_kwargs
         )
         # Add site if given
-        if site_name is None:
-            object_kwargs["campaign"] = campaign
-            object_kwargs["observers"] = observer_list
-        else:
-            object_kwargs["site"] = site
+        object_kwargs["site"] = site
+        # Drop all columns were not expecting
 
         # Now that the instrument exists, create the entry, notice we only need the instrument object
         new_entry = data_cls(**object_kwargs)

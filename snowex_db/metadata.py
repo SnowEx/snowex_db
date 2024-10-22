@@ -472,7 +472,6 @@ class DataHeader(object):
         'northern_hemisphere': True,
         'depth_is_metadata': True,
         'allow_split_lines': False,
-        'doi': None
         }
 
     def __init__(self, filename, **kwargs):
