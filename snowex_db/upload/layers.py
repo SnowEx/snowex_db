@@ -14,6 +14,7 @@ import logging
 from timezonefinder import TimezoneFinder
 from snowexsql.db import get_table_attributes
 from snowexsql.tables import LayerData
+import datetime
 
 from ..interpretation import add_date_time_keys, standardize_depth
 from ..metadata import DataHeader
@@ -205,9 +206,9 @@ class UploadProfileData(BaseUpload):
             df['value'] = df[data_name].astype(str)
 
         # Drop all columns were not expecting
-        drop_cols = [
-            c for c in df.columns if c not in self.expected_attributes]
-        df = df.drop(columns=drop_cols)
+        # drop_cols = [
+        #     c for c in df.columns if c not in self.expected_attributes]
+        # df = df.drop(columns=drop_cols)
 
         # Clean up comments a bit
         if 'comments' in df.columns:
@@ -270,12 +271,16 @@ class UploadProfileData(BaseUpload):
             observer_list.append(observer)
 
         # Add site
-        site_name = kwargs.pop('site_name')
+        site_id = kwargs.pop('pit_id')
+        date = kwargs.pop("date")
+        meas_time = kwargs.pop("time")
+        dt = datetime.datetime.combine(date, meas_time)
+
         site = self._check_or_add_object(
-            session, Site, dict(name=site_name),
+            session, Site, dict(name=site_id),
             object_kwargs=dict(
-                name=site_name, campaign=campaign,
-                datetime=kwargs.pop("datetime"),
+                name=site_id, campaign=campaign,
+                datetime=dt,
                 geom=kwargs.pop("geom"),
                 elevation=kwargs.pop("elevation"),
                 observers=observer_list,

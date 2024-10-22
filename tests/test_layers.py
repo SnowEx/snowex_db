@@ -88,7 +88,8 @@ class TestDensityProfile(TableTestBase):
     """
 
     args = ['density.csv']
-    kwargs = {'in_timezone': 'MST', 'instrument':'kelly cutter', 'site_name':'grand mesa'}
+    kwargs = {'in_timezone': 'MST', 'instrument':'kelly cutter', 'site_name':'grand mesa',
+              'observers':'TEST', 'elevation':1000, 'doi':None}
     UploaderClass = UploadProfileData
     TableClass = LayerData
     dt = datetime.datetime(2020, 2, 5, 20, 30, 0, 0, pytz.utc)
