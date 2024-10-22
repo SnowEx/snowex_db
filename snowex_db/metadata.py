@@ -9,7 +9,7 @@ from insitupy.campaigns.campaign import SnowExMetadataParser
 from insitupy.campaigns.variables import SnowExProfileVariables, \
     MeasurementDescription
 from snowexsql.db import get_table_attributes
-from snowexsql.data import SiteData
+from snowexsql.tables import Site
 
 from .interpretation import *
 from .projection import add_geom, reproject_point_in_dict
@@ -534,13 +534,13 @@ class DataHeader(object):
         """
         # only submit valid  keys to db
         kwargs = {}
-        valid = get_table_attributes(SiteData)
+        valid = get_table_attributes(Site)
         for k, v in self.info.items():
             if k in valid:
                 kwargs[k] = v
 
         kwargs = add_geom(kwargs, self.info['epsg'])
-        d = SiteData(**kwargs)
+        d = Site(**kwargs)
         session.add(d)
         session.commit()
 
