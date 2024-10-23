@@ -285,13 +285,13 @@ class ExtendedSnowExProfileVariables(SnowExProfileVariables):
     )
     SNOW_VOID = MeasurementDescription(
         "snow_void", "Void depth in the snow measurement",
-        ["snow void", "snow_void"]
+        ["snow void", "snow_void"], True
     )
     PERMITTIVITY = MeasurementDescription(
         "permittivity", "Permittivity",
         ["permittivity_a", "permittivity_b", "permittivity",
          'dielectric_constant', 'dielectric_constant_a',
-         'dielectric_constant_b']
+         'dielectric_constant_b'], True
     )
     IGNORE = MeasurementDescription(
         "ignore", "Ignore this",
@@ -336,7 +336,7 @@ class ExtendedSnowExProfileVariables(SnowExProfileVariables):
     )
     ELEVATION = MeasurementDescription(
         'elevation', "Elevation",
-        ['elev_m', 'elevation', 'elevationwgs84']
+        ['elev_m', 'elevation', 'elevationwgs84'], True
     )
     EQUIPMENT = MeasurementDescription(
         'equipment', "Equipment",
@@ -348,11 +348,11 @@ class ExtendedSnowExProfileVariables(SnowExProfileVariables):
     )
     NORTHING = MeasurementDescription(
         'northing', "UTM Northing",
-        ['northing', 'utm_wgs84_northing']
+        ['northing', 'utm_wgs84_northing'], True
     )
     EASTING = MeasurementDescription(
         'easting', "UTM Easting",
-        ['easting', 'utm_wgs84_easting']
+        ['easting', 'utm_wgs84_easting'], True
     )
 
 
@@ -399,55 +399,6 @@ class DataHeader(object):
     """
 
     # Typical names we run into that need renaming
-    rename = {'location': 'site_name',
-              'top': 'depth',
-              'snow void': "snow_void",
-              'height': 'depth',
-              'bottom': 'bottom_depth',
-              'site': 'site_id',
-              'pitid': 'pit_id',
-              'slope': 'slope_angle',
-              'weather': 'weather_description',
-              'sky': 'sky_cover',
-              'notes': 'site_notes',
-              'sample_top_height': 'depth',
-              'deq': 'equivalent_diameter',
-              'operator': 'observers',
-              'surveyors': 'observers',
-              'observer': 'observers',
-              'total_snow_depth': 'total_depth',
-              'smp_serial_number': 'instrument',
-              'lat': 'latitude',
-              'long': 'longitude',
-              'lon': 'longitude',
-              'twt': 'two_way_travel',
-              'twt_ns': 'two_way_travel',
-              'utmzone': 'utm_zone',
-              'measurement_tool': 'instrument',
-              'avgdensity': 'density',
-              'avg_density': 'density',
-              'density_mean': 'density',
-              'dielectric_constant': 'permittivity',
-              'flag': 'flags',
-              'hs': 'depth',
-              'swe_mm': 'swe',
-              'depth_m': 'depth',
-              'date_dd_mmm_yy': 'date',
-              'time_gmt': 'time',
-              'elev_m': 'elevation',
-              'rh_10ft': 'relative_humidity_10ft',
-              'bp_kpa_avg': 'barometric_pressure',
-              'airtc_10ft_avg': 'air_temp_10ft',
-              'wsms_10ft_avg': 'wind_speed_10ft',
-              'winddir_10ft_d1_wvt': 'wind_direction_10ft',
-              'sup_avg': 'incoming_shortwave',
-              'sdn_avg': 'outgoing_shortwave',
-              'lupco_avg': 'incoming_longwave',
-              'ldnco_avg': 'outgoing_longwave',
-              'sm_20cm_avg': 'soil_moisture_20cm',
-              'tc_20cm_avg': 'soil_temp_20cm',
-              'snowdepthfilter(m)': 'depth'
-              }
 
     # Known possible profile types anything not in here will throw an error
     available_data_names = [
@@ -638,11 +589,10 @@ class DataHeader(object):
             header_sep=self.header_sep,
             allow_split_lines=self.allow_split_lines
         )
-        str_data, standard_cols, header_pos = parser.find_header_info()
+        str_data, columns, header_pos = parser.find_header_info()
 
-        if standard_cols is not None:
-            # handle name remapping
-            columns = remap_data_names(standard_cols, self.rename)
+        if columns is not None:
+
             # Determine the profile type
             (self.data_names, self.multi_sample_profiles) = \
                 self.determine_data_names(columns)

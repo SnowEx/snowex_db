@@ -39,6 +39,7 @@ class UploadProfileData(BaseUpload):
     one file at a time.
     """
     expected_attributes = [c for c in dir(LayerData) if c[0] != '_']
+    TABLE_CLASS = LayerData
 
     def __init__(self, profile_filename, **kwargs):
         self.log = get_logger(__name__)
@@ -251,7 +252,7 @@ class UploadProfileData(BaseUpload):
             if not df.empty:
                 self.log.debug('Profile Submitted!\n')
 
-    def _add_entry(self, session, data_cls, **kwargs):
+    def _add_entry(self, session, **kwargs):
         # Add instrument
         instrument = self._check_or_add_object(
             session, Instrument, dict(name=kwargs.pop('instrument'))
@@ -301,20 +302,22 @@ class UploadProfileData(BaseUpload):
             session, MeasurementType, dict(name=measurement_type)
         )
 
-        filtered_kwargs = {
-            k: v for k, v in kwargs.items()
-            if k in self.expected_attributes
-        }
-        object_kwargs = dict(
+        # Now that the other objects exist, create the entry,
+        # notice we only need the instrument object
+        new_entry = self.TABLE_CLASS(
+            # Linked tables
             instrument=instrument,
             doi=doi,
             measurement_type=measurement_obj,
-            **filtered_kwargs
+            site=site,
+            # Arguments from kwargs
+            depth=kwargs.get("depth"),
+            bottom_depth=kwargs.get("bottom_depth"),
+            comments=kwargs.get("comments"),
+            sample_a=kwargs.get("sample_a"),
+            sample_b=kwargs.get("sample_b"),
+            sample_c=kwargs.get("sample_c"),
+            value=kwargs.get("value"),
+            flags=kwargs.get("flags"),
         )
-        # Add site if given
-        object_kwargs["site"] = site
-        # Drop all columns were not expecting
-
-        # Now that the instrument exists, create the entry, notice we only need the instrument object
-        new_entry = data_cls(**object_kwargs)
         return new_entry
