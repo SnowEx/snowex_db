@@ -10,20 +10,27 @@ dist/*
 *.shp
 *.shx
 
+# Versioning
 snowex_db/_version.py
+
+# Test files
+snowex_cog_storage/
+
+.coverage
+coverage.xml
+htmlcov/*
+
+# Configuration files
+credentials.json
 
 docs/modules.rst
 docs/snowex_db.rst
 docs/_build/*
 
-**/.ipynb_checkpoints/*
-
-.coverage
-coverage.xml
-htmlcov/*
 scripts/upload/test*.txt
-.idea/*
 scripts/download/data/*
 venv/
 
-credentials.json
+# IDE files
+.idea/*
+**/.ipynb_checkpoints/*
