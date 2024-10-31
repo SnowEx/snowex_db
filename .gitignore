@@ -33,4 +33,5 @@ venv/
 
 # IDE files
 .idea/*
+.vscode/*
 **/.ipynb_checkpoints/*
