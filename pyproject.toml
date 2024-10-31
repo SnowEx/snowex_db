@@ -1,0 +1,65 @@
+[build-system]
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
+
+[project]
+name = "snowexdb"
+dynamic = ["version"]
+description = "SQL Database software for SnowEx data"
+keywords = ["snowexdb", "snowexsql", "sql", "database", "snow"]
+readme = "README.rst"
+requires-python = ">=3.8"
+classifiers = [
+    'Development Status :: 2 - Pre-Alpha',
+    'Intended Audience :: Developers',
+    'Natural Language :: English',
+    'Programming Language :: Python :: 3.9',
+    'Programming Language :: Python :: 3.10',
+    'Programming Language :: Python :: 3.11',
+    'Programming Language :: Python :: 3.12',
+]
+dependencies = [
+    "snowexsql<0.6",
+    "snowmicropyn",
+    "insitupy==0.1.2",
+    "boto3<1.24",
+    "rasterio<1.4",
+    "timezonefinder<7",
+    "metloom==0.6.1",
+    "coloredlogs",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-cov",
+    "moto<3.2",
+]
+uploader = [
+    "progressbar2",
+]
+all = ["snowexdb[dev,uploader]"]
+
+[project.scripts]
+clear_dataset = "snowex_db.cli:clear_dataset"
+
+# TODO - Issue #36
+#[project.license]
+#file = "LICENSE"
+
+[project.urls]
+Homepage = "https://github.com/SnowEx/snowex_db"
+Repository = "https://github.com/SnowEx/snowex_db.git"
+Issues = "https://github.com/SnowEx/snowex_db/issues"
+
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.build.hooks.vcs]
+version-file = "snowex_db/_version.py"
+
+[tool.hatch.version.raw-options]
+local_scheme = "no-local-version"
+
+[tool.hatch.build.targets.sdist]
+exclude = ["/tests"]
