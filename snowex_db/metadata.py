@@ -275,27 +275,117 @@ class ExtendedSnowExProfileVariables(SnowExProfileVariables):
     """
     Extend variables to add a few relevant ones
     """
-    DEPTH = MeasurementDescription(
-        "depth", "top or center depth of measurement",
-        [
-            "depth", "top", "sample_top_height", "hs",
-            "depth_m", 'snowdepthfilter(m)', 'snowdepthfilter',
-            'height'
-        ], True
+    COMMENTS = MeasurementDescription(
+        "comments", "Comments",
+        ["comments", "pit_comments"]
+    )
+    COUNT = MeasurementDescription(
+        "count", "Count for surrounding perimeter depths",
+        ["count"]
+    )
+    PARAMETER_CODES = MeasurementDescription(
+        "parameter_codes", "Parameter Codes",
+        ["parameter_codes"]
+    )
+    TIME_BOUND_PIT = MeasurementDescription(
+        "Time start/end",
+        "Time of first or last pit measurement",
+        ["Time start/end", "time_start/end"]
+    )
+    SITE_NAME = MeasurementDescription(
+        "site_name", "Name of campaign site",
+        ['location'], True
+    )
+    SITE_ID = MeasurementDescription(
+        "site_id", "ID within campaign site",
+        ['site'], True
+    )
+    PIT_ID = MeasurementDescription(
+        "pit_id", "ID of snow pit",
+        ['pitid'], True
+    )
+    EQUIVALENT_DIAMETER = MeasurementDescription(
+        'equivalent_diameter', "",
+        ['deq']
+    )
+    OBSERVERS = MeasurementDescription(
+        'observers', "Observer(s) of the measurement",
+        ['operator', 'surveyors', 'observer']
+    )
+
+    TWO_WAY_TRAVEL = MeasurementDescription(
+        'two_way_travel', "Two way travel",
+        ['twt', 'twt_ns']
+    )
+
+    FLAGS = MeasurementDescription(
+        'flags', "Measurements flags",
+        ['flag']
+    )
+
+    RH_10FT = MeasurementDescription(
+        "relative_humidity_10ft",
+        "Relative humidity measured at 10 ft tower level",
+        ['rh_10ft']
+    )
+    BP = MeasurementDescription(
+        'barometric_pressure', "Barometric pressure",
+        ['bp_kpa_avg']
+    )
+    AIR_TEMP_10FT = MeasurementDescription(
+        'air_temperature_10ft',
+        "Air temperature measured at 10 ft tower level",
+        ['airtc_10ft_avg']
+    )
+    WIND_SPEED_10FT = MeasurementDescription(
+        'wind_speed_10ft',
+        "Vector mean wind speed measured at 10 ft tower level",
+        ['wsms_10ft_avg']
+    )
+    WIND_DIR_10ft = MeasurementDescription(
+        'wind_direction_10ft',
+        "Vector mean wind direction measured at 10 ft tower level",
+        ['winddir_10ft_d1_wvt']
+    )
+    SW_IN = MeasurementDescription(
+        'incoming_shortwave',
+        "Shortwave radiation measured with upward-facing sensor",
+        ['sup_avg']
+    )
+    SW_OUT = MeasurementDescription(
+        'outgoing_shortwave',
+        "Shortwave radiation measured with downward-facing sensor",
+        ['sdn_avg']
+    )
+    LW_IN = MeasurementDescription(
+        'incoming_longwave',
+        "Longwave radiation measured with upward-facing sensor",
+        ['lupco_avg']
+    )
+    LW_OUT = MeasurementDescription(
+        'outgoing_longwave',
+        "Longwave radiation measured with downward-facing sensor",
+        ['ldnco_avg']
+    )
+    SM_20CM = MeasurementDescription(
+        'soil_moisture_20cm', "Soil moisture measured at 10 cm below the soil",
+        ['sm_20cm_avg']
+    )
+    ST_20CM = MeasurementDescription(
+        'soil_temperature_20cm',
+        "Soil temperature measured at 10 cm below the soil",
+        ['tc_20cm_avg']
     )
     SNOW_VOID = MeasurementDescription(
         "snow_void", "Void depth in the snow measurement",
         ["snow void", "snow_void"], True
     )
-    PERMITTIVITY = MeasurementDescription(
-        "permittivity", "Permittivity",
-        ["permittivity_a", "permittivity_b", "permittivity",
-         'dielectric_constant', 'dielectric_constant_a',
-         'dielectric_constant_b'], True
-    )
     IGNORE = MeasurementDescription(
         "ignore", "Ignore this",
-        ["original_index", 'id', 'freq_mhz', 'camera', 'avgvelocity']
+        [
+            "original_index", 'id', 'freq_mhz', 'camera',
+            'avgvelocity', 'equipment', 'version_number'
+        ]
     )
     SAMPLE_SIGNAL = MeasurementDescription(
         'sample_signal', "Sample Signal",
@@ -311,20 +401,6 @@ class ExtendedSnowExProfileVariables(SnowExProfileVariables):
         'specific_surface_area', "Specific Surface Area",
         ['specific_surface_area']
     )
-    DATETIME = MeasurementDescription(
-        'datetime', "Combined date and time",
-        ["Date/Local Standard Time", "date/local_standard_time", "datetime",
-         "date&time"],
-        True
-    )
-    DATE = MeasurementDescription(
-        'date', "Measurement Date (only date column)",
-        ['date_dd_mmm_yy', 'date']
-    )
-    TIME = MeasurementDescription(
-        'time', "Measurement time",
-        ['time_gmt', 'time']
-    )
     UTCYEAR = MeasurementDescription(
         'utcyear', "UTC Year", ['utcyear']
     )
@@ -333,26 +409,6 @@ class ExtendedSnowExProfileVariables(SnowExProfileVariables):
     )
     UTCTOD = MeasurementDescription(
         'utctod', 'UTC Time of Day', ['utctod']
-    )
-    ELEVATION = MeasurementDescription(
-        'elevation', "Elevation",
-        ['elev_m', 'elevation', 'elevationwgs84'], True
-    )
-    EQUIPMENT = MeasurementDescription(
-        'equipment', "Equipment",
-        ['equipment']
-    )
-    VERSION_NUMBER = MeasurementDescription(
-        'version_number', "Version Number",
-        ['version_number']
-    )
-    NORTHING = MeasurementDescription(
-        'northing', "UTM Northing",
-        ['northing', 'utm_wgs84_northing'], True
-    )
-    EASTING = MeasurementDescription(
-        'easting', "UTM Easting",
-        ['easting', 'utm_wgs84_easting'], True
     )
 
 
@@ -589,6 +645,7 @@ class DataHeader(object):
             header_sep=self.header_sep,
             allow_split_lines=self.allow_split_lines
         )
+        # TODO:
         str_data, columns, header_pos = parser.find_header_info()
 
         if columns is not None:
