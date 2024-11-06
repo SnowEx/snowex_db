@@ -5,9 +5,11 @@ to describing data.
 
 from os.path import basename
 import pandas as pd
-from insitupy.campaigns.campaign import SnowExMetadataParser
-from insitupy.campaigns.variables import SnowExProfileVariables, \
-    MeasurementDescription
+from insitupy.campaigns.snowex.snowex_campaign import SnowExMetadataParser
+from insitupy.variables import MeasurementDescription
+from insitupy.campaigns.snowex import (
+    SnowExPrimaryVariables, SnowExMetadataVariables,
+)
 from snowexsql.db import get_table_attributes
 from snowexsql.tables import Site
 
@@ -271,7 +273,23 @@ class SMPMeasurementLog(object):
         return meta.iloc[0].to_dict()
 
 
-class ExtendedSnowExProfileVariables(SnowExProfileVariables):
+class ExtendedSnowExMetadataVariables(SnowExMetadataVariables):
+    COUNT = MeasurementDescription(
+        "count", "Count for surrounding perimeter depths",
+        ["count"]
+    )
+    UTCYEAR = MeasurementDescription(
+        'utcyear', "UTC Year", ['utcyear']
+    )
+    UTCDOY = MeasurementDescription(
+        'utcdoy', "UTC day of year", ['utcdoy']
+    )
+    UTCTOD = MeasurementDescription(
+        'utctod', 'UTC Time of Day', ['utctod']
+    )
+
+
+class ExtendedSnowExPrimaryVariables(SnowExPrimaryVariables):
     """
     Extend variables to add a few relevant ones
     """
@@ -279,40 +297,14 @@ class ExtendedSnowExProfileVariables(SnowExProfileVariables):
         "comments", "Comments",
         ["comments", "pit_comments"]
     )
-    COUNT = MeasurementDescription(
-        "count", "Count for surrounding perimeter depths",
-        ["count"]
-    )
     PARAMETER_CODES = MeasurementDescription(
         "parameter_codes", "Parameter Codes",
         ["parameter_codes"]
-    )
-    TIME_BOUND_PIT = MeasurementDescription(
-        "Time start/end",
-        "Time of first or last pit measurement",
-        ["Time start/end", "time_start/end"]
-    )
-    SITE_NAME = MeasurementDescription(
-        "site_name", "Name of campaign site",
-        ['location'], True
-    )
-    SITE_ID = MeasurementDescription(
-        "site_id", "ID within campaign site",
-        ['site'], True
-    )
-    PIT_ID = MeasurementDescription(
-        "pit_id", "ID of snow pit",
-        ['pitid'], True
-    )
-    EQUIVALENT_DIAMETER = MeasurementDescription(
-        'equivalent_diameter', "",
-        ['deq']
     )
     OBSERVERS = MeasurementDescription(
         'observers', "Observer(s) of the measurement",
         ['operator', 'surveyors', 'observer']
     )
-
     TWO_WAY_TRAVEL = MeasurementDescription(
         'two_way_travel', "Two way travel",
         ['twt', 'twt_ns']
@@ -401,22 +393,14 @@ class ExtendedSnowExProfileVariables(SnowExProfileVariables):
         'specific_surface_area', "Specific Surface Area",
         ['specific_surface_area']
     )
-    UTCYEAR = MeasurementDescription(
-        'utcyear', "UTC Year", ['utcyear']
-    )
-    UTCDOY = MeasurementDescription(
-        'utcdoy', "UTC day of year", ['utcdoy']
-    )
-    UTCTOD = MeasurementDescription(
-        'utctod', 'UTC Time of Day', ['utctod']
-    )
 
 
 class ExtendedSnowExMetadataParser(SnowExMetadataParser):
     """
     Extend the parser to update the extended varaibles
     """
-    VARIABLES_CLASS = ExtendedSnowExProfileVariables
+    PRIMARY_VARIABLES_CLASS = ExtendedSnowExPrimaryVariables
+    METADATA_VARIABLE_CLASS = ExtendedSnowExMetadataVariables
 
 
 class DataHeader(object):
