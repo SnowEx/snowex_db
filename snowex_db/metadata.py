@@ -629,7 +629,6 @@ class DataHeader(object):
             header_sep=self.header_sep,
             allow_split_lines=self.allow_split_lines
         )
-        # TODO:
         str_data, columns, header_pos = parser.find_header_info()
 
         if columns is not None:

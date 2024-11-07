@@ -1,29 +1,23 @@
 """
 Module for classes that upload single files to the database.
 """
+from typing import List
 
-import os
-from subprocess import STDOUT, check_output
-from pathlib import Path
 import pandas as pd
-from geoalchemy2.elements import RasterElement, WKTElement
-from os.path import basename, exists, join
-from os import makedirs, remove
-import boto3
+
 import logging
-from timezonefinder import TimezoneFinder
-from snowexsql.db import get_table_attributes
 from snowexsql.tables import LayerData
 import datetime
-
-from ..interpretation import add_date_time_keys, standardize_depth
-from ..metadata import DataHeader
-from ..string_management import parse_none, remap_data_names
-from ..utilities import (assign_default_kwargs, get_file_creation_date,
-                        get_logger)
-from ..projection import reproject_point_in_dict
 from snowexsql.tables import Instrument, Campaign, Observer, DOI, MeasurementType, Site
+from insitupy.campaigns.snowex import SnowExProfileData
+
+from ..metadata import DataHeader
+from ..string_management import parse_none
+from ..utilities import get_file_creation_date, get_logger
 from .base import BaseUpload
+
+
+from ..profile_data import SnowExProfileDataCollection
 
 
 LOG = logging.getLogger("snowex_db.upload.layers")
@@ -54,42 +48,12 @@ class UploadProfileData(BaseUpload):
             setattr(self, att, getattr(self.hdr, att))
 
         # Read in data
-        self.df = self._read(profile_filename)
+        self.data = self._read(profile_filename)
 
         # Use the files creation date as the date accessed for NSIDC citation
         self.date_accessed = get_file_creation_date(self.filename)
 
-    def _handle_force(self, df, profile_filename):
-        if 'force' in df.columns:
-            # Convert depth from mm to cm
-            df['depth'] = df['depth'].div(10)
-            is_smp = True
-            # Make the data negative from snow surface
-            depth_fmt = 'surface_datum'
-
-            # SMP serial number and original filename for provenance to the comment
-            f = basename(profile_filename)
-            serial_no = f.split('SMP_')[-1][1:3]
-
-            df['comments'] = f"fname = {f}, " \
-                             f"serial no. = {serial_no}"
-
-        return df
-
-    def _handle_flags(self, df):
-
-        if "flags" in df.columns:
-            # Max length of the flags column
-            max_len = LayerData.flags.type.length
-            df["flags"] = df["flags"].str.replace(" ", "")
-            str_len = df["flags"].str.len()
-            if any(str_len > max_len):
-                raise DataValidationError(
-                    f"Flag column is too long"
-                )
-        return df
-
-    def _read(self, profile_filename):
+    def _read(self, profile_filename) -> List[SnowExProfileData]:
         """
         Read in a profile file. Managing the number of lines to skip and
         adjusting column names
@@ -98,44 +62,15 @@ class UploadProfileData(BaseUpload):
             profile_filename: Filename containing the a manually measured
                              profile
         Returns:
-            df: pd.dataframe contain csv data with standardized column names
+            list of ProfileData objects
         """
-        # header=0 because docs say to if using skip rows and columns
         try:
-            df = pd.read_csv(
-                profile_filename, header=0, skiprows=self.hdr.header_pos,
-                names=self.hdr.columns, encoding='latin'
-            )
+            data = SnowExProfileDataCollection.from_csv(profile_filename)
         except pd.errors.ParserError as e:
             LOG.error(e)
             raise RuntimeError(f"Failed reading {profile_filename}")
 
-        # Special SMP specific tasks
-        depth_fmt = 'snow_height'
-        is_smp = False
-
-        if 'force' in df.columns:
-            df = self._handle_force(df, profile_filename)
-            is_smp = True
-            # Make the data negative from snow surface
-            depth_fmt = 'surface_datum'
-
-        if not df.empty:
-            # Standardize all depth data
-            new_depth = standardize_depth(df['depth'],
-                                          desired_format=depth_fmt,
-                                          is_smp=is_smp)
-
-            if 'bottom_depth' in df.columns:
-                delta = df['depth'] - new_depth
-                df['bottom_depth'] = df['bottom_depth'] - delta
-
-            df['depth'] = new_depth
-
-            delta = abs(df['depth'].max() - df['depth'].min())
-            self.log.info('File contains {} profiles each with {:,} layers across '
-                          '{:0.2f} cm'.format(len(self.hdr.data_names), len(df), delta))
-        return df
+        return data
 
     def check(self, site_info):
         """
@@ -164,47 +99,30 @@ class UploadProfileData(BaseUpload):
                                                                       self.hdr.info[k],
                                                                       site_info[k]))
 
-    def build_data(self, data_name):
+    def build_data(self, profile: SnowExProfileData):
         """
         Build out the original dataframe with the metadata to avoid doing it
         during the submission loop. Removes all other main profile columns and
         assigns data_name as the value column
 
         Args:
-            data_name: Name of a the main profile
+            profile: The object of a single profile
 
         Returns:
             df: Dataframe ready for submission
         """
 
-        df = self.df.copy()
+        df = profile.df.copy()
+        # TODO: what do we do with the metadata
+        metadata = profile.metadata
+        variable = profile.variable
 
-        # Assign all meta data to every entry to the data frame
-        for k, v in self.hdr.info.items():
-            if not pd.isna(v):
-                df[k] = v
-
-        df['type'] = data_name
-        df['date_accessed'] = self.date_accessed
+        df['type'] = [variable.code] * len(df)
 
         # Manage nans and nones
         for c in df.columns:
             df[c] = df[c].apply(lambda x: parse_none(x))
-
-        # Get the average if its multisample profile
-        if data_name in self.multi_sample_profiles:
-            kw = '{}_sample'.format(data_name)
-            sample_cols = [c for c in df.columns if kw in c]
-            df['value'] = df[sample_cols].mean(axis=1, skipna=True).astype(str)
-
-            # Replace the data_name sample columns with just sample
-            for s in sample_cols:
-                n = s.replace(kw, 'sample')
-                df[n] = df[s].copy()
-
-        # Individual
-        else:
-            df['value'] = df[data_name].astype(str)
+        df['value'] = df[variable.code].astype(str)
 
         # Drop all columns were not expecting
         # drop_cols = [
@@ -215,8 +133,6 @@ class UploadProfileData(BaseUpload):
         if 'comments' in df.columns:
             df['comments'] = df['comments'].apply(
                 lambda x: x.strip(' ') if isinstance(x, str) else x)
-
-        self._handle_flags(df)
 
         return df
 
@@ -230,27 +146,20 @@ class UploadProfileData(BaseUpload):
         """
 
         # Construct a dataframe with all metadata
-        for pt in self.data_names:
-            df = self.build_data(pt)
+        for profile in self.data:
+            df = self.build_data(profile)
 
             # Grab each row, convert it to dict and join it with site info
             if not df.empty:
                 objects = []
                 for i, row in df.iterrows():
                     data = row.to_dict()
-
-                    # self.log.debug('\tAdding {} for {} at {}cm'.format(value_type, data['site_id'], data['depth']))
                     d = self._add_entry(session, LayerData, **row)
-                    # d = LayerData(**data)
                     objects.append(d)
                 session.bulk_save_objects(objects)
                 session.commit()
             else:
                 self.log.warning('File contains header but no data which is sometimes expected. Skipping db submission.')
-
-        if self.data_names:
-            if not df.empty:
-                self.log.debug('Profile Submitted!\n')
 
     def _add_entry(self, session, **kwargs):
         # Add instrument
@@ -314,9 +223,6 @@ class UploadProfileData(BaseUpload):
             depth=kwargs.get("depth"),
             bottom_depth=kwargs.get("bottom_depth"),
             comments=kwargs.get("comments"),
-            sample_a=kwargs.get("sample_a"),
-            sample_b=kwargs.get("sample_b"),
-            sample_c=kwargs.get("sample_c"),
             value=kwargs.get("value"),
             flags=kwargs.get("flags"),
         )
