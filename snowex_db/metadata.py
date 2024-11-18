@@ -287,6 +287,11 @@ class ExtendedSnowExMetadataVariables(SnowExMetadataVariables):
     UTCTOD = MeasurementDescription(
         'utctod', 'UTC Time of Day', ['utctod']
     )
+    COMMENTS = MeasurementDescription(
+        "comments", "Comments in the header", [
+            "comments", "pit comments"
+        ]
+    )
 
 
 class ExtendedSnowExPrimaryVariables(SnowExPrimaryVariables):
@@ -295,7 +300,7 @@ class ExtendedSnowExPrimaryVariables(SnowExPrimaryVariables):
     """
     COMMENTS = MeasurementDescription(
         "comments", "Comments",
-        ["comments", "pit_comments"]
+        ["comments"]
     )
     PARAMETER_CODES = MeasurementDescription(
         "parameter_codes", "Parameter Codes",

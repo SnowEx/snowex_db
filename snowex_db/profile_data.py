@@ -1,4 +1,4 @@
-from insitupy.campaigns.campaigns import ProfileDataCollection
+from insitupy.campaigns.campaign import ProfileDataCollection
 from insitupy.campaigns.snowex import SnowExProfileData
 from .metadata import ExtendedSnowExMetadataParser
 
