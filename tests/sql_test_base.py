@@ -4,6 +4,7 @@ from numpy.testing import assert_almost_equal
 from sqlalchemy import asc
 
 from snowexsql.db import get_db, initialize
+from tests.db_setup import DBSetup
 
 
 def pytest_generate_tests(metafunc):
@@ -19,37 +20,6 @@ def pytest_generate_tests(metafunc):
             metafunc.parametrize(
                 argnames, [[funcargs[name] for name in argnames] for funcargs in funcarglist]
             )
-
-
-class DBSetup:
-    """
-    Base class for all our tests. Ensures that we clean up after every class that's run
-    """
-
-    @classmethod
-    def setup_class(self):
-        """
-        Setup the database one time for testing
-        """
-        self.db = 'localhost/test'
-        self.data_dir = join(dirname(__file__), 'data')
-        creds = join(dirname(__file__), 'credentials.json')
-
-        self.engine, self.session, self.metadata = get_db(self.db, credentials=creds, return_metadata=True)
-
-        initialize(self.engine)
-
-    @classmethod
-    def teardown_class(self):
-        """
-        Remove the databse
-        """
-        self.metadata.drop_all(bind=self.engine)
-        self.session.close()  # optional, depends on use case
-
-    def teardown(self):
-        self.session.flush()
-        self.session.rollback()
 
 
 class TableTestBase(DBSetup):

@@ -2,10 +2,14 @@ import datetime
 from datetime import date
 
 import numpy as np
+import pytest
 import pytz
 import os
 
+from snowexsql.api import db_session
 from snowexsql.tables import LayerData
+from tests.db_setup import DBSetup
+
 from snowex_db.upload.layers import UploadProfileData
 
 from .sql_test_base import TableTestBase, pytest_generate_tests
@@ -199,6 +203,15 @@ class TestLWCProfileB(TableTestBase):
     }
 
 
+class TestRowBasedTimezone(TableTestBase):
+    # Option for alaska data
+    pass
+
+
+class TestRowBasedCRS(TableTestBase):
+    pass
+
+
 class TestTemperatureProfile(TableTestBase):
     """
     Test that a temperature profile is uploaded to the DB correctly
@@ -324,3 +337,46 @@ class TestEmptyProfile(TableTestBase):
                                   filter_value=1, expected=None)],
               'test_unique_count': [dict(data_name='hand_hardness', attribute_to_count='comments', expected_count=0)]
         }
+
+
+class TestMetadata(DBSetup):
+    kwargs = {'in_timezone': 'MST'}
+    UploaderClass = UploadProfileData
+
+    def upload_file(self, fname):
+        with db_session(self.database_name()) as (session, engine):
+            u = self.UploaderClass(fname, **self.kwargs)
+
+            # Allow for batches and single upload
+            if 'batch' in self.UploaderClass.__name__.lower():
+                u.push()
+            else:
+                u.submit(session)
+    @pytest.fixture
+    def uploaded_density_file(self, db, data_dir):
+        self.upload_file(str(data_dir.joinpath("density.csv")))
+
+    @pytest.fixture
+    def uploaded_lwc_file(self, db, data_dir):
+        self.upload_file(str(data_dir.joinpath("LWC.csv")))
+
+    @pytest.mark.parametrize(
+        "table_name, attribute, expected_value", [
+            (
+                    {'site_name': 'Grand Mesa',
+                     'site_id': '1N20',
+                     'pit_id': 'COGM1N20_20200205',
+                     'date': dt.date(),
+                     'time': dt.timetz(),
+                     'utm_zone': 12,
+                     'easting': 743281.0,
+                     'northing': 4324005.0,
+                     'latitude': 39.03126190934254,
+                     'longitude': -108.18948133421802,
+                     }
+            )
+        ]
+    )
+    def test_lwc_file_metadata(
+            self, uploaded_lwc_file, table_name, attribute, expected_value
+    ):

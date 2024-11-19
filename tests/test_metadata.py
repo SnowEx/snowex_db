@@ -39,7 +39,9 @@ class DataHeaderTestBase:
         """
 
         data = abspath(join(dirname(__file__), 'data'))
-        self.header = DataHeader(join(data, self.file), depth_is_metadata=self.depth_is_metadata, **self.kwargs)
+        self.header = DataHeader(
+            join(data, self.file), depth_is_metadata=self.depth_is_metadata, **self.kwargs
+        )
         self.name = self.file.split('.')[0]
 
     def assert_header_attribute(self, attr):

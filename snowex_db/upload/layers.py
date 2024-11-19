@@ -76,13 +76,17 @@ class UploadProfileData(BaseUpload):
         """
 
         df = profile.df.copy()
-        # TODO: what do we do with the metadata
         metadata = profile.metadata
         variable = profile.variable
         # TODO: build more metadata
-        #   Row based timezone
-        #   depth_is_metadata
+        #   Row based timezone? (alaska)
+        #   Row based crs? (alaska)
+        #   depth_is_metadata (
+        #       This may not be relevant since point data is in a different table,
+        #       But this means depth is a descriptor not the main value
+        #   )
 
+        # The type of measurement
         df['type'] = [variable.code] * len(df)
 
         # Manage nans and nones
