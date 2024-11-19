@@ -43,7 +43,7 @@ class UploadProfileData(BaseUpload):
         # Read in data
         self.data = self._read(profile_filename)
 
-    def _read(self, profile_filename) -> List[SnowExProfileData]:
+    def _read(self, profile_filename) -> SnowExProfileDataCollection:
         """
         Read in a profile file. Managing the number of lines to skip and
         adjusting column names
@@ -126,7 +126,7 @@ class UploadProfileData(BaseUpload):
         """
 
         # Construct a dataframe with all metadata
-        for profile in self.data:
+        for profile in self.data.profiles:
             df = self.build_data(profile)
 
             # Grab each row, convert it to dict and join it with site info
@@ -148,7 +148,7 @@ class UploadProfileData(BaseUpload):
         )
         # Add campaign
         campaign = self._check_or_add_object(
-            session, Campaign, dict(name=row['site_name'])
+            session, Campaign, dict(name=metadata.site_name)
         )
 
         # add list of observers
@@ -161,10 +161,8 @@ class UploadProfileData(BaseUpload):
             observer_list.append(observer)
 
         # Add site
-        site_id = row['pit_id']
-        date = row["date"]
-        meas_time = row["time"]
-        dt = datetime.datetime.combine(date, meas_time)
+        site_id = metadata.id
+        dt = row["datetime"]
 
         site = self._check_or_add_object(
             session, Site, dict(name=site_id),

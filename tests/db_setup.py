@@ -7,7 +7,7 @@ from snowexsql.db import get_db, initialize
 from snowexsql.tables import (Campaign, DOI, Instrument, LayerData,
                               MeasurementType, Observer, Site)
 from snowexsql.tables.site import SiteObservers
-from venv.bin import pytest
+import pytest
 
 # DB Configuration and Session
 CREDENTIAL_FILE = join(dirname(__file__), 'credentials.json')
@@ -39,7 +39,7 @@ class DBSetup:
 
         initialize(self.engine)
 
-    @pytest.fixture
+    @pytest.fixture(scope="class")
     def db(self):
         self.setup()
         yield self.engine

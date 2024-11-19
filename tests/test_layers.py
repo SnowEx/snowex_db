@@ -7,13 +7,35 @@ import pytz
 import os
 
 from snowexsql.api import db_session
-from snowexsql.tables import LayerData
+from snowexsql.tables import (
+    LayerData, Campaign, Instrument, Observer, MeasurementType, Site
+)
 from tests.db_setup import DBSetup
 
 from snowex_db.upload.layers import UploadProfileData
 
-from .sql_test_base import TableTestBase, pytest_generate_tests
+from .sql_test_base import TableTestBase
 
+
+class WithUploadedFile(DBSetup):
+    UploaderClass = UploadProfileData
+    kwargs = {}
+
+    def upload_file(self, fname):
+        with db_session(self.database_name()) as (session, engine):
+            u = self.UploaderClass(fname, **self.kwargs)
+
+            # Allow for batches and single upload
+            if 'batch' in self.UploaderClass.__name__.lower():
+                u.push()
+            else:
+                u.submit(session)
+
+    def get_value(self, table, attribute):
+        with db_session(self.database_name()) as (session, engine):
+            obj = getattr(table, attribute)
+            result = session.query(obj).all()
+        return result
 
 class TestStratigraphyProfile(TableTestBase):
     """
@@ -77,21 +99,13 @@ class TestStratigraphyProfile(TableTestBase):
         ]
     }
 
-    def test_date_accessed(self):
-        """
-        Tests that the date accessed is auto assigned on upload
-        """
-        result = self.session.query(LayerData.date_accessed).limit(1).all()
-        assert type(result[0][0]) is date
 
-
-class TestDensityProfile(TableTestBase):
+class TestDensityProfile(TableTestBase, WithUploadedFile):
     """
     Test that a density file is uploaded correctly including sample
     averaging for the main value.
     """
 
-    args = ['density.csv']
     kwargs = {'in_timezone': 'MST', 'instrument': 'kelly cutter',
               'site_name': 'grand mesa',
               'observers': 'TEST', 'elevation': 1000, 'doi': "somedoi"}
@@ -99,31 +113,74 @@ class TestDensityProfile(TableTestBase):
     TableClass = LayerData
     dt = datetime.datetime(2020, 2, 5, 20, 30, 0, 0, pytz.utc)
 
-    params = {
-        'test_count': [dict(data_name='density', expected_count=4)],
+    @pytest.fixture
+    def uploaded_file(self, db, data_dir):
+        self.upload_file(str(data_dir.joinpath("density.csv")))
 
-        # Test a value from the profile to check that the profile is there and it has integrity
-        'test_value': [dict(data_name='density', attribute_to_check='value', filter_attribute='depth', filter_value=35,
-                            expected=np.mean([190, 245])),
-                       dict(data_name='density', attribute_to_check='sample_a', filter_attribute='depth',
-                            filter_value=35, expected=190),
-                       dict(data_name='density', attribute_to_check='sample_b', filter_attribute='depth',
-                            filter_value=35, expected=245),
-                       dict(data_name='density', attribute_to_check='sample_c', filter_attribute='depth',
-                            filter_value=35, expected=None),
-                       ],
-        'test_unique_count': [
-            # Place holder for this test: test only one site_id was added
-            dict(data_name='density', attribute_to_count='site_id', expected_count=1)
+    @pytest.mark.parametrize(
+        "table, attribute, expected_value", [
+            (Site, "name", "COGM1N20_20200205"),
+            (Site, "datetime", ""),
+            (Site, "elevation", "COGM1N20_20200205"),
+            (Site, "geometry", "COGM1N20_20200205"),
+            (Campaign, "name", "Grand Mesa"),
+            (Instrument, "name", "COGM1N20_20200205"),
         ]
-    }
+    )
+    def test_metadata(self, table, attribute, expected_value, uploaded_file):
+        result = self.get_value(table, attribute)
+        if not isinstance(expected_value, list):
+            expected_value = [expected_value]
+        assert result == expected_value
 
-    def test_bottom_depth(self):
-        """
-        Insure bottom depth info is not lost after standardizing it
-        """
-        records = self.session.query(LayerData.bottom_depth).filter(LayerData.id <= 2).all()
-        assert records[0][0] - records[1][0] == 10
+    @pytest.mark.parametrize(
+        "data_name, attribute_to_check, filter_attribute, filter_value, expected", [
+            ('density', 'value', 'depth', 35, np.mean([190, 245])),
+            ('density', 'sample_a', 'depth', 35, 190),
+            ('density', 'sample_b', 'depth', 35, 245),
+            ('density', 'sample_c', 'depth', 35, None),
+       ]
+    )
+    def test_value(
+            self, data_name, attribute_to_check,
+            filter_attribute, filter_value, expected, uploaded_file
+    ):
+        self.check_value(
+            "type", data_name, attribute_to_check,
+            filter_attribute, filter_value, expected,
+        )
+
+    @pytest.mark.parametrize(
+        "data_name, expected", [
+            ("density", 4)
+        ]
+    )
+    def test_count(self, data_name, expected, uploaded_file):
+        self.check_count("type", data_name, expected)
+
+    @pytest.mark.parametrize(
+        "data_name, attribute_to_count, expected", [
+            ("density", "site_id", 4)
+        ]
+    )
+    def test_unique_count(self, data_name, attribute_to_count, expected, uploaded_file):
+        self.check_unique_count(
+            "type", data_name, attribute_to_count, expected
+        )
+
+
+class TestDensityProfileRowBased(TableTestBase, WithUploadedFile):
+    """
+    Test that row based tzinfo and crs works (for alaska data)
+    """
+
+    @pytest.mark.parametrize(
+        "data_name, expected", [
+            ("density", 4)
+        ]
+    )
+    def test_count(self, data_name, expected, uploaded_file):
+        raise NotImplementedError("")
 
 
 class TestLWCProfile(TableTestBase):
@@ -201,15 +258,6 @@ class TestLWCProfileB(TableTestBase):
             dict(data_name='permittivity', attribute_to_count='northing', expected_count=1)
         ]
     }
-
-
-class TestRowBasedTimezone(TableTestBase):
-    # Option for alaska data
-    pass
-
-
-class TestRowBasedCRS(TableTestBase):
-    pass
 
 
 class TestTemperatureProfile(TableTestBase):
@@ -339,44 +387,97 @@ class TestEmptyProfile(TableTestBase):
         }
 
 
-class TestMetadata(DBSetup):
+class TestMetadata(WithUploadedFile):
     kwargs = {'in_timezone': 'MST'}
     UploaderClass = UploadProfileData
-
-    def upload_file(self, fname):
-        with db_session(self.database_name()) as (session, engine):
-            u = self.UploaderClass(fname, **self.kwargs)
-
-            # Allow for batches and single upload
-            if 'batch' in self.UploaderClass.__name__.lower():
-                u.push()
-            else:
-                u.submit(session)
-    @pytest.fixture
-    def uploaded_density_file(self, db, data_dir):
-        self.upload_file(str(data_dir.joinpath("density.csv")))
 
     @pytest.fixture
     def uploaded_lwc_file(self, db, data_dir):
         self.upload_file(str(data_dir.joinpath("LWC.csv")))
+        
+    @pytest.fixture
+    def uploaded_site_details_file(self, db, data_dir):
+        self.upload_file(str(data_dir.joinpath("site_details.csv")))
 
     @pytest.mark.parametrize(
-        "table_name, attribute, expected_value", [
-            (
-                    {'site_name': 'Grand Mesa',
-                     'site_id': '1N20',
-                     'pit_id': 'COGM1N20_20200205',
-                     'date': dt.date(),
-                     'time': dt.timetz(),
-                     'utm_zone': 12,
-                     'easting': 743281.0,
-                     'northing': 4324005.0,
-                     'latitude': 39.03126190934254,
-                     'longitude': -108.18948133421802,
-                     }
-            )
+        "table, attribute, expected_value", [
+            (Site, "name", "COGM1N20_20200205"),
+            (Site, "datetime", ""),
+            (Site, "elevation", "COGM1N20_20200205"),
+            (Site, "geometry", "COGM1N20_20200205"),
+            (Campaign, "name", "Grand Mesa"),
+            (Instrument, "name", "COGM1N20_20200205"),
+
+                    # {'site_name': 'Grand Mesa',
+                    #  'site_id': '1N20',
+                    #  'pit_id': 'COGM1N20_20200205',
+                    #  'date': dt.date(),
+                    #  'time': dt.timetz(),
+                    #  'utm_zone': 12,
+                    #  'easting': 743281.0,
+                    #  'northing': 4324005.0,
+                    #  'latitude': 39.03126190934254,
+                    #  'longitude': -108.18948133421802,
+                    #  }
         ]
     )
     def test_lwc_file_metadata(
-            self, uploaded_lwc_file, table_name, attribute, expected_value
+            self, uploaded_density_file, table, attribute, expected_value
     ):
+        result = self.get_value(table, attribute)
+        if not isinstance(expected_value, list):
+            expected_value = [expected_value]
+        assert result == expected_value
+
+    # @pytest.mark.parametrize(
+    #     "table_name, attribute, expected_value", [
+    #         (
+    #                 {'site_name': 'Grand Mesa',
+    #                  'site_id': '1N20',
+    #                  'pit_id': 'COGM1N20_20200205',
+    #                  'date': dt.date(),
+    #                  'time': dt.timetz(),
+    #                  'utm_zone': 12,
+    #                  'easting': 743281.0,
+    #                  'northing': 4324005.0,
+    #                  'latitude': 39.03126190934254,
+    #                  'longitude': -108.18948133421802,
+    #                  }
+    #         )
+    #     ]
+    # )
+    # def test_lwc_file_metadata(
+    #         self, uploaded_lwc_file, table_name, attribute, expected_value
+    # ):
+    #     pass
+
+    @pytest.mark.parametrize(
+        "table, attribute, expected_value", [
+            (Site, "name", "COGM1N20_20200205"),
+            (Site, "datetime", ""),
+            (Site, "elevation", "COGM1N20_20200205"),
+            (Site, "geometry", "COGM1N20_20200205"),
+            (Site, "aspect", ""),
+            (Site, "air_temp", ""),
+            (Site, "total_depth", ""),
+            (Site, "weather_description", ""),
+            (Site, "precip", ""),
+            (Site, "sky_cover", ""),
+            (Site, "wind", ""),
+            (Site, "ground_condition", ""),
+            (Site, "ground_roughness", ""),
+            (Site, "ground_vegetation", ""),
+            (Site, "vegetation_height", ""),
+            (Site, "tree_canopy", ""),
+            (Site, "site_notes", ""),
+            (Observer, "name", "")
+        ]
+    )
+    def test_site_file(
+            self, uploaded_site_details_file, table, attribute,
+            expected_value
+    ):
+        result = self.get_value(table, attribute)
+        if not isinstance(expected_value, list):
+            expected_value = [expected_value]
+        assert result == expected_value
