@@ -4,8 +4,10 @@ Module for classes that upload single files to the database.
 from typing import List
 
 import pandas as pd
-
+import geopandas as gpd
 import logging
+
+from geoalchemy2 import WKTElement
 from snowexsql.tables import LayerData
 import datetime
 from snowexsql.tables import Instrument, Campaign, Observer, DOI, MeasurementType, Site
@@ -39,7 +41,9 @@ class UploadProfileData(BaseUpload):
         self.log = get_logger(__name__)
 
         self.filename = profile_filename
-        self.timezone = timezone
+        self._timezone = timezone
+        self._doi = kwargs.get("doi")
+        self._instrument = kwargs.get("instrument")
 
         # Read in data
         self.data = self._read(profile_filename)
@@ -57,7 +61,7 @@ class UploadProfileData(BaseUpload):
         """
         try:
             data = SnowExProfileDataCollection.from_csv(
-                profile_filename, timezone=self.timezone
+                profile_filename, timezone=self._timezone
             )
         except pd.errors.ParserError as e:
             LOG.error(e)
@@ -65,7 +69,7 @@ class UploadProfileData(BaseUpload):
 
         return data
 
-    def build_data(self, profile: SnowExProfileData):
+    def build_data(self, profile: SnowExProfileData) -> gpd.GeoDataFrame:
         """
         Build out the original dataframe with the metadata to avoid doing it
         during the submission loop. Removes all other main profile columns and
@@ -97,8 +101,9 @@ class UploadProfileData(BaseUpload):
             df[c] = df[c].apply(lambda x: parse_none(x))
         df['value'] = df[variable.code].astype(str)
 
+        columns = df.columns.values
         # Clean up comments a bit
-        if 'comments' in df.columns.values:
+        if 'comments' in columns:
             df['comments'] = df['comments'].apply(
                 lambda x: x.strip(' ') if isinstance(x, str) else x)
             # Add pit comments
@@ -112,10 +117,15 @@ class UploadProfileData(BaseUpload):
         flag_string = metadata.flags
         if flag_string:
             flag_string = " Flags: " + flag_string
-            if 'comments' in df.columns.values:
+            if 'comments' in columns:
                 df["comments"] += flag_string
             else:
                 df["comments"] = flag_string
+
+        if 'instrument' not in columns:
+            df["instrument"] = [self._instrument] * len(df)
+        if 'doi' not in columns:
+            df["doi"] = [self._doi] * len(df)
 
         return df
 
@@ -135,25 +145,29 @@ class UploadProfileData(BaseUpload):
             # Grab each row, convert it to dict and join it with site info
             if not df.empty:
                 objects = []
-                for i, row in df.iterrows():
-                    d = self._add_entry(session, row, profile.metadata)
+                for row in df.to_dict(orient="records"):
+                    row["geometry"] = WKTElement(
+                        str(row["geometry"]),
+                        srid=int(df.crs.srs.replace("EPSG:", ""))
+                    )
+                    d = self._add_entry(
+                        session, row, profile.metadata
+                    )
                     objects.append(d)
                 session.bulk_save_objects(objects)
                 session.commit()
             else:
                 self.log.warning('File contains header but no data which is sometimes expected. Skipping db submission.')
 
-    def _add_entry(self, session, row: pd.Series, metadata: ProfileMetaData):
+    def _add_entry(
+        self, session, row: dict, metadata: ProfileMetaData
+    ):
         # Add instrument
         # TODO: what comes from row vs metadata?
-        if "instrument" in row:
-            instrument = self._check_or_add_object(
-                session, Instrument, dict(name=row['instrument'])
-            )
-        else:
-            instrument = self._check_or_add_object(
-                session, Instrument, dict(name="unknown")
-            )
+        instrument = self._check_or_add_object(
+            session, Instrument, dict(name=row['instrument'])
+        )
+
         # Add campaign
         campaign = self._check_or_add_object(
             session, Campaign, dict(name=metadata.campaign_name)

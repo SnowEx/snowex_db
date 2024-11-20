@@ -109,9 +109,14 @@ class TestDensityProfile(TableTestBase, WithUploadedFile):
     averaging for the main value.
     """
 
-    kwargs = {'in_timezone': 'MST', 'instrument': 'kelly cutter',
-              'site_name': 'grand mesa',
-              'observers': 'TEST', 'elevation': 1000, 'doi': "somedoi"}
+    kwargs = {
+        'timezone': 'MST',
+        'instrument': 'kelly cutter',
+        # 'site_name': 'grand mesa',
+        # 'observers': 'TEST',
+        # 'elevation': 1000,
+        'doi': "somedoi"
+    }
     UploaderClass = UploadProfileData
     TableClass = LayerData
     dt = datetime.datetime(2020, 2, 5, 20, 30, 0, 0, pytz.utc)
