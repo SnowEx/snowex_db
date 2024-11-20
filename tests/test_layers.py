@@ -41,6 +41,7 @@ class WithUploadedFile(DBSetup):
             result = session.query(obj).all()
         return result[0][0]
 
+
 class TestStratigraphyProfile(TableTestBase):
     """
     Test that all the profiles from the Stratigraphy file were uploaded and
@@ -196,7 +197,6 @@ class TestLWCProfile(TableTestBase, WithUploadedFile):
     Test the permittivity file is uploaded correctly
     """
 
-    args = ['LWC.csv']
     kwargs = {'timezone': 'MST'}
     UploaderClass = UploadProfileData
     TableClass = LayerData
@@ -342,16 +342,14 @@ class TestLWCProfileB(TableTestBase, WithUploadedFile):
         )
 
 
-class TestTemperatureProfile(TableTestBase):
+class TestTemperatureProfile(TableTestBase, WithUploadedFile):
     """
     Test that a temperature profile is uploaded to the DB correctly
     """
 
-    args = ['temperature.csv']
     kwargs = {'in_timezone': 'MST'}
     UploaderClass = UploadProfileData
     TableClass = LayerData
-    dt = datetime(2020, 2, 5, 20, 40, 0, 0, pytz.utc)
 
     params = {
         'test_count': [dict(data_name='temperature', expected_count=5)],
@@ -368,6 +366,69 @@ class TestTemperatureProfile(TableTestBase):
             dict(data_name='temperature', attribute_to_count='northing', expected_count=1)
         ]
     }
+
+    @pytest.fixture(scope="class")
+    def uploaded_file(self, db, data_dir):
+        self.upload_file(str(data_dir.joinpath("temperature.csv")))
+
+    @pytest.mark.parametrize(
+        "table, attribute, expected_value", [
+            (Site, "name", "COGM1N20_20200205"),
+            (Site, "datetime", datetime(
+                2020, 2, 5, 20, 30, tzinfo=timezone.utc)
+             ),
+            (Site, "geom", WKTElement(
+                'POINT (-108.1894813320662 39.031261970372725)', srid=4326)
+             ),
+            (Campaign, "name", "Grand Mesa"),
+            (Instrument, "name", None),
+        ]
+    )
+    def test_metadata(self, table, attribute, expected_value, uploaded_file):
+        result = self.get_value(table, attribute)
+        if attribute == "geom":
+            # Check geometry equals expected
+            geom_from_wkb = load_wkb(bytes(result.data))
+            geom_from_wkt = load_wkt(expected_value.data)
+
+            assert geom_from_wkb.equals(geom_from_wkt)
+        else:
+            assert result == expected_value
+
+    @pytest.mark.parametrize(
+        "data_name, attribute_to_check, filter_attribute, filter_value, expected",
+        [
+            ('snow_temperature', 'value', 'depth', 10, [-5.9]),
+        ]
+    )
+    def test_value(
+            self, data_name, attribute_to_check,
+            filter_attribute, filter_value, expected, uploaded_file
+    ):
+        self.check_value(
+            data_name, attribute_to_check,
+            filter_attribute, filter_value, expected,
+        )
+
+    @pytest.mark.parametrize(
+        "data_name, expected", [
+            ("snow_temperature", 5),
+        ]
+    )
+    def test_count(self, data_name, expected, uploaded_file):
+        n = self.check_count(data_name)
+        assert n == expected
+
+    @pytest.mark.parametrize(
+        "data_name, attribute_to_count, expected", [
+            ("snow_temperature", "site_id", 1),
+        ]
+    )
+    def test_unique_count(self, data_name, attribute_to_count, expected,
+                          uploaded_file):
+        self.check_unique_count(
+            data_name, attribute_to_count, expected
+        )
 
 
 class TestSSAProfile(TableTestBase):
