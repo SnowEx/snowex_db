@@ -1,7 +1,15 @@
 from numpy.testing import assert_almost_equal
+from snowexsql.tables import MeasurementType
 from sqlalchemy import asc
 
 from tests.db_setup import DBSetup, db_session_with_credentials
+
+
+def safe_float(r):
+    try:
+        return float(r)
+    except ValueError:
+        return r
 
 
 def pytest_generate_tests(metafunc):
@@ -35,6 +43,15 @@ class TableTestBase(DBSetup):
     # Always define this using a table class from data.py and is used for ORM
     TableClass = None
 
+    def filter_measurement_type(self, session, measurement_type, query=None):
+        if query is None:
+            query = session.query(self.TableClass)
+
+        query = query.join(
+            self.TableClass.measurement_type
+        ).filter(MeasurementType.name == measurement_type)
+        return query
+
     def get_query(self, session, filter_attribute, filter_value, query=None):
         """
         Return the base query using an attribute and value that it is supposed
@@ -55,18 +72,18 @@ class TableTestBase(DBSetup):
         q = query.filter(fa == filter_value).order_by(asc(fa))
         return q
 
-    def check_count(self, count_attribute, data_name, expected_count):
+    def check_count(self, data_name, expected_count):
         """
         Test the record count of a data type
         """
         with db_session_with_credentials(
                 self.database_name(), self.CREDENTIAL_FILE
         ) as (session, engine):
-            q = self.get_query(session, count_attribute, data_name)
+            q = self.filter_measurement_type(session, data_name)
             records = q.all()
         assert len(records) == expected_count
 
-    def check_value(self, count_attribute, data_name, attribute_to_check, filter_attribute, filter_value, expected):
+    def check_value(self, measurement_type, attribute_to_check, filter_attribute, filter_value, expected):
         """
         Test that the first value in a filtered record search is as expected
         """
@@ -74,28 +91,24 @@ class TableTestBase(DBSetup):
         with db_session_with_credentials(
                 self.database_name(), self.CREDENTIAL_FILE
         ) as (session, engine):
-            q = self.get_query(session, count_attribute, data_name)
+            q = self.filter_measurement_type(session, measurement_type)
 
             # Add another filter by some attribute
             q = self.get_query(session, filter_attribute, filter_value, query=q)
 
             records = q.all()
         if records:
-            received = getattr(records[0], attribute_to_check)
+            received = [getattr(r, attribute_to_check) for r in records]
+            received = [safe_float(r) for r in received]
         else:
             received = None
-
-        try:
-            received = float(received)
-        except:
-            pass
 
         if type(received) == float:
             assert_almost_equal(received, expected, 6)
         else:
             assert received == expected
 
-    def check_unique_count(self, count_attribute, data_name, attribute_to_count, expected_count):
+    def check_unique_count(self, data_name, attribute_to_count, expected_count):
         """
         Test that the number of unique values in a given attribute is as expected
         """
@@ -103,7 +116,7 @@ class TableTestBase(DBSetup):
         with db_session_with_credentials(
                 self.database_name(), self.CREDENTIAL_FILE
         ) as (session, engine):
-            q = self.get_query(session, count_attribute, data_name)
+            q = self.filter_measurement_type(session, data_name)
             records = q.all()
         received = len(set([getattr(r, attribute_to_count) for r in records]))
         assert received == expected_count

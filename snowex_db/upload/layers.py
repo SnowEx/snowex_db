@@ -153,11 +153,15 @@ class UploadProfileData(BaseUpload):
                     d = self._add_entry(
                         session, row, profile.metadata
                     )
-                    objects.append(d)
-                session.bulk_save_objects(objects)
-                session.commit()
+                    # session.bulk_save_objects(objects) does not resolve
+                    # foreign keys, DO NOT USE IT
+                    session.add(d)
+                    session.commit()
             else:
-                self.log.warning('File contains header but no data which is sometimes expected. Skipping db submission.')
+                self.log.warning(
+                    'File contains header but no data which is sometimes'
+                    ' expected. Skipping db submission.'
+                )
 
     def _add_entry(
         self, session, row: dict, metadata: ProfileMetaData

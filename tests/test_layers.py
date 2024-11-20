@@ -1,11 +1,12 @@
-import datetime
-from datetime import date
-
+from datetime import datetime, timezone
+from shapely.wkb import loads as load_wkb
+from shapely.wkt import loads as load_wkt
 import numpy as np
 import pytest
 import pytz
 import os
 
+from geoalchemy2 import WKTElement
 from snowexsql.tables import (
     LayerData, Campaign, Instrument, Observer, Site
 )
@@ -38,7 +39,7 @@ class WithUploadedFile(DBSetup):
         ) as (session, engine):
             obj = getattr(table, attribute)
             result = session.query(obj).all()
-        return result
+        return result[0][0]
 
 class TestStratigraphyProfile(TableTestBase):
     """
@@ -50,10 +51,6 @@ class TestStratigraphyProfile(TableTestBase):
     kwargs = {'in_timezone': 'MST'}
     UploaderClass = UploadProfileData
     TableClass = LayerData
-    dt = datetime.datetime(
-        2020, 2, 5, 20, 30, 0, 0,
-        pytz.timezone('UTC')
-    )
 
     params = {
         'test_count': [dict(data_name='hand_hardness', expected_count=5)],
@@ -72,10 +69,8 @@ class TestStratigraphyProfile(TableTestBase):
             # Test were are uploading most of the important attributes
             dict(data_name='hand_hardness', attribute_to_check='site_id', filter_attribute='depth',
                  filter_value=30, expected='1N20'),
-            dict(data_name='hand_hardness', attribute_to_check='date', filter_attribute='depth', filter_value=30,
-                 expected=dt.date()),
-            dict(data_name='hand_hardness', attribute_to_check='time', filter_attribute='depth', filter_value=30,
-                 expected=dt.timetz()),
+            dict(data_name='hand_hardness', attribute_to_check='datetime', filter_attribute='depth', filter_value=30,
+                 expected=None),
             dict(data_name='hand_hardness', attribute_to_check='site_name', filter_attribute='depth',
                  filter_value=30, expected='Grand Mesa'),
             dict(data_name='hand_hardness', attribute_to_check='easting', filter_attribute='depth',
@@ -119,34 +114,38 @@ class TestDensityProfile(TableTestBase, WithUploadedFile):
     }
     UploaderClass = UploadProfileData
     TableClass = LayerData
-    dt = datetime.datetime(2020, 2, 5, 20, 30, 0, 0, pytz.utc)
 
-    @pytest.fixture
+    @pytest.fixture(scope="class")
     def uploaded_file(self, db, data_dir):
         self.upload_file(str(data_dir.joinpath("density.csv")))
 
     @pytest.mark.parametrize(
         "table, attribute, expected_value", [
             (Site, "name", "COGM1N20_20200205"),
-            (Site, "datetime", ""),
-            (Site, "elevation", "COGM1N20_20200205"),
-            (Site, "geometry", "COGM1N20_20200205"),
+            (Site, "datetime", datetime(
+                2020, 2, 5, 20, 30, tzinfo=timezone.utc)
+             ),
+            (Site, "geom", WKTElement(
+                'POINT (-108.1894813320662 39.031261970372725)', srid=4326)
+             ),
             (Campaign, "name", "Grand Mesa"),
-            (Instrument, "name", "COGM1N20_20200205"),
+            (Instrument, "name", "kelly cutter"),
         ]
     )
     def test_metadata(self, table, attribute, expected_value, uploaded_file):
         result = self.get_value(table, attribute)
-        if not isinstance(expected_value, list):
-            expected_value = [expected_value]
-        assert result == expected_value
+        if attribute == "geom":
+            # Check geometry equals expected
+            geom_from_wkb = load_wkb(bytes(result.data))
+            geom_from_wkt = load_wkt(expected_value.data)
+
+            assert geom_from_wkb.equals(geom_from_wkt)
+        else:
+            assert result == expected_value
 
     @pytest.mark.parametrize(
         "data_name, attribute_to_check, filter_attribute, filter_value, expected", [
-            ('density', 'value', 'depth', 35, np.mean([190, 245])),
-            ('density', 'sample_a', 'depth', 35, 190),
-            ('density', 'sample_b', 'depth', 35, 245),
-            ('density', 'sample_c', 'depth', 35, None),
+            ('density', 'value', 'depth', 35, [190, 245, 'None']),
        ]
     )
     def test_value(
@@ -154,26 +153,26 @@ class TestDensityProfile(TableTestBase, WithUploadedFile):
             filter_attribute, filter_value, expected, uploaded_file
     ):
         self.check_value(
-            "type", data_name, attribute_to_check,
+            data_name, attribute_to_check,
             filter_attribute, filter_value, expected,
         )
 
     @pytest.mark.parametrize(
         "data_name, expected", [
-            ("density", 4)
+            ("density", 12)
         ]
     )
     def test_count(self, data_name, expected, uploaded_file):
-        self.check_count("type", data_name, expected)
+        self.check_count(data_name, expected)
 
     @pytest.mark.parametrize(
         "data_name, attribute_to_count, expected", [
-            ("density", "site_id", 4)
+            ("density", "site_id", 1)
         ]
     )
     def test_unique_count(self, data_name, attribute_to_count, expected, uploaded_file):
         self.check_unique_count(
-            "type", data_name, attribute_to_count, expected
+            data_name, attribute_to_count, expected
         )
 
 
@@ -200,7 +199,7 @@ class TestLWCProfile(TableTestBase):
     kwargs = {'in_timezone': 'MST'}
     UploaderClass = UploadProfileData
     TableClass = LayerData
-    dt = datetime.datetime(2020, 2, 5, 20, 30, 0, 0,  pytz.utc)
+    dt = datetime(2020, 2, 5, 20, 30, 0, 0,  pytz.utc)
 
     params = {
         'test_count': [dict(data_name='permittivity', expected_count=4)],
@@ -232,7 +231,7 @@ class TestLWCProfileB(TableTestBase):
     kwargs = {'in_timezone': 'MST'}
     UploaderClass = UploadProfileData
     TableClass = LayerData
-    dt = datetime.datetime(2020, 3, 12, 21, 45, 0, 0, pytz.utc)
+    dt = datetime(2020, 3, 12, 21, 45, 0, 0, pytz.utc)
 
     params = {
         'test_count': [dict(data_name='permittivity', expected_count=8)],
@@ -277,7 +276,7 @@ class TestTemperatureProfile(TableTestBase):
     kwargs = {'in_timezone': 'MST'}
     UploaderClass = UploadProfileData
     TableClass = LayerData
-    dt = datetime.datetime(2020, 2, 5, 20, 40, 0, 0, pytz.utc)
+    dt = datetime(2020, 2, 5, 20, 40, 0, 0, pytz.utc)
 
     params = {
         'test_count': [dict(data_name='temperature', expected_count=5)],
@@ -305,7 +304,7 @@ class TestSSAProfile(TableTestBase):
     kwargs = {'in_timezone': 'MST'}
     UploaderClass = UploadProfileData
     TableClass = LayerData
-    dt = datetime.datetime(2020, 2, 5, 20, 40, 0, 0,  pytz.utc)
+    dt = datetime(2020, 2, 5, 20, 40, 0, 0,  pytz.utc)
 
     params = {
         'test_count': [dict(data_name='reflectance', expected_count=16)],
@@ -341,7 +340,7 @@ class TestSMPProfile(TableTestBase):
     kwargs = {'in_timezone': 'UTC', 'units': 'Newtons', 'header_sep': ':', 'instrument': 'snowmicropen'}
     UploaderClass = UploadProfileData
     TableClass = LayerData
-    dt = datetime.datetime(2020, 1, 31, 22, 42, 14, 0, pytz.utc)
+    dt = datetime(2020, 1, 31, 22, 42, 14, 0, pytz.utc)
 
     params = {
         'test_count': [dict(data_name='force', expected_count=154)],
@@ -386,7 +385,7 @@ class TestEmptyProfile(TableTestBase):
     kwargs = {'in_timezone': 'MST'}
     UploaderClass = UploadProfileData
     TableClass = LayerData
-    dt = datetime.datetime(2020, 2, 5, 18, 40, 0, 0,  pytz.utc)
+    dt = datetime(2020, 2, 5, 18, 40, 0, 0,  pytz.utc)
 
     params = {'test_count': [dict(data_name='hand_hardness', expected_count=0)],
               'test_value': [dict(data_name='hand_hardness', attribute_to_check='value', filter_attribute='depth',
@@ -481,7 +480,7 @@ class TestMetadata(WithUploadedFile):
             (Observer, "name", "")
         ]
     )
-    def test_site_file(
+    def test_metadata(
             self, uploaded_site_details_file, table, attribute,
             expected_value
     ):
