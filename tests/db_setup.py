@@ -1,4 +1,5 @@
 import json
+from contextlib import contextmanager
 from os.path import dirname, join
 
 from sqlalchemy import orm
@@ -13,6 +14,15 @@ import pytest
 CREDENTIAL_FILE = join(dirname(__file__), 'credentials.json')
 DB_INFO = json.load(open(CREDENTIAL_FILE))
 SESSION = orm.scoped_session(orm.sessionmaker())
+
+
+@contextmanager
+def db_session_with_credentials(db_name, credentials_file):
+    # use default_name
+    db_name = db_name
+    engine, session = get_db(db_name, credentials=credentials_file)
+    yield session, engine
+    session.close()
 
 
 class DBSetup:

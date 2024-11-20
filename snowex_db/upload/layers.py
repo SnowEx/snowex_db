@@ -35,10 +35,11 @@ class UploadProfileData(BaseUpload):
     expected_attributes = [c for c in dir(LayerData) if c[0] != '_']
     TABLE_CLASS = LayerData
 
-    def __init__(self, profile_filename, **kwargs):
+    def __init__(self, profile_filename, timezone="US/Mountain", **kwargs):
         self.log = get_logger(__name__)
 
         self.filename = profile_filename
+        self.timezone = timezone
 
         # Read in data
         self.data = self._read(profile_filename)
@@ -55,7 +56,9 @@ class UploadProfileData(BaseUpload):
             list of ProfileData objects
         """
         try:
-            data = SnowExProfileDataCollection.from_csv(profile_filename)
+            data = SnowExProfileDataCollection.from_csv(
+                profile_filename, timezone=self.timezone
+            )
         except pd.errors.ParserError as e:
             LOG.error(e)
             raise RuntimeError(f"Failed reading {profile_filename}")
@@ -143,25 +146,30 @@ class UploadProfileData(BaseUpload):
     def _add_entry(self, session, row: pd.Series, metadata: ProfileMetaData):
         # Add instrument
         # TODO: what comes from row vs metadata?
-        instrument = self._check_or_add_object(
-            session, Instrument, dict(name=row['instrument'])
-        )
+        if "instrument" in row:
+            instrument = self._check_or_add_object(
+                session, Instrument, dict(name=row['instrument'])
+            )
+        else:
+            instrument = self._check_or_add_object(
+                session, Instrument, dict(name="unknown")
+            )
         # Add campaign
         campaign = self._check_or_add_object(
-            session, Campaign, dict(name=metadata.site_name)
+            session, Campaign, dict(name=metadata.campaign_name)
         )
 
         # add list of observers
         observer_list = []
-        observer_names = row['observers']
-        for obs_name in observer_names.split(','):
+        observer_names = metadata.observers or []
+        for obs_name in observer_names:
             observer = self._check_or_add_object(
                 session, Observer, dict(name=obs_name)
             )
             observer_list.append(observer)
 
         # Add site
-        site_id = metadata.id
+        site_id = metadata.site_name
         dt = row["datetime"]
 
         site = self._check_or_add_object(
@@ -169,9 +177,9 @@ class UploadProfileData(BaseUpload):
             object_kwargs=dict(
                 name=site_id, campaign=campaign,
                 datetime=dt,
-                geom=row["geom"],
-                elevation=row["elevation"],
+                geom=row["geometry"],
                 observers=observer_list,
+                # TODO: more parameters
             ))
 
         # Add doi

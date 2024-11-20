@@ -6,11 +6,10 @@ import pytest
 import pytz
 import os
 
-from snowexsql.api import db_session
 from snowexsql.tables import (
-    LayerData, Campaign, Instrument, Observer, MeasurementType, Site
+    LayerData, Campaign, Instrument, Observer, Site
 )
-from tests.db_setup import DBSetup
+from tests.db_setup import DBSetup, db_session_with_credentials
 
 from snowex_db.upload.layers import UploadProfileData
 
@@ -22,7 +21,9 @@ class WithUploadedFile(DBSetup):
     kwargs = {}
 
     def upload_file(self, fname):
-        with db_session(self.database_name()) as (session, engine):
+        with db_session_with_credentials(
+                self.database_name(), self.CREDENTIAL_FILE
+        ) as (session, engine):
             u = self.UploaderClass(fname, **self.kwargs)
 
             # Allow for batches and single upload
@@ -32,7 +33,9 @@ class WithUploadedFile(DBSetup):
                 u.submit(session)
 
     def get_value(self, table, attribute):
-        with db_session(self.database_name()) as (session, engine):
+        with db_session_with_credentials(
+                self.database_name(), self.CREDENTIAL_FILE
+        ) as (session, engine):
             obj = getattr(table, attribute)
             result = session.query(obj).all()
         return result
