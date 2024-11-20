@@ -72,7 +72,7 @@ class TableTestBase(DBSetup):
         q = query.filter(fa == filter_value).order_by(asc(fa))
         return q
 
-    def check_count(self, data_name, expected_count):
+    def check_count(self, data_name):
         """
         Test the record count of a data type
         """
@@ -81,7 +81,7 @@ class TableTestBase(DBSetup):
         ) as (session, engine):
             q = self.filter_measurement_type(session, data_name)
             records = q.all()
-        assert len(records) == expected_count
+        return len(records)
 
     def check_value(self, measurement_type, attribute_to_check, filter_attribute, filter_value, expected):
         """

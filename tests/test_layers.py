@@ -163,7 +163,8 @@ class TestDensityProfile(TableTestBase, WithUploadedFile):
         ]
     )
     def test_count(self, data_name, expected, uploaded_file):
-        self.check_count(data_name, expected)
+        n = self.check_count(data_name)
+        assert  n == expected
 
     @pytest.mark.parametrize(
         "data_name, attribute_to_count, expected", [
@@ -190,81 +191,155 @@ class TestDensityProfileRowBased(TableTestBase, WithUploadedFile):
         raise NotImplementedError("")
 
 
-class TestLWCProfile(TableTestBase):
+class TestLWCProfile(TableTestBase, WithUploadedFile):
     """
     Test the permittivity file is uploaded correctly
     """
 
     args = ['LWC.csv']
-    kwargs = {'in_timezone': 'MST'}
+    kwargs = {'timezone': 'MST'}
     UploaderClass = UploadProfileData
     TableClass = LayerData
-    dt = datetime(2020, 2, 5, 20, 30, 0, 0,  pytz.utc)
 
-    params = {
-        'test_count': [dict(data_name='permittivity', expected_count=4)],
+    @pytest.fixture(scope="class")
+    def uploaded_file(self, db, data_dir):
+        self.upload_file(str(data_dir.joinpath("LWC.csv")))
 
-        # Test a value from the profile to check that the profile is there and it has integrity
-        'test_value': [
-            dict(data_name='permittivity', attribute_to_check='value', filter_attribute='depth', filter_value=27,
-                 expected=np.mean([1.372, 1.35])),
-            dict(data_name='permittivity', attribute_to_check='sample_a', filter_attribute='depth', filter_value=27,
-                 expected=1.372),
-            dict(data_name='permittivity', attribute_to_check='sample_b', filter_attribute='depth', filter_value=27,
-                 expected=1.35),
-            dict(data_name='permittivity', attribute_to_check='sample_c', filter_attribute='depth', filter_value=27,
-                 expected=None),
-            ],
-        'test_unique_count': [
-            # Place holder for this test: test only one location was added
-            dict(data_name='permittivity', attribute_to_count='northing', expected_count=1)
+    @pytest.mark.parametrize(
+        "table, attribute, expected_value", [
+            (Site, "name", "COGM1N20_20200205"),
+            (Site, "datetime", datetime(
+                2020, 2, 5, 20, 30, tzinfo=timezone.utc)
+             ),
+            (Site, "geom", WKTElement(
+                'POINT (-108.1894813320662 39.031261970372725)', srid=4326)
+             ),
+            (Campaign, "name", "Grand Mesa"),
+            (Instrument, "name", None),
         ]
-    }
+    )
+    def test_metadata(self, table, attribute, expected_value, uploaded_file):
+        result = self.get_value(table, attribute)
+        if attribute == "geom":
+            # Check geometry equals expected
+            geom_from_wkb = load_wkb(bytes(result.data))
+            geom_from_wkt = load_wkt(expected_value.data)
+
+            assert geom_from_wkb.equals(geom_from_wkt)
+        else:
+            assert result == expected_value
+
+    @pytest.mark.parametrize(
+        "data_name, attribute_to_check, filter_attribute, filter_value, expected", [
+            ('permittivity', 'value', 'depth', 27, [1.372, 1.35]),
+       ]
+    )
+    def test_value(
+            self, data_name, attribute_to_check,
+            filter_attribute, filter_value, expected, uploaded_file
+    ):
+        self.check_value(
+            data_name, attribute_to_check,
+            filter_attribute, filter_value, expected,
+        )
+
+    @pytest.mark.parametrize(
+        "data_name, expected", [
+            ("permittivity", 8)
+        ]
+    )
+    def test_count(self, data_name, expected, uploaded_file):
+        n = self.check_count(data_name)
+        assert n == expected
+
+    @pytest.mark.parametrize(
+        "data_name, attribute_to_count, expected", [
+            ("permittivity", "site_id", 1)
+        ]
+    )
+    def test_unique_count(self, data_name, attribute_to_count, expected, uploaded_file):
+        self.check_unique_count(
+            data_name, attribute_to_count, expected
+        )
 
 
-class TestLWCProfileB(TableTestBase):
+class TestLWCProfileB(TableTestBase, WithUploadedFile):
     """
     Test the permittivity file is uploaded correctly
     """
 
-    args = ['LWC2.csv']
-    kwargs = {'in_timezone': 'MST'}
+    kwargs = {'timezone': 'MST'}
     UploaderClass = UploadProfileData
     TableClass = LayerData
-    dt = datetime(2020, 3, 12, 21, 45, 0, 0, pytz.utc)
 
-    params = {
-        'test_count': [dict(data_name='permittivity', expected_count=8)],
+    @pytest.fixture(scope="class")
+    def uploaded_file(self, db, data_dir):
+        self.upload_file(str(data_dir.joinpath("LWC2.csv")))
 
-        # Test a value from the profile to check that the profile is there and it has integrity
-        'test_value': [
-            dict(data_name='permittivity', attribute_to_check='value', filter_attribute='depth', filter_value=73,
-                 expected=np.mean([1.507, 1.521])),
-            dict(data_name='permittivity', attribute_to_check='sample_a', filter_attribute='depth', filter_value=73,
-                 expected=1.507),
-            dict(data_name='permittivity', attribute_to_check='sample_b', filter_attribute='depth', filter_value=73,
-                 expected=1.521),
-            dict(data_name='permittivity', attribute_to_check='sample_c', filter_attribute='depth', filter_value=73,
-                 expected=None),
-            # Check lwc_vol
-            dict(data_name='lwc_vol', attribute_to_check='value', filter_attribute='depth', filter_value=15,
-                 expected=np.mean([0.1, 0.0])),
-            dict(data_name='lwc_vol', attribute_to_check='sample_a', filter_attribute='depth', filter_value=15,
-                 expected=0.1),
-            dict(data_name='lwc_vol', attribute_to_check='sample_b', filter_attribute='depth', filter_value=15,
-                 expected=0.0),
-            dict(data_name='lwc_vol', attribute_to_check='sample_c', filter_attribute='depth', filter_value=15,
-                 expected=None),
-            # Density
-            dict(data_name='density', attribute_to_check='value', filter_attribute='depth', filter_value=83,
-                 expected=164.5),
-            ],
-
-        'test_unique_count': [
-            # Place holder for this test: test only one location was added
-            dict(data_name='permittivity', attribute_to_count='northing', expected_count=1)
+    @pytest.mark.parametrize(
+        "table, attribute, expected_value", [
+            (Site, "name", "COGM1N20_20200205"),
+            (Site, "datetime", datetime(
+                2020, 2, 5, 20, 30, tzinfo=timezone.utc)
+             ),
+            (Site, "geom", WKTElement(
+                'POINT (-108.1894813320662 39.031261970372725)', srid=4326)
+             ),
+            (Campaign, "name", "Grand Mesa"),
+            (Instrument, "name", None),
         ]
-    }
+    )
+    def test_metadata(self, table, attribute, expected_value, uploaded_file):
+        result = self.get_value(table, attribute)
+        if attribute == "geom":
+            # Check geometry equals expected
+            geom_from_wkb = load_wkb(bytes(result.data))
+            geom_from_wkt = load_wkt(expected_value.data)
+
+            assert geom_from_wkb.equals(geom_from_wkt)
+        else:
+            assert result == expected_value
+
+    @pytest.mark.parametrize(
+        "data_name, attribute_to_check, filter_attribute, filter_value, expected",
+        [
+            ('permittivity', 'value', 'depth', 73, [1.507, 1.521]),
+            ('liquid_water_content', 'value', 'depth', 15, [0.1, 0.0]),
+            ('density', 'value', 'depth', 83, [164.5])
+        ]
+    )
+    def test_value(
+            self, data_name, attribute_to_check,
+            filter_attribute, filter_value, expected, uploaded_file
+    ):
+        self.check_value(
+            data_name, attribute_to_check,
+            filter_attribute, filter_value, expected,
+        )
+
+    @pytest.mark.parametrize(
+        "data_name, expected", [
+            ("permittivity", 16),
+            ('liquid_water_content', 16),
+            ('density', 8)
+        ]
+    )
+    def test_count(self, data_name, expected, uploaded_file):
+        n = self.check_count(data_name)
+        assert n == expected
+
+    @pytest.mark.parametrize(
+        "data_name, attribute_to_count, expected", [
+            ("permittivity", "site_id", 1),
+            ("liquid_water_content", "site_id", 1),
+            ("density", "site_id", 1),
+        ]
+    )
+    def test_unique_count(self, data_name, attribute_to_count, expected,
+                          uploaded_file):
+        self.check_unique_count(
+            data_name, attribute_to_count, expected
+        )
 
 
 class TestTemperatureProfile(TableTestBase):
