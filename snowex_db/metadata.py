@@ -2,10 +2,14 @@
 Module for header classes and metadata interpreters. This includes interpreting data file headers or dedicated files
 to describing data.
 """
-
+import logging
+from dataclasses import dataclass
 from os.path import basename
+from typing import Union
+
 import pandas as pd
 from insitupy.campaigns.snowex.snowex_campaign import SnowExMetadataParser
+from insitupy.profiles.metadata import ProfileMetaData
 from insitupy.variables import MeasurementDescription
 from insitupy.campaigns.snowex import (
     SnowExPrimaryVariables, SnowExMetadataVariables,
@@ -17,6 +21,9 @@ from .interpretation import *
 from .projection import add_geom, reproject_point_in_dict
 from .string_management import *
 from .utilities import assign_default_kwargs, get_logger, read_n_lines
+
+
+LOG = logging.getLogger(__name__)
 
 
 def read_InSar_annotation(ann_file):
@@ -276,21 +283,40 @@ class SMPMeasurementLog(object):
 class ExtendedSnowExMetadataVariables(SnowExMetadataVariables):
     COUNT = MeasurementDescription(
         "count", "Count for surrounding perimeter depths",
-        ["count"]
+        ["count"], auto_remap=True
     )
     UTCYEAR = MeasurementDescription(
-        'utcyear', "UTC Year", ['utcyear']
+        'utcyear', "UTC Year", ['utcyear'], auto_remap=True
     )
     UTCDOY = MeasurementDescription(
-        'utcdoy', "UTC day of year", ['utcdoy']
+        'utcdoy', "UTC day of year", ['utcdoy'], auto_remap=True
     )
     UTCTOD = MeasurementDescription(
-        'utctod', 'UTC Time of Day', ['utctod']
+        'utctod', 'UTC Time of Day', ['utctod'], auto_remap=True
     )
     COMMENTS = MeasurementDescription(
         "comments", "Comments in the header", [
             "comments", "pit comments"
-        ]
+        ], auto_remap=True
+    )
+    SLOPE = MeasurementDescription(
+        "slope_angle", "Slope Angle", ["slope"], match_on_code=True,
+        auto_remap=True
+    )
+    WEATHER = MeasurementDescription(
+        "weather_description", "Weather Description", ["weather"],
+        match_on_code=True,
+        auto_remap=True
+    )
+    SKY_COVER = MeasurementDescription(
+        "sky_cover", "Sky Cover Description", ["sky"], match_on_code=True,
+        auto_remap=True
+    )
+    NOTES = MeasurementDescription(
+        "site_notes", "Site Notes", ["notes"], auto_remap=True
+    )
+    INSTRUMENT = MeasurementDescription(
+        "instrument", "Instrument", ["measurement_tool"], auto_remap=True
     )
 
 
@@ -400,12 +426,162 @@ class ExtendedSnowExPrimaryVariables(SnowExPrimaryVariables):
     )
 
 
+@dataclass()
+class SnowExProfileMetadata(ProfileMetaData):
+    """
+    Extend the profile metadata to add more args
+    """
+    aspect: Union[float, None] = None
+    slope: Union[float, None] = None
+    air_temp: Union[float, None] = None
+    total_depth: Union[float, None] = None
+    weather_description: Union[str, None] = None
+    precip: Union[str, None] = None
+    sky_cover: Union[str, None] = None
+    wind: Union[str, None] = None
+    ground_condition: Union[str, None] = None
+    ground_roughness: Union[str, None] = None
+    ground_vegetation: Union[str, None] = None
+    vegetation_height: Union[str, None] = None
+    tree_canopy: Union[str, None] = None
+    site_notes: Union[str, None] = None
+
+
 class ExtendedSnowExMetadataParser(SnowExMetadataParser):
     """
     Extend the parser to update the extended varaibles
     """
     PRIMARY_VARIABLES_CLASS = ExtendedSnowExPrimaryVariables
     METADATA_VARIABLE_CLASS = ExtendedSnowExMetadataVariables
+
+    def parse(self):
+        """
+        Parse the file and return a metadata object.
+        We can override these methods as needed to parse the different
+        metadata
+
+        This populates self.rough_obj
+
+        Returns:
+            (metadata object, column list, position of header in file)
+        """
+        (meta_lines, columns,
+         columns_map, header_position) = self.find_header_info(self._fname)
+        self._rough_obj = self._preparse_meta(meta_lines)
+        # Create a standard metadata object
+        metadata = SnowExProfileMetadata(
+            site_name=self.parse_id(),
+            date_time=self.parse_date_time(),
+            latitude=self.parse_latitude(),
+            longitude=self.parse_longitude(),
+            utm_epsg=str(self.parse_utm_epsg()),
+            campaign_name=self.parse_campaign_name(),
+            flags=self.parse_flags(),
+            observers=self.parse_observers(),
+            aspect=self.parse_aspect(),
+            slope=self.parse_slope(),
+            air_temp=self.parse_air_temp(),
+            total_depth=self.parse_total_depth(),
+            weather_description=self.parse_weather_description(),
+            precip=self.parse_precip(),
+            sky_cover=self.parse_sky_cover(),
+            wind=self.parse_wind(),
+            ground_condition=self.parse_ground_condition(),
+            ground_roughness=self.parse_ground_roughness(),
+            ground_vegetation=self.parse_ground_vegetation(),
+            vegetation_height=self.parse_vegetation_height(),
+            tree_canopy=self.parse_tree_canopy(),
+            site_notes=self.parse_site_notes(),
+        )
+
+        return metadata, columns, columns_map, header_position
+
+    def parse_aspect(self):
+        aspect = None
+        for k, v in self.rough_obj.items():
+            if k in ["aspect"]:
+                aspect = v
+                # Handle parsing string
+                aspect = manage_degree_values(aspect)
+                # Handle conversion to degrees
+                if aspect is not None and isinstance(aspect, str):
+                    # Check for number of numeric values.
+                    numeric = len([True for c in aspect if c.isnumeric()])
+
+                    if numeric != len(aspect) and aspect is not None:
+                        LOG.warning(
+                            'Aspect recorded as cardinal '
+                            'directions, converting to degrees...'
+                        )
+                        aspect = convert_cardinal_to_degree(aspect)
+
+        return aspect
+
+    def parse_slope(self):
+        result = None
+        for k, v in self.rough_obj.items():
+            if k in ["slope_angle"]:
+                result = v
+                # Handle parsing string
+                result = manage_degree_values(result)
+        return result
+
+    def parse_air_temp(self):
+        result = None
+        for k, v in self.rough_obj.items():
+            if k in ["air_temp"]:
+                result = manage_degree_values(v)
+        return result
+
+    def parse_total_depth(self):
+        result = None
+        for k, v in self.rough_obj.items():
+            if k in ["total_depth"]:
+                result = manage_degree_values(v)
+        return result
+
+    def parse_weather_description(self):
+        result = None
+        for k, v in self.rough_obj.items():
+            if k in [ExtendedSnowExMetadataVariables.WEATHER.code]:
+                result = manage_degree_values(v)
+        return result
+
+    def parse_precip(self):
+        pass
+
+    def parse_sky_cover(self):
+        result = None
+        for k, v in self.rough_obj.items():
+            if k in [ExtendedSnowExMetadataVariables.SKY_COVER.code]:
+                result = manage_degree_values(v)
+        return result
+
+    def parse_wind(self):
+        pass
+
+    def parse_ground_condition(self):
+        pass
+
+    def parse_ground_roughness(self):
+        pass
+
+    def parse_ground_vegetation(self):
+        pass
+
+    def parse_vegetation_height(self):
+        pass
+
+    def parse_tree_canopy(self):
+        pass
+
+    def parse_site_notes(self):
+        result = None
+        for k, v in self.rough_obj.items():
+            if k in [ExtendedSnowExMetadataVariables.NOTES.code]:
+                result = manage_degree_values(v)
+        return result
+
 
 
 class DataHeader(object):
@@ -761,7 +937,7 @@ class DataHeader(object):
         info.update(self.extra_header)
 
         # Convert slope, aspect, and zone to numbers
-        info = manage_degrees(info)
+        info = manage_degrees_keys(info)
         info = manage_aspect(info)
         info = manage_utm_zone(info)
 

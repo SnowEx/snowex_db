@@ -9,13 +9,15 @@ import logging
 
 from geoalchemy2 import WKTElement
 from snowexsql.tables import LayerData
-from snowexsql.tables import Instrument, Campaign, Observer, DOI, MeasurementType, Site
+from snowexsql.tables import (
+    Instrument, Campaign, Observer, DOI, MeasurementType, Site
+)
 from insitupy.campaigns.snowex import SnowExProfileData
-from insitupy.profiles.metadata import ProfileMetaData
 
 from ..string_management import parse_none
 from ..utilities import get_logger
 from .base import BaseUpload
+from ..metadata import SnowExProfileMetadata
 
 
 from ..profile_data import SnowExProfileDataCollection
@@ -165,7 +167,7 @@ class UploadProfileData(BaseUpload):
                     session.add(d)
                     session.commit()
             else:
-                # TODO: procedure to still upload metadata (sites, etc)
+                # procedure to still upload metadata (sites, etc)
                 self.log.warning(
                     'File contains header but no data which is sometimes'
                     ' expected. Skipping row submissions, and only inserting'
@@ -176,7 +178,7 @@ class UploadProfileData(BaseUpload):
                 )
 
     def _add_metadata(
-            self, session, metadata: ProfileMetaData, row:dict = None
+            self, session, metadata: SnowExProfileMetadata, row: dict = None
     ):
         """
         Add the metadata entry and return objects
@@ -222,7 +224,20 @@ class UploadProfileData(BaseUpload):
                 datetime=dt,
                 geom=geom,
                 observers=observer_list,
-                # TODO: more parameters
+                aspect=metadata.aspect,
+                # slope=metadata.slope,
+                air_temp=metadata.air_temp,
+                total_depth=metadata.total_depth,
+                weather_description=metadata.weather_description,
+                precip=metadata.precip,
+                sky_cover=metadata.sky_cover,
+                wind=metadata.wind,
+                ground_condition=metadata.ground_condition,
+                ground_roughness=metadata.ground_roughness,
+                ground_vegetation=metadata.ground_vegetation,
+                vegetation_height=metadata.vegetation_height,
+                tree_canopy=metadata.tree_canopy,
+                site_notes=metadata.site_notes,
             ))
         return campaign, observer_list, site
 
