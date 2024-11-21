@@ -8,7 +8,7 @@ from tests.db_setup import DBSetup, db_session_with_credentials
 def safe_float(r):
     try:
         return float(r)
-    except ValueError:
+    except Exception:
         return r
 
 
@@ -83,7 +83,10 @@ class TableTestBase(DBSetup):
             records = q.all()
         return len(records)
 
-    def check_value(self, measurement_type, attribute_to_check, filter_attribute, filter_value, expected):
+    def check_value(
+            self, measurement_type, attribute_to_check, filter_attribute,
+            filter_value, expected
+    ):
         """
         Test that the first value in a filtered record search is as expected
         """

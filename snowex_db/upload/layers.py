@@ -9,7 +9,6 @@ import logging
 
 from geoalchemy2 import WKTElement
 from snowexsql.tables import LayerData
-import datetime
 from snowexsql.tables import Instrument, Campaign, Observer, DOI, MeasurementType, Site
 from insitupy.campaigns.snowex import SnowExProfileData
 from insitupy.profiles.metadata import ProfileMetaData
@@ -225,7 +224,7 @@ class UploadProfileData(BaseUpload):
             site=site,
             # Arguments from kwargs
             depth=row["depth"],
-            bottom_depth=row["bottom_depth"],
+            bottom_depth=row.get("bottom_depth"),
             comments=row["comments"],
             value=row["value"],
         )

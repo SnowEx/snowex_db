@@ -351,22 +351,6 @@ class TestTemperatureProfile(TableTestBase, WithUploadedFile):
     UploaderClass = UploadProfileData
     TableClass = LayerData
 
-    params = {
-        'test_count': [dict(data_name='temperature', expected_count=5)],
-
-        # Test a value from each profile to check that the profile is there and it has integrity
-        'test_value': [
-            dict(data_name='temperature', attribute_to_check='value', filter_attribute='depth', filter_value=10,
-                 expected=-5.9),
-            dict(data_name='temperature', attribute_to_check='sample_a', filter_attribute='depth', filter_value=35,
-                 expected=None),
-            ],
-        'test_unique_count': [
-            # Place holder for this test: test only one location was added
-            dict(data_name='temperature', attribute_to_count='northing', expected_count=1)
-        ]
-    }
-
     @pytest.fixture(scope="class")
     def uploaded_file(self, db, data_dir):
         self.upload_file(str(data_dir.joinpath("temperature.csv")))
@@ -431,40 +415,82 @@ class TestTemperatureProfile(TableTestBase, WithUploadedFile):
         )
 
 
-class TestSSAProfile(TableTestBase):
+class TestSSAProfile(TableTestBase, WithUploadedFile):
     """
     Test that all profiles from an SSA file are uploaded correctly
     """
 
-    args = ['SSA.csv']
     kwargs = {'in_timezone': 'MST'}
     UploaderClass = UploadProfileData
     TableClass = LayerData
-    dt = datetime(2020, 2, 5, 20, 40, 0, 0,  pytz.utc)
 
-    params = {
-        'test_count': [dict(data_name='reflectance', expected_count=16)],
+    @pytest.fixture(scope="class")
+    def uploaded_file(self, db, data_dir):
+        self.upload_file(str(data_dir.joinpath("SSA.csv")))
 
-        # Test a value from each profile to check that the profile is there and it has integrity
-        'test_value': [
-            dict(data_name='reflectance', attribute_to_check='value', filter_attribute='depth', filter_value=10,
-                 expected=22.12),
-            dict(data_name='specific_surface_area', attribute_to_check='value', filter_attribute='depth',
-                 filter_value=35, expected=11.2),
-            dict(data_name='equivalent_diameter', attribute_to_check='value', filter_attribute='depth', filter_value=80,
-                 expected=0.1054),
-            dict(data_name='sample_signal', attribute_to_check='value', filter_attribute='depth', filter_value=10,
-                 expected=186.9),
-            dict(data_name='reflectance', attribute_to_check='comments', filter_attribute='depth', filter_value=5,
-                 expected='brush'),
-
-            ],
-        'test_unique_count': [
-            # Confirm we only have 1 comment and everything else is none
-            dict(data_name='reflectance', attribute_to_count='comments', expected_count=2),
-
+    @pytest.mark.parametrize(
+        "table, attribute, expected_value", [
+            (Site, "name", "COGM1N20_20200205"),
+            (Site, "datetime", datetime(
+                2020, 2, 5, 20, 40, tzinfo=timezone.utc)
+             ),
+            (Site, "geom", WKTElement(
+                'POINT (-108.1894813320662 39.031261970372725)', srid=4326)
+             ),
+            (Campaign, "name", "Grand Mesa"),
+            (Instrument, "name", None),
         ]
-    }
+    )
+    def test_metadata(self, table, attribute, expected_value, uploaded_file):
+        result = self.get_value(table, attribute)
+        if attribute == "geom":
+            # Check geometry equals expected
+            geom_from_wkb = load_wkb(bytes(result.data))
+            geom_from_wkt = load_wkt(expected_value.data)
+
+            assert geom_from_wkb.equals(geom_from_wkt)
+        else:
+            assert result == expected_value
+
+    @pytest.mark.parametrize(
+        "data_name, attribute_to_check, filter_attribute, "
+        "filter_value, expected",
+        [
+            ('reflectance', 'value', 'depth', 10, [22.12]),
+            ('specific_surface_area', 'value', 'depth', 35, [11.2]),
+            ('equivalent_diameter', 'value', 'depth', 80, [0.1054]),
+            ('sample_signal', 'value', 'depth', 10, [186.9]),
+            ('sample_signal', 'comments', 'depth', 5, ["brush"])
+        ]
+    )
+    def test_value(
+            self, data_name, attribute_to_check,
+            filter_attribute, filter_value, expected, uploaded_file
+    ):
+        self.check_value(
+            data_name, attribute_to_check,
+            filter_attribute, filter_value, expected,
+        )
+
+    @pytest.mark.parametrize(
+        "data_name, expected", [
+            ("reflectance", 16),
+        ]
+    )
+    def test_count(self, data_name, expected, uploaded_file):
+        n = self.check_count(data_name)
+        assert n == expected
+
+    @pytest.mark.parametrize(
+        "data_name, attribute_to_count, expected", [
+            ("reflectance", "site_id", 1),
+        ]
+    )
+    def test_unique_count(self, data_name, attribute_to_count, expected,
+                          uploaded_file):
+        self.check_unique_count(
+            data_name, attribute_to_count, expected
+        )
 
 
 class TestSMPProfile(TableTestBase):
