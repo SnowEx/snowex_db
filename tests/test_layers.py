@@ -639,12 +639,12 @@ class TestEmptyProfile(TableTestBase, WithUploadedFile):
 
 
 class TestMetadata(WithUploadedFile):
-    kwargs = {'in_timezone': 'MST'}
+    """
+    Test the large amount of metadata we get from the
+    site details file
+    """
+    kwargs = {'timezone': 'MST'}
     UploaderClass = UploadProfileData
-
-    @pytest.fixture
-    def uploaded_lwc_file(self, db, data_dir):
-        self.upload_file(str(data_dir.joinpath("LWC.csv")))
         
     @pytest.fixture
     def uploaded_site_details_file(self, db, data_dir):
@@ -653,61 +653,14 @@ class TestMetadata(WithUploadedFile):
     @pytest.mark.parametrize(
         "table, attribute, expected_value", [
             (Site, "name", "COGM1N20_20200205"),
-            (Site, "datetime", ""),
-            (Site, "elevation", "COGM1N20_20200205"),
-            (Site, "geometry", "COGM1N20_20200205"),
+            (Site, "datetime", datetime(
+                2020, 2, 5, 20, 30, tzinfo=timezone.utc)
+             ),
+            (Site, "geom", WKTElement(
+                'POINT (-108.1894813320662 39.031261970372725)', srid=4326)
+             ),
             (Campaign, "name", "Grand Mesa"),
-            (Instrument, "name", "COGM1N20_20200205"),
-
-                    # {'site_name': 'Grand Mesa',
-                    #  'site_id': '1N20',
-                    #  'pit_id': 'COGM1N20_20200205',
-                    #  'date': dt.date(),
-                    #  'time': dt.timetz(),
-                    #  'utm_zone': 12,
-                    #  'easting': 743281.0,
-                    #  'northing': 4324005.0,
-                    #  'latitude': 39.03126190934254,
-                    #  'longitude': -108.18948133421802,
-                    #  }
-        ]
-    )
-    def test_lwc_file_metadata(
-            self, uploaded_density_file, table, attribute, expected_value
-    ):
-        result = self.get_value(table, attribute)
-        if not isinstance(expected_value, list):
-            expected_value = [expected_value]
-        assert result == expected_value
-
-    # @pytest.mark.parametrize(
-    #     "table_name, attribute, expected_value", [
-    #         (
-    #                 {'site_name': 'Grand Mesa',
-    #                  'site_id': '1N20',
-    #                  'pit_id': 'COGM1N20_20200205',
-    #                  'date': dt.date(),
-    #                  'time': dt.timetz(),
-    #                  'utm_zone': 12,
-    #                  'easting': 743281.0,
-    #                  'northing': 4324005.0,
-    #                  'latitude': 39.03126190934254,
-    #                  'longitude': -108.18948133421802,
-    #                  }
-    #         )
-    #     ]
-    # )
-    # def test_lwc_file_metadata(
-    #         self, uploaded_lwc_file, table_name, attribute, expected_value
-    # ):
-    #     pass
-
-    @pytest.mark.parametrize(
-        "table, attribute, expected_value", [
-            (Site, "name", "COGM1N20_20200205"),
-            (Site, "datetime", ""),
-            (Site, "elevation", "COGM1N20_20200205"),
-            (Site, "geometry", "COGM1N20_20200205"),
+            # (Site, "elevation", "COGM1N20_20200205"),
             (Site, "aspect", ""),
             (Site, "air_temp", ""),
             (Site, "total_depth", ""),
@@ -729,6 +682,11 @@ class TestMetadata(WithUploadedFile):
             expected_value
     ):
         result = self.get_value(table, attribute)
-        if not isinstance(expected_value, list):
-            expected_value = [expected_value]
-        assert result == expected_value
+        if attribute == "geom":
+            # Check geometry equals expected
+            geom_from_wkb = load_wkb(bytes(result.data))
+            geom_from_wkt = load_wkt(expected_value.data)
+
+            assert geom_from_wkb.equals(geom_from_wkt)
+        else:
+            assert result == expected_value

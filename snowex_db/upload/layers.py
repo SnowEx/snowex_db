@@ -84,6 +84,9 @@ class UploadProfileData(BaseUpload):
         """
 
         df = profile.df.copy()
+        if df.empty:
+            LOG.debug("df is empty, returning")
+            return df
         metadata = profile.metadata
         variable = profile.variable
         # TODO: build more metadata
@@ -151,33 +154,44 @@ class UploadProfileData(BaseUpload):
                         str(row["geometry"]),
                         srid=int(df.crs.srs.replace("EPSG:", ""))
                     )
+                    campaign, observer_list, site = self._add_metadata(
+                        session, profile.metadata, row=row
+                    )
                     d = self._add_entry(
-                        session, row, profile.metadata
+                        session, row, campaign, observer_list, site
                     )
                     # session.bulk_save_objects(objects) does not resolve
                     # foreign keys, DO NOT USE IT
                     session.add(d)
                     session.commit()
             else:
+                # TODO: procedure to still upload metadata (sites, etc)
                 self.log.warning(
                     'File contains header but no data which is sometimes'
-                    ' expected. Skipping db submission.'
+                    ' expected. Skipping row submissions, and only inserting'
+                    ' metadata.'
+                )
+                _ = self._add_metadata(
+                    session, profile.metadata
                 )
 
-    def _add_entry(
-        self, session, row: dict, metadata: ProfileMetaData
+    def _add_metadata(
+            self, session, metadata: ProfileMetaData, row:dict = None
     ):
-        # Add instrument
-        # TODO: what comes from row vs metadata?
-        instrument = self._check_or_add_object(
-            session, Instrument, dict(name=row['instrument'])
-        )
+        """
+        Add the metadata entry and return objects
+        Args:
+            session: db session object
+            metadata: ProfileMetadata information
+            row: Optional entry for row based info
 
+        Returns:
+
+        """
         # Add campaign
         campaign = self._check_or_add_object(
             session, Campaign, dict(name=metadata.campaign_name)
         )
-
         # add list of observers
         observer_list = []
         observer_names = metadata.observers or []
@@ -189,17 +203,50 @@ class UploadProfileData(BaseUpload):
 
         # Add site
         site_id = metadata.site_name
-        dt = row["datetime"]
+        if row is None:
+            # Datetime from metadata
+            dt = metadata.date_time
+            # Form geom from lat and lon
+            geom = WKTElement(
+                f"Point ({metadata.longitude} {metadata.latitude})",
+                srid=4326
+            )
+        else:
+            geom = row["geometry"]
+            dt = row["datetime"]
 
         site = self._check_or_add_object(
             session, Site, dict(name=site_id),
             object_kwargs=dict(
                 name=site_id, campaign=campaign,
                 datetime=dt,
-                geom=row["geometry"],
+                geom=geom,
                 observers=observer_list,
                 # TODO: more parameters
             ))
+        return campaign, observer_list, site
+
+    def _add_entry(
+        self, session, row: dict, campaign: Campaign,
+        observer_list: List[Observer], site: Site
+    ):
+        """
+
+        Args:
+            session: db session object
+            row: dataframe row of data to add
+            campaign: Campaign object inserted into db
+            observer_list: List of Observers inserted into db
+            site: the Site inserted into db
+
+        Returns:
+
+        """
+        # Add instrument
+        # TODO: what comes from row vs metadata?
+        instrument = self._check_or_add_object(
+            session, Instrument, dict(name=row['instrument'])
+        )
 
         # Add doi
         doi_string = row["doi"]
