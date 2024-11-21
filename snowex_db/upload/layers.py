@@ -43,6 +43,7 @@ class UploadProfileData(BaseUpload):
         self._timezone = timezone
         self._doi = kwargs.get("doi")
         self._instrument = kwargs.get("instrument")
+        self._header_sep = kwargs.get("header_sep", ",")
 
         # Read in data
         self.data = self._read(profile_filename)
@@ -60,7 +61,8 @@ class UploadProfileData(BaseUpload):
         """
         try:
             data = SnowExProfileDataCollection.from_csv(
-                profile_filename, timezone=self._timezone
+                profile_filename, timezone=self._timezone,
+                header_sep=self._header_sep
             )
         except pd.errors.ParserError as e:
             LOG.error(e)

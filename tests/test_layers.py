@@ -42,61 +42,87 @@ class WithUploadedFile(DBSetup):
         return result[0][0]
 
 
-class TestStratigraphyProfile(TableTestBase):
+class TestStratigraphyProfile(TableTestBase, WithUploadedFile):
     """
     Test that all the profiles from the Stratigraphy file were uploaded and
     have integrity
     """
 
-    args = ['stratigraphy.csv']
-    kwargs = {'in_timezone': 'MST'}
+    kwargs = {'timezone': 'MST'}
     UploaderClass = UploadProfileData
     TableClass = LayerData
 
-    params = {
-        'test_count': [dict(data_name='hand_hardness', expected_count=5)],
+    @pytest.fixture(scope="class")
+    def uploaded_file(self, db, data_dir):
+        self.upload_file(str(data_dir.joinpath("stratigraphy.csv")))
 
-        # Test a value from the profile to check that the profile is there and it has integrity
-        'test_value': [
-            dict(data_name='hand_hardness', attribute_to_check='value', filter_attribute='depth', filter_value=30,
-                 expected='4F'),
-            dict(data_name='grain_size', attribute_to_check='value', filter_attribute='depth', filter_value=35,
-                 expected='< 1 mm'),
-            dict(data_name='grain_type', attribute_to_check='value', filter_attribute='depth', filter_value=17,
-                 expected='FC'),
-            dict(data_name='manual_wetness', attribute_to_check='value', filter_attribute='depth', filter_value=17,
-                 expected='D'),
-
-            # Test were are uploading most of the important attributes
-            dict(data_name='hand_hardness', attribute_to_check='site_id', filter_attribute='depth',
-                 filter_value=30, expected='1N20'),
-            dict(data_name='hand_hardness', attribute_to_check='datetime', filter_attribute='depth', filter_value=30,
-                 expected=None),
-            dict(data_name='hand_hardness', attribute_to_check='site_name', filter_attribute='depth',
-                 filter_value=30, expected='Grand Mesa'),
-            dict(data_name='hand_hardness', attribute_to_check='easting', filter_attribute='depth',
-                 filter_value=30, expected=743281),
-            dict(data_name='hand_hardness', attribute_to_check='northing', filter_attribute='depth',
-                 filter_value=30, expected=4324005),
-
-            # Test the single comment was used
-            dict(data_name='hand_hardness', attribute_to_check='comments', filter_attribute='depth',
-                 filter_value=17, expected='Cups'),
-
-            ],
-
-        'test_unique_count': [
-            # Test only 1 value was submitted to each layer for wetness
-            dict(data_name='manual_wetness', attribute_to_count='value', expected_count=1),
-            # Test only 3 hand hardness categories were used
-            dict(data_name='hand_hardness', attribute_to_count='value', expected_count=3),
-            # Test only 2 grain type categories were used
-            dict(data_name='grain_type', attribute_to_count='value', expected_count=2),
-            # Test only 2 grain_sizes were used
-            dict(data_name='grain_size', attribute_to_count='value', expected_count=2),
-
+    @pytest.mark.parametrize(
+        "table, attribute, expected_value", [
+            (Site, "name", "COGM1N20_20200205"),
+            (Site, "datetime", datetime(
+                2020, 2, 5, 20, 30, tzinfo=timezone.utc)
+             ),
+            (Site, "geom", WKTElement(
+                'POINT (-108.1894813320662 39.031261970372725)', srid=4326)
+             ),
+            (Campaign, "name", "Grand Mesa"),
+            (Instrument, "name", None),
         ]
-    }
+    )
+    def test_metadata(self, table, attribute, expected_value, uploaded_file):
+        result = self.get_value(table, attribute)
+        if attribute == "geom":
+            # Check geometry equals expected
+            geom_from_wkb = load_wkb(bytes(result.data))
+            geom_from_wkt = load_wkt(expected_value.data)
+
+            assert geom_from_wkb.equals(geom_from_wkt)
+        else:
+            assert result == expected_value
+
+    @pytest.mark.parametrize(
+        "data_name, attribute_to_check,"
+        " filter_attribute, filter_value, expected",
+        [
+            ('hand_hardness', 'value', 'depth', 30, ["4F"]),
+            ('grain_size', 'value', 'depth', 35, ["< 1 mm"]),
+            ('grain_type', 'value', 'depth', 17, ["FC"]),
+            ('manual_wetness', 'value', 'depth', 17, ["D"]),
+            ('hand_hardness', 'comments', 'depth', 17, ["Cups"]),
+        ]
+    )
+    def test_value(
+            self, data_name, attribute_to_check,
+            filter_attribute, filter_value, expected, uploaded_file
+    ):
+        self.check_value(
+            data_name, attribute_to_check,
+            filter_attribute, filter_value, expected,
+        )
+
+    @pytest.mark.parametrize(
+        "data_name, expected", [
+            ("hand_hardness", 5)
+        ]
+    )
+    def test_count(self, data_name, expected, uploaded_file):
+        n = self.check_count(data_name)
+        assert n == expected
+
+    @pytest.mark.parametrize(
+        "data_name, attribute_to_count, expected", [
+            ("hand_hardness", "site_id", 1),
+            ("manual_wetness", "value", 1),
+            ("hand_hardness", "value", 3),
+            ("grain_type", "value", 2),
+            ("grain_size", "value", 2),
+        ]
+    )
+    def test_unique_count(self, data_name, attribute_to_count, expected,
+                          uploaded_file):
+        self.check_unique_count(
+            data_name, attribute_to_count, expected
+        )
 
 
 class TestDensityProfile(TableTestBase, WithUploadedFile):
@@ -165,7 +191,7 @@ class TestDensityProfile(TableTestBase, WithUploadedFile):
     )
     def test_count(self, data_name, expected, uploaded_file):
         n = self.check_count(data_name)
-        assert  n == expected
+        assert n == expected
 
     @pytest.mark.parametrize(
         "data_name, attribute_to_count, expected", [
@@ -180,7 +206,7 @@ class TestDensityProfile(TableTestBase, WithUploadedFile):
 
 class TestDensityProfileRowBased(TableTestBase, WithUploadedFile):
     """
-    Test that row based tzinfo and crs works (for alaska data)
+    # TODO: Test that row based tzinfo and crs works (for alaska data)
     """
 
     @pytest.mark.parametrize(
@@ -493,33 +519,23 @@ class TestSSAProfile(TableTestBase, WithUploadedFile):
         )
 
 
-class TestSMPProfile(TableTestBase):
+class TestSMPProfile(TableTestBase, WithUploadedFile):
     """
     Test SMP profile is uploaded with all its attributes and valid data
     """
 
-    args = ['S06M0874_2N12_20200131.CSV']
-    kwargs = {'in_timezone': 'UTC', 'units': 'Newtons', 'header_sep': ':', 'instrument': 'snowmicropen'}
+    kwargs = {
+        'timezone': 'UTC',
+        'units': 'Newtons',  # TODO: make sure units are passed through
+        'header_sep': ':',
+        'instrument': 'snowmicropen'
+    }
     UploaderClass = UploadProfileData
     TableClass = LayerData
-    dt = datetime(2020, 1, 31, 22, 42, 14, 0, pytz.utc)
 
-    params = {
-        'test_count': [dict(data_name='force', expected_count=154)],
-        'test_value': [
-            dict(data_name='force', attribute_to_check='value', filter_attribute='depth', filter_value=-53.17,
-                 expected=0.331),
-            dict(data_name='force', attribute_to_check='date', filter_attribute='depth', filter_value=-0.4,
-                 expected=dt.date()),
-            dict(data_name='force', attribute_to_check='time', filter_attribute='depth', filter_value=-0.4,
-                 expected=dt.timetz()),
-            dict(data_name='force', attribute_to_check='latitude', filter_attribute='depth', filter_value=-0.4,
-                 expected=39.03013229370117),
-            dict(data_name='force', attribute_to_check='longitude', filter_attribute='depth', filter_value=-0.4,
-                 expected=-108.16268920898438),
-        ],
-        'test_unique_count': [dict(data_name='force', attribute_to_count='date', expected_count=1)]
-    }
+    @pytest.fixture(scope="class")
+    def uploaded_file(self, db, data_dir):
+        self.upload_file(str(data_dir.joinpath("S06M0874_2N12_20200131.CSV")))
 
     def test_instrument_id_comment(self):
         """
@@ -536,24 +552,90 @@ class TestSMPProfile(TableTestBase):
         result = self.session.query(LayerData.comments).limit(1).one()
         assert f'fname = {os.path.basename(self.args[0])}' in result[0]
 
+    @pytest.mark.parametrize(
+        "table, attribute, expected_value", [
+            (Site, "name", ""),  # TODO: how do we parse id here,
+            (Site, "datetime", datetime(
+                2020, 1, 31, 22, 42, 14, 0, tzinfo=timezone.utc)
+             ),
+            (Site, "geom", WKTElement(
+                'POINT (-108.16268920898438 39.03013229370117)', srid=4326)
+             ),
+            (Campaign, "name", "Grand Mesa"),
+            (Instrument, "name", "snowmicropen"),
+        ]
+    )
+    def test_metadata(self, table, attribute, expected_value, uploaded_file):
+        result = self.get_value(table, attribute)
+        if attribute == "geom":
+            # Check geometry equals expected
+            geom_from_wkb = load_wkb(bytes(result.data))
+            geom_from_wkt = load_wkt(expected_value.data)
 
-class TestEmptyProfile(TableTestBase):
+            assert geom_from_wkb.equals(geom_from_wkt)
+        else:
+            assert result == expected_value
+
+    @pytest.mark.parametrize(
+        "data_name, attribute_to_check, filter_attribute, "
+        "filter_value, expected",
+        [
+            ('force', 'value', 'depth', -53.17, [0.331]),
+        ]
+    )
+    def test_value(
+            self, data_name, attribute_to_check,
+            filter_attribute, filter_value, expected, uploaded_file
+    ):
+        self.check_value(
+            data_name, attribute_to_check,
+            filter_attribute, filter_value, expected,
+        )
+
+    @pytest.mark.parametrize(
+        "data_name, expected", [
+            ("force", 154),
+        ]
+    )
+    def test_count(self, data_name, expected, uploaded_file):
+        n = self.check_count(data_name)
+        assert n == expected
+
+    @pytest.mark.parametrize(
+        "data_name, attribute_to_count, expected", [
+            ("force", "site_id", 1),
+        ]
+    )
+    def test_unique_count(self, data_name, attribute_to_count, expected,
+                          uploaded_file):
+        self.check_unique_count(
+            data_name, attribute_to_count, expected
+        )
+
+
+class TestEmptyProfile(TableTestBase, WithUploadedFile):
     """
-    Test that a file with header info that doesnt have data (which
-    happens on purpose) doesnt upload anything
+    Test that a file with header info that doesn't have data (which
+    happens on purpose) doesn't upload anything
     """
 
-    args = ['empty_data.csv']
-    kwargs = {'in_timezone': 'MST'}
+    args = []
+    kwargs = {'timezone': 'MST'}
     UploaderClass = UploadProfileData
     TableClass = LayerData
-    dt = datetime(2020, 2, 5, 18, 40, 0, 0,  pytz.utc)
 
-    params = {'test_count': [dict(data_name='hand_hardness', expected_count=0)],
-              'test_value': [dict(data_name='hand_hardness', attribute_to_check='value', filter_attribute='depth',
-                                  filter_value=1, expected=None)],
-              'test_unique_count': [dict(data_name='hand_hardness', attribute_to_count='comments', expected_count=0)]
-        }
+    @pytest.fixture(scope="class")
+    def uploaded_file(self, db, data_dir):
+        self.upload_file(str(data_dir.joinpath('empty_data.csv')))
+
+    @pytest.mark.parametrize(
+        "data_name, expected", [
+            ("hand_hardness", 0),
+        ]
+    )
+    def test_count(self, data_name, expected, uploaded_file):
+        n = self.check_count(data_name)
+        assert n == expected
 
 
 class TestMetadata(WithUploadedFile):
