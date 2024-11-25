@@ -150,7 +150,6 @@ class UploadProfileData(BaseUpload):
 
             # Grab each row, convert it to dict and join it with site info
             if not df.empty:
-                objects = []
                 for row in df.to_dict(orient="records"):
                     row["geometry"] = WKTElement(
                         str(row["geometry"]),
@@ -225,7 +224,7 @@ class UploadProfileData(BaseUpload):
                 geom=geom,
                 observers=observer_list,
                 aspect=metadata.aspect,
-                # slope=metadata.slope,
+                slope_angle=metadata.slope,
                 air_temp=metadata.air_temp,
                 total_depth=metadata.total_depth,
                 weather_description=metadata.weather_description,

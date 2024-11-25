@@ -41,6 +41,14 @@ class WithUploadedFile(DBSetup):
             result = session.query(obj).all()
         return result[0][0]
 
+    def get_values(self, table, attribute):
+        with db_session_with_credentials(
+                self.database_name(), self.CREDENTIAL_FILE
+        ) as (session, engine):
+            obj = getattr(table, attribute)
+            result = session.query(obj).all()
+        return [r[0] for r in result]
+
 
 class TestStratigraphyProfile(TableTestBase, WithUploadedFile):
     """
@@ -662,32 +670,38 @@ class TestMetadata(WithUploadedFile):
             (Campaign, "name", "Grand Mesa"),
             # (Site, "elevation", "COGM1N20_20200205"),
             (Site, "aspect", 180.0),
-            (Site, "slope", ""),
-            (Site, "air_temp", ""),
+            (Site, "slope_angle", 5.0),
+            (Site, "air_temp", np.nan),
             (Site, "total_depth", 35.0),
-            (Site, "weather_description", ""),
-            (Site, "precip", ""),
-            (Site, "sky_cover", ""),
-            (Site, "wind", ""),
-            (Site, "ground_condition", ""),
-            (Site, "ground_roughness", ""),
-            (Site, "ground_vegetation", ""),
-            (Site, "vegetation_height", ""),
-            (Site, "tree_canopy", ""),
-            (Site, "site_notes", ""),
-            (Observer, "name", "")
+            (Site, "weather_description", "Sunny, cold, gusts"),
+            (Site, "precip", "None"),
+            (Site, "sky_cover", "Few (< 1/4 of sky)"),
+            (Site, "wind", "Moderate"),
+            (Site, "ground_condition", "Frozen"),
+            (Site, "ground_roughness", "rough, rocks in places"),
+            (Site, "ground_vegetation", "[Grass]"),
+            (Site, "vegetation_height", "5, nan"),
+            (Site, "tree_canopy", "No Trees"),
+            (Site, "site_notes", None),
+            (Observer, "name", ["Chris Hiemstra", "Hans Lievens"])
         ]
     )
     def test_metadata(
             self, uploaded_site_details_file, table, attribute,
             expected_value
     ):
-        result = self.get_value(table, attribute)
+        # Get multiple values for observers
+        if table == Observer:
+            result = self.get_values(table, attribute)
+        else:
+            result = self.get_value(table, attribute)
         if attribute == "geom":
             # Check geometry equals expected
             geom_from_wkb = load_wkb(bytes(result.data))
             geom_from_wkt = load_wkt(expected_value.data)
 
             assert geom_from_wkb.equals(geom_from_wkt)
+        elif isinstance(expected_value, float) and np.isnan(expected_value):
+            assert np.isnan(result)
         else:
             assert result == expected_value

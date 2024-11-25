@@ -300,12 +300,15 @@ class ExtendedSnowExMetadataVariables(SnowExMetadataVariables):
         ], auto_remap=True
     )
     SLOPE = MeasurementDescription(
-        "slope_angle", "Slope Angle", ["slope"], match_on_code=True,
+        "slope_angle", "Slope Angle", ["slope", "slope_angle"],
+        auto_remap=True
+    )
+    ASPECT = MeasurementDescription(
+        "aspect", "Site Aspect", ["aspect",],
         auto_remap=True
     )
     WEATHER = MeasurementDescription(
         "weather_description", "Weather Description", ["weather"],
-        match_on_code=True,
         auto_remap=True
     )
     SKY_COVER = MeasurementDescription(
@@ -317,6 +320,44 @@ class ExtendedSnowExMetadataVariables(SnowExMetadataVariables):
     )
     INSTRUMENT = MeasurementDescription(
         "instrument", "Instrument", ["measurement_tool"], auto_remap=True
+    )
+    OBSERVERS = MeasurementDescription(
+        'observers', "Observer(s) of the measurement",
+        ['operator', 'surveyors', 'observer'], auto_remap=True
+    )
+    GROUND_ROUGHNESS = MeasurementDescription(
+        "ground_roughness", "Roughness Description", [
+            "ground roughness"
+        ], auto_remap=True
+    )
+    GROUND_CONDITION = MeasurementDescription(
+        "ground_condition", "The condition of the ground", [
+            "ground condition"
+        ], auto_remap=True
+    )
+    GROUND_VEGETATION = MeasurementDescription(
+        "ground_vegetation", "Description of the vegetation", [
+            "ground vegetation"
+        ], auto_remap=True
+    )
+    VEGETATION_HEIGHT = MeasurementDescription(
+        "vegetation_height", "The height of the vegetation", [
+            "vegetation height"
+        ], auto_remap=True
+    )
+    PRECIP = MeasurementDescription(
+        "precip", "Site notes on precipitation", ["precip"], auto_remap=True
+    )
+    WIND = MeasurementDescription(
+        "wind", "Site notes on wind", ["wind"], auto_remap=True
+    )
+    AIR_TEMP = MeasurementDescription(
+        "air_temp", "Site notes on air temperature", ["air_temp"],
+        auto_remap=True
+    )
+    TREE_CANOPY = MeasurementDescription(
+        "tree_canopy", "Description of the tree canopy", ["tree canopy"],
+        auto_remap=True
     )
 
 
@@ -331,10 +372,6 @@ class ExtendedSnowExPrimaryVariables(SnowExPrimaryVariables):
     PARAMETER_CODES = MeasurementDescription(
         "parameter_codes", "Parameter Codes",
         ["parameter_codes"]
-    )
-    OBSERVERS = MeasurementDescription(
-        'observers', "Observer(s) of the measurement",
-        ['operator', 'surveyors', 'observer']
     )
     TWO_WAY_TRAVEL = MeasurementDescription(
         'two_way_travel', "Two way travel",
@@ -514,16 +551,18 @@ class ExtendedSnowExMetadataParser(SnowExMetadataParser):
                             'directions, converting to degrees...'
                         )
                         aspect = convert_cardinal_to_degree(aspect)
+                break
 
         return aspect
 
     def parse_slope(self):
         result = None
         for k, v in self.rough_obj.items():
-            if k in ["slope_angle"]:
+            if k in ["slope_angle", "slope"]:
                 result = v
                 # Handle parsing string
                 result = manage_degree_values(result)
+                break
         return result
 
     def parse_air_temp(self):
@@ -531,56 +570,59 @@ class ExtendedSnowExMetadataParser(SnowExMetadataParser):
         for k, v in self.rough_obj.items():
             if k in ["air_temp"]:
                 result = manage_degree_values(v)
+                break
         return result
 
     def parse_total_depth(self):
-        result = None
-        for k, v in self.rough_obj.items():
-            if k in ["total_depth"]:
-                result = manage_degree_values(v)
-        return result
+        return self.rough_obj.get(
+            ExtendedSnowExMetadataVariables.TOTAL_DEPTH.code
+        )
 
     def parse_weather_description(self):
-        result = None
-        for k, v in self.rough_obj.items():
-            if k in [ExtendedSnowExMetadataVariables.WEATHER.code]:
-                result = manage_degree_values(v)
-        return result
+        return self.rough_obj.get(
+            ExtendedSnowExMetadataVariables.WEATHER.code
+        )
 
     def parse_precip(self):
-        pass
+        return self.rough_obj.get(
+            ExtendedSnowExMetadataVariables.PRECIP.code
+        )
 
     def parse_sky_cover(self):
-        result = None
-        for k, v in self.rough_obj.items():
-            if k in [ExtendedSnowExMetadataVariables.SKY_COVER.code]:
-                result = manage_degree_values(v)
-        return result
+        return self.rough_obj.get(
+            ExtendedSnowExMetadataVariables.SKY_COVER.code
+        )
 
     def parse_wind(self):
-        pass
+        return self.rough_obj.get(ExtendedSnowExMetadataVariables.WIND.code)
 
     def parse_ground_condition(self):
-        pass
+        return self.rough_obj.get(
+            ExtendedSnowExMetadataVariables.GROUND_CONDITION.code
+        )
 
     def parse_ground_roughness(self):
-        pass
+        return self.rough_obj.get(
+            ExtendedSnowExMetadataVariables.GROUND_ROUGHNESS.code
+        )
 
     def parse_ground_vegetation(self):
-        pass
+        return self.rough_obj.get(
+            ExtendedSnowExMetadataVariables.GROUND_VEGETATION.code
+        )
 
     def parse_vegetation_height(self):
-        pass
+        return self.rough_obj.get(
+            ExtendedSnowExMetadataVariables.VEGETATION_HEIGHT.code
+        )
 
     def parse_tree_canopy(self):
-        pass
+        return self.rough_obj.get(
+            ExtendedSnowExMetadataVariables.TREE_CANOPY.code
+        )
 
     def parse_site_notes(self):
-        result = None
-        for k, v in self.rough_obj.items():
-            if k in [ExtendedSnowExMetadataVariables.NOTES.code]:
-                result = manage_degree_values(v)
-        return result
+        return None
 
 
 
