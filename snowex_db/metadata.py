@@ -281,6 +281,14 @@ class SMPMeasurementLog(object):
 
 
 class ExtendedSnowExMetadataVariables(SnowExMetadataVariables):
+    FLAGS = MeasurementDescription(
+        'flags', "Measurements flags",
+        ['flag']
+    )
+    UTM_ZONE = MeasurementDescription(
+        'utm_zone', "UTM Zone",
+        ['utmzone', 'utm_zone', 'zone'], auto_remap=True
+    )
     COUNT = MeasurementDescription(
         "count", "Count for surrounding perimeter depths",
         ["count"], auto_remap=True
@@ -377,12 +385,10 @@ class ExtendedSnowExPrimaryVariables(SnowExPrimaryVariables):
         'two_way_travel', "Two way travel",
         ['twt', 'twt_ns']
     )
-
     FLAGS = MeasurementDescription(
         'flags', "Measurements flags",
         ['flag']
     )
-
     RH_10FT = MeasurementDescription(
         "relative_humidity_10ft",
         "Relative humidity measured at 10 ft tower level",

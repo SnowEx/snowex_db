@@ -1,0 +1,17 @@
+# Location: Fairbanks
+# Site: BCEF
+# PitID: SB454
+# Date/Local Standard Time: 2023-03-16T10:25
+# Zone: 6N
+# Easting: 437163
+# Northing: 7176739
+# Latitude: 64.70955
+# Longitude: -148.31829
+# Flags: None
+# Comments: nan
+# Top (cm),Bottom (cm),Density A (kg/m3),Density B (kg/m3),Density C (kg/m3)
+57.0,47.0,208.0,173.0,-9999
+47.0,37.0,229.0,223.0,-9999
+37.0,27.0,308.0,267.0,-9999
+27.0,17.0,236.0,226.0,-9999
+17.0,7.0,204.0,220.0,-9999
