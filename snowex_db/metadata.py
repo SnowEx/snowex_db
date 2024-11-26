@@ -284,12 +284,14 @@ class ExtendedSnowExMetadataVariables(SnowExMetadataVariables):
     IGNORE = MeasurementDescription(
         "ignore", "Ignore this",
         [
-            "profile_id", "timing"
-        ]
+            "profile_id", "timing",  # SSA things
+            "smp_serial_number", "original_total_samples",  # SMP things
+            "data_subsampled_to"
+        ], auto_remap=False
     )
     FLAGS = MeasurementDescription(
         'flags', "Measurements flags",
-        ['flag']
+        ['flag', 'flags'], auto_remap=True
     )
     UTM_ZONE = MeasurementDescription(
         'utm_zone', "UTM Zone",

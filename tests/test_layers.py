@@ -570,7 +570,8 @@ class TestSMPProfile(TableTestBase, WithUploadedFile):
         'units': 'Newtons',
         'header_sep': ':',
         'instrument': 'snowmicropen',
-        'site_id': "COGM_Fakepitid123"
+        'id': "COGM_Fakepitid123",
+        'campaign_name': "Grand Mesa",
     }
     UploaderClass = UploadProfileData
     TableClass = LayerData

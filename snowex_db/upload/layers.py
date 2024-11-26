@@ -46,6 +46,8 @@ class UploadProfileData(BaseUpload):
         self._doi = kwargs.get("doi")
         self._instrument = kwargs.get("instrument")
         self._header_sep = kwargs.get("header_sep", ",")
+        self._id = kwargs.get("id")
+        self._campaign_name = kwargs.get("campaign_name")
 
         # Read in data
         self.data = self._read(profile_filename)
@@ -64,7 +66,8 @@ class UploadProfileData(BaseUpload):
         try:
             data = SnowExProfileDataCollection.from_csv(
                 profile_filename, timezone=self._timezone,
-                header_sep=self._header_sep
+                header_sep=self._header_sep, id=self._id,
+                campaign_name=self._campaign_name
             )
         except pd.errors.ParserError as e:
             LOG.error(e)
@@ -274,7 +277,11 @@ class UploadProfileData(BaseUpload):
         # Add measurement type
         measurement_type = row["type"]
         measurement_obj = self._check_or_add_object(
-            session, MeasurementType, dict(name=measurement_type)
+            # TODO: Add units and 'derived' flag
+            #   TODO: these can be passed in
+            session, MeasurementType, dict(
+                name=measurement_type
+            )
         )
 
         # Now that the other objects exist, create the entry,
