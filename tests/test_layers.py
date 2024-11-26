@@ -170,6 +170,9 @@ class TestDensityProfile(TableTestBase, WithUploadedFile):
              ),
             (Campaign, "name", "Grand Mesa"),
             (Instrument, "name", "kelly cutter"),
+            (MeasurementType, "name", ['density']),
+            (MeasurementType, "units", ['kg/m3']),
+            (MeasurementType, "derived", [False])
         ]
     )
     def test_metadata(self, table, attribute, expected_value, uploaded_file):
@@ -339,6 +342,11 @@ class TestLWCProfileB(TableTestBase, WithUploadedFile):
              ),
             (Campaign, "name", "Grand Mesa"),
             (Instrument, "name", None),
+            (MeasurementType, "name", [
+                'density', 'permittivity', 'liquid_water_content'
+            ]),
+            (MeasurementType, "units", ['kg/m3', None, '%']),
+            (MeasurementType, "derived", [False] * 3)
         ]
     )
     def test_metadata(self, table, attribute, expected_value, uploaded_file):
@@ -410,6 +418,9 @@ class TestTemperatureProfile(TableTestBase, WithUploadedFile):
              ),
             (Campaign, "name", "Grand Mesa"),
             (Instrument, "name", None),
+            (MeasurementType, "name", ['snow_temperature']),
+            (MeasurementType, "units", ['deg c']),
+            (MeasurementType, "derived", [False])
         ]
     )
     def test_metadata(self, table, attribute, expected_value, uploaded_file):
@@ -475,8 +486,13 @@ class TestSSAProfile(TableTestBase, WithUploadedFile):
              ),
             (Campaign, "name", "Grand Mesa"),
             (Instrument, "name", None),
-            (MeasurementType, "name", "force"),
-            (MeasurementType, "units", "Newtons"),
+            (
+                MeasurementType, "name",
+                ['sample_signal', 'reflectance', 'specific_surface_area',
+                 'equivalent_diameter']
+            ),
+            (MeasurementType, "units", ['mv', '%', 'm^2/kg', 'mm']),
+            (MeasurementType, "derived", [False] * 4)
         ]
     )
     def test_metadata(self, table, attribute, expected_value, uploaded_file):
@@ -570,7 +586,7 @@ class TestSMPProfile(TableTestBase, WithUploadedFile):
             (Campaign, "name", "Grand Mesa"),
             (Instrument, "name", "snowmicropen"),
             (MeasurementType, "name", ["force"]),
-            (MeasurementType, "units", ["newtons"]),
+            (MeasurementType, "units", ["n"]),
             (MeasurementType, "derived", [True])
         ]
     )
