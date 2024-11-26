@@ -281,6 +281,12 @@ class SMPMeasurementLog(object):
 
 
 class ExtendedSnowExMetadataVariables(SnowExMetadataVariables):
+    IGNORE = MeasurementDescription(
+        "ignore", "Ignore this",
+        [
+            "profile_id", "timing"
+        ]
+    )
     FLAGS = MeasurementDescription(
         'flags', "Measurements flags",
         ['flag']

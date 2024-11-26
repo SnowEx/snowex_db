@@ -345,12 +345,12 @@ class TestLWCProfileB(TableTestBase, WithUploadedFile):
 
     @pytest.mark.parametrize(
         "table, attribute, expected_value", [
-            (Site, "name", "COGM1N20_20200205"),
+            (Site, "name", "COGMST_20200312"),
             (Site, "datetime", datetime(
-                2020, 2, 5, 20, 30, tzinfo=timezone.utc)
+                2020, 3, 12, 21, 45, tzinfo=timezone.utc)
              ),
             (Site, "geom", WKTElement(
-                'POINT (-108.1894813320662 39.031261970372725)', srid=4326)
+                'POINT (-108.06310597266031 39.04495658046074)', srid=4326)
              ),
             (Campaign, "name", "Grand Mesa"),
             (Instrument, "name", None),
