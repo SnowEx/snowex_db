@@ -1,6 +1,7 @@
 """
 Module for classes that upload single files to the database.
 """
+import time
 from typing import List
 
 import pandas as pd
@@ -14,6 +15,7 @@ from snowexsql.tables import (
 )
 from insitupy.campaigns.snowex import SnowExProfileData
 
+from .batch import BatchBase
 from ..string_management import parse_none
 from ..utilities import get_logger
 from .base import BaseUpload
@@ -307,3 +309,65 @@ class UploadProfileData(BaseUpload):
             value=row["value"],
         )
         return new_entry
+
+
+class UploadProfileBatch(BatchBase):
+    """
+    Class for submitting multiple files of profile type data.
+
+    Attributes:
+        smp_log_f: CSV providing metadata for profile_filenames.
+    """
+
+    UploaderClass = UploadProfileData
+
+    def push(self):
+        """
+        An overwritten push function to account for managing SMP meta data.
+        """
+
+        self.start = time.time()
+
+        i = 0
+
+        # TODO: uncertain here
+        # if self.smp_log_f is not None:
+        #     self.smp_log = SMPMeasurementLog(self.smp_log_f)
+        # else:
+        #     self.smp_log = None
+
+        # Keep track of whether we are using a site details file for each profile
+        smp_file = False
+
+        # Read the data and organize it, remap the names
+        # if not isinstance(self.smp_log, type(None)):
+        #     self.log.info(
+        #         'Processing SMP profiles with SMP measurement log...')
+        #     smp_file = True
+        #     self.meta['header_sep'] = ':'
+
+        # Loop over all the ssa files and upload them
+        if self.n_files != -1:
+            self.filenames[0:self.n_files]
+
+        for i, f in enumerate(self.filenames):
+
+            # if smp_file:
+            #     extras = self.smp_log.get_metadata(f)
+            #     meta.update(extras)
+
+            # If were not debugging script allow exceptions and report them
+            # later
+            if not self.debug:
+                try:
+                    self._push_one(f, **self._kwargs)
+
+                except Exception as e:
+                    self.log.error('Error with {}'.format(f))
+                    self.log.error(e)
+                    self.errors.append((f, e))
+
+            else:
+                self._push_one(f, **self._kwargs)
+
+        self.report(i + 1)

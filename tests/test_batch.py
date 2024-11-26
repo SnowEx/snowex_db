@@ -1,14 +1,14 @@
 import datetime
-from os.path import dirname, join
+from os.path import dirname
 
 import pytest
 import pytz
 from sqlalchemy import func
 
-from snowex_db.batch import *
-from snowexsql.data import ImageData, LayerData, SiteData
+from snowex_db.upload.batch import *
+from snowexsql.tables import ImageData, LayerData, Site
 
-from .sql_test_base import TableTestBase, pytest_generate_tests
+from .sql_test_base import TableTestBase
 
 
 class TestUploadSiteDetailsBatch(TableTestBase):
@@ -19,7 +19,7 @@ class TestUploadSiteDetailsBatch(TableTestBase):
     args = [['site_5S21.csv', 'site_details.csv']]
     kwargs = {'epsg': 26912, 'in_timezone': 'US/Mountain'}
     UploaderClass = UploadSiteDetailsBatch
-    TableClass = SiteData
+    TableClass = Site
     count_attribute = 'site_id'
 
     # Define params which is a dictionary of test names and their args
@@ -38,63 +38,8 @@ class TestUploadSiteDetailsBatch(TableTestBase):
     }
 
     def test_extended_geom(self):
-        g = self.session.query(SiteData.geom).limit(1).all()
+        g = self.session.query(Site.geom).limit(1).all()
         assert g[0][0].srid == 26912
-
-
-class TestUploadProfileBatch(TableTestBase):
-    """
-    Test uploading multiple vertical profiles
-    """
-
-    args = [['stratigraphy.csv', 'temperature.csv']]
-    kwargs = {'in_timezone': 'UTC'}
-    UploaderClass = UploadProfileBatch
-    TableClass = LayerData
-
-    params = {
-        'test_count': [dict(data_name='hand_hardness', expected_count=5),
-                       dict(data_name='temperature', expected_count=5)],
-        'test_value': [
-            dict(data_name='hand_hardness', attribute_to_check='observers', filter_attribute='depth', filter_value=17,
-                 expected=None),
-            dict(data_name='hand_hardness', attribute_to_check='comments', filter_attribute='depth', filter_value=17,
-                 expected='Cups')],
-        'test_unique_count': [dict(data_name='manual_wetness', attribute_to_count='value', expected_count=1)]
-    }
-
-
-class TestUploadProfileBatchErrors():
-    """
-    Test uploading multiple vertical profiles
-    """
-    files = ['doesnt_exist.csv']
-
-    def test_without_debug(self):
-        """
-        Test batch uploading without debug and errors
-        """
-
-        u = UploadProfileBatch(self.files, credentials=join(dirname(__file__), 'credentials.json'), debug=False)
-        u.push()
-        assert len(u.errors) == 1
-
-    def test_with_debug(self):
-        """
-        Test batch uploading with debug and errors
-        """
-
-        with pytest.raises(Exception):
-            u = UploadProfileBatch(self.files, debug=True)
-            u.push()
-
-    def test_without_files(self):
-        """
-        Test that batch correctly runs with no files
-        """
-        u = UploadProfileBatch([], credentials=join(dirname(__file__), 'credentials.json'), debug=True)
-        u.push()
-        assert u.uploaded == 0
 
 
 class TestUploadLWCProfileBatch(TableTestBase):

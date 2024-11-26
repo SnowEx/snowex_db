@@ -3,7 +3,7 @@ from shapely.wkb import loads as load_wkb
 from shapely.wkt import loads as load_wkt
 from snowexsql.tables import Observer, MeasurementType
 
-from snowex_db.upload.layers import UploadProfileData
+from snowex_db.upload.layers import UploadProfileData, UploadProfileBatch
 from tests.db_setup import DBSetup, db_session_with_credentials
 
 
@@ -55,3 +55,14 @@ class WithUploadedFile(DBSetup):
             assert np.isnan(result)
         else:
             assert result == expected_value
+
+
+class WithUploadBatchFiles(WithUploadedFile):
+    UploaderClass = UploadProfileBatch
+
+    def upload_file(self, fnames):
+        u = self.UploaderClass(
+            fnames, self.database_name(), self.CREDENTIAL_FILE,
+            **self.kwargs)
+
+        u.push()
