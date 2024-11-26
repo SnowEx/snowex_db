@@ -48,6 +48,23 @@ class WithUploadedFile(DBSetup):
             result = session.query(obj).all()
         return [r[0] for r in result]
 
+    def _check_metadata(self, table, attribute, expected_value):
+        # Get multiple values for observers
+        if table in [Observer, MeasurementType]:
+            result = self.get_values(table, attribute)
+        else:
+            result = self.get_value(table, attribute)
+        if attribute == "geom":
+            # Check geometry equals expected
+            geom_from_wkb = load_wkb(bytes(result.data))
+            geom_from_wkt = load_wkt(expected_value.data)
+
+            assert geom_from_wkb.equals(geom_from_wkt)
+        elif isinstance(expected_value, float) and np.isnan(expected_value):
+            assert np.isnan(result)
+        else:
+            assert result == expected_value
+
 
 class TestStratigraphyProfile(TableTestBase, WithUploadedFile):
     """
@@ -77,15 +94,7 @@ class TestStratigraphyProfile(TableTestBase, WithUploadedFile):
         ]
     )
     def test_metadata(self, table, attribute, expected_value, uploaded_file):
-        result = self.get_value(table, attribute)
-        if attribute == "geom":
-            # Check geometry equals expected
-            geom_from_wkb = load_wkb(bytes(result.data))
-            geom_from_wkt = load_wkt(expected_value.data)
-
-            assert geom_from_wkb.equals(geom_from_wkt)
-        else:
-            assert result == expected_value
+        self._check_metadata(table, attribute, expected_value)
 
     @pytest.mark.parametrize(
         "data_name, attribute_to_check,"
@@ -164,15 +173,7 @@ class TestDensityProfile(TableTestBase, WithUploadedFile):
         ]
     )
     def test_metadata(self, table, attribute, expected_value, uploaded_file):
-        result = self.get_value(table, attribute)
-        if attribute == "geom":
-            # Check geometry equals expected
-            geom_from_wkb = load_wkb(bytes(result.data))
-            geom_from_wkt = load_wkt(expected_value.data)
-
-            assert geom_from_wkb.equals(geom_from_wkt)
-        else:
-            assert result == expected_value
+        self._check_metadata(table, attribute, expected_value)
 
     @pytest.mark.parametrize(
         "data_name, attribute_to_check, filter_attribute, filter_value, expected", [
@@ -239,15 +240,7 @@ class TestDensityAlaska(TableTestBase, WithUploadedFile):
         ]
     )
     def test_metadata(self, table, attribute, expected_value, uploaded_file):
-        result = self.get_value(table, attribute)
-        if attribute == "geom":
-            # Check geometry equals expected
-            geom_from_wkb = load_wkb(bytes(result.data))
-            geom_from_wkt = load_wkt(expected_value.data)
-
-            assert geom_from_wkb.equals(geom_from_wkt)
-        else:
-            assert result == expected_value
+        self._check_metadata(table, attribute, expected_value)
 
     @pytest.mark.parametrize(
         "data_name, expected", [
@@ -286,15 +279,7 @@ class TestLWCProfile(TableTestBase, WithUploadedFile):
         ]
     )
     def test_metadata(self, table, attribute, expected_value, uploaded_file):
-        result = self.get_value(table, attribute)
-        if attribute == "geom":
-            # Check geometry equals expected
-            geom_from_wkb = load_wkb(bytes(result.data))
-            geom_from_wkt = load_wkt(expected_value.data)
-
-            assert geom_from_wkb.equals(geom_from_wkt)
-        else:
-            assert result == expected_value
+        self._check_metadata(table, attribute, expected_value)
 
     @pytest.mark.parametrize(
         "data_name, attribute_to_check, filter_attribute, filter_value, expected", [
@@ -357,15 +342,7 @@ class TestLWCProfileB(TableTestBase, WithUploadedFile):
         ]
     )
     def test_metadata(self, table, attribute, expected_value, uploaded_file):
-        result = self.get_value(table, attribute)
-        if attribute == "geom":
-            # Check geometry equals expected
-            geom_from_wkb = load_wkb(bytes(result.data))
-            geom_from_wkt = load_wkt(expected_value.data)
-
-            assert geom_from_wkb.equals(geom_from_wkt)
-        else:
-            assert result == expected_value
+        self._check_metadata(table, attribute, expected_value)
 
     @pytest.mark.parametrize(
         "data_name, attribute_to_check, filter_attribute, filter_value, expected",
@@ -436,15 +413,7 @@ class TestTemperatureProfile(TableTestBase, WithUploadedFile):
         ]
     )
     def test_metadata(self, table, attribute, expected_value, uploaded_file):
-        result = self.get_value(table, attribute)
-        if attribute == "geom":
-            # Check geometry equals expected
-            geom_from_wkb = load_wkb(bytes(result.data))
-            geom_from_wkt = load_wkt(expected_value.data)
-
-            assert geom_from_wkb.equals(geom_from_wkt)
-        else:
-            assert result == expected_value
+        self._check_metadata(table, attribute, expected_value)
 
     @pytest.mark.parametrize(
         "data_name, attribute_to_check, filter_attribute, filter_value, expected",
@@ -506,18 +475,12 @@ class TestSSAProfile(TableTestBase, WithUploadedFile):
              ),
             (Campaign, "name", "Grand Mesa"),
             (Instrument, "name", None),
+            (MeasurementType, "name", "force"),
+            (MeasurementType, "units", "Newtons"),
         ]
     )
     def test_metadata(self, table, attribute, expected_value, uploaded_file):
-        result = self.get_value(table, attribute)
-        if attribute == "geom":
-            # Check geometry equals expected
-            geom_from_wkb = load_wkb(bytes(result.data))
-            geom_from_wkt = load_wkt(expected_value.data)
-
-            assert geom_from_wkb.equals(geom_from_wkt)
-        else:
-            assert result == expected_value
+        self._check_metadata(table, attribute, expected_value)
 
     @pytest.mark.parametrize(
         "data_name, attribute_to_check, filter_attribute, "
@@ -567,11 +530,11 @@ class TestSMPProfile(TableTestBase, WithUploadedFile):
 
     kwargs = {
         'timezone': 'UTC',
-        'units': 'Newtons',
         'header_sep': ':',
         'instrument': 'snowmicropen',
         'id': "COGM_Fakepitid123",
         'campaign_name': "Grand Mesa",
+        "derived": True
     }
     UploaderClass = UploadProfileData
     TableClass = LayerData
@@ -606,20 +569,13 @@ class TestSMPProfile(TableTestBase, WithUploadedFile):
              ),
             (Campaign, "name", "Grand Mesa"),
             (Instrument, "name", "snowmicropen"),
-            (MeasurementType, "name", "force"),
-            (MeasurementType, "units", "Newtons"),
+            (MeasurementType, "name", ["force"]),
+            (MeasurementType, "units", ["newtons"]),
+            (MeasurementType, "derived", [True])
         ]
     )
     def test_metadata(self, table, attribute, expected_value, uploaded_file):
-        result = self.get_value(table, attribute)
-        if attribute == "geom":
-            # Check geometry equals expected
-            geom_from_wkb = load_wkb(bytes(result.data))
-            geom_from_wkt = load_wkt(expected_value.data)
-
-            assert geom_from_wkb.equals(geom_from_wkt)
-        else:
-            assert result == expected_value
+        self._check_metadata(table, attribute, expected_value)
 
     @pytest.mark.parametrize(
         "data_name, attribute_to_check, filter_attribute, "
@@ -727,18 +683,4 @@ class TestMetadata(WithUploadedFile):
             self, uploaded_site_details_file, table, attribute,
             expected_value
     ):
-        # Get multiple values for observers
-        if table == Observer:
-            result = self.get_values(table, attribute)
-        else:
-            result = self.get_value(table, attribute)
-        if attribute == "geom":
-            # Check geometry equals expected
-            geom_from_wkb = load_wkb(bytes(result.data))
-            geom_from_wkt = load_wkt(expected_value.data)
-
-            assert geom_from_wkb.equals(geom_from_wkt)
-        elif isinstance(expected_value, float) and np.isnan(expected_value):
-            assert np.isnan(result)
-        else:
-            assert result == expected_value
+        self._check_metadata(table, attribute, expected_value)

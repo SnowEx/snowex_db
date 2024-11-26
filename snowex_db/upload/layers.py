@@ -48,6 +48,9 @@ class UploadProfileData(BaseUpload):
         self._header_sep = kwargs.get("header_sep", ",")
         self._id = kwargs.get("id")
         self._campaign_name = kwargs.get("campaign_name")
+        # Is this file for derived measurements
+        self._derived = kwargs.get("derived", False)
+
 
         # Read in data
         self.data = self._read(profile_filename)
@@ -109,6 +112,10 @@ class UploadProfileData(BaseUpload):
         for c in df.columns:
             df[c] = df[c].apply(lambda x: parse_none(x))
         df['value'] = df[variable.code].astype(str)
+
+        if 'units' not in df.columns:
+            unit_str = profile.units_map.get(variable.code)
+            df['units'] = [unit_str] * len(df)
 
         columns = df.columns.values
         # Clean up comments a bit
@@ -277,10 +284,11 @@ class UploadProfileData(BaseUpload):
         # Add measurement type
         measurement_type = row["type"]
         measurement_obj = self._check_or_add_object(
-            # TODO: Add units and 'derived' flag
-            #   TODO: these can be passed in
+            # Add units and 'derived' flag for the measurement
             session, MeasurementType, dict(
-                name=measurement_type
+                name=measurement_type,
+                units=row["units"],
+                derived=self._derived
             )
         )
 
