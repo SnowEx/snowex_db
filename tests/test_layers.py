@@ -3,12 +3,11 @@ from shapely.wkb import loads as load_wkb
 from shapely.wkt import loads as load_wkt
 import numpy as np
 import pytest
-import pytz
 import os
 
 from geoalchemy2 import WKTElement
 from snowexsql.tables import (
-    LayerData, Campaign, Instrument, Observer, Site
+    LayerData, Campaign, Instrument, Observer, Site, MeasurementType
 )
 from tests.db_setup import DBSetup, db_session_with_credentials
 
@@ -142,9 +141,6 @@ class TestDensityProfile(TableTestBase, WithUploadedFile):
     kwargs = {
         'timezone': 'MST',
         'instrument': 'kelly cutter',
-        # 'site_name': 'grand mesa',
-        # 'observers': 'TEST',
-        # 'elevation': 1000,
         'doi': "somedoi"
     }
     UploaderClass = UploadProfileData
@@ -212,18 +208,55 @@ class TestDensityProfile(TableTestBase, WithUploadedFile):
         )
 
 
-class TestDensityProfileRowBased(TableTestBase, WithUploadedFile):
+class TestDensityAlaska(TableTestBase, WithUploadedFile):
     """
-    # TODO: Test that row based tzinfo and crs works (for alaska data)
+    Test that the logic carries over to Alaska data
     """
+    kwargs = {
+        'timezone': 'US/Alaska',
+        'header_sep': ':',
+    }
+    UploaderClass = UploadProfileData
+    TableClass = LayerData
+
+    @pytest.fixture(scope="class")
+    def uploaded_file(self, db, data_dir):
+        self.upload_file(str(data_dir.joinpath(
+            "SnowEx23_SnowPits_AKIOP_454SB_20230316_density_v01.csv"
+        )))
+
+    @pytest.mark.parametrize(
+        "table, attribute, expected_value", [
+            (Site, "name", "SB454"),
+            (Site, "datetime", datetime(
+                2023, 3, 16, 18, 25, tzinfo=timezone.utc)
+             ),
+            (Site, "geom", WKTElement(
+                'POINT (-148.31829 64.70955)', srid=4326)
+             ),
+            (Campaign, "name", "Fairbanks"),
+            (Instrument, "name", None),
+        ]
+    )
+    def test_metadata(self, table, attribute, expected_value, uploaded_file):
+        result = self.get_value(table, attribute)
+        if attribute == "geom":
+            # Check geometry equals expected
+            geom_from_wkb = load_wkb(bytes(result.data))
+            geom_from_wkt = load_wkt(expected_value.data)
+
+            assert geom_from_wkb.equals(geom_from_wkt)
+        else:
+            assert result == expected_value
 
     @pytest.mark.parametrize(
         "data_name, expected", [
-            ("density", 4)
+            ("density", 15)
         ]
     )
     def test_count(self, data_name, expected, uploaded_file):
-        raise NotImplementedError("")
+        n = self.check_count(data_name)
+        assert n == expected
 
 
 class TestLWCProfile(TableTestBase, WithUploadedFile):
@@ -534,9 +567,10 @@ class TestSMPProfile(TableTestBase, WithUploadedFile):
 
     kwargs = {
         'timezone': 'UTC',
-        'units': 'Newtons',  # TODO: make sure units are passed through
+        'units': 'Newtons',
         'header_sep': ':',
-        'instrument': 'snowmicropen'
+        'instrument': 'snowmicropen',
+        'site_id': "COGM_Fakepitid123"
     }
     UploaderClass = UploadProfileData
     TableClass = LayerData
@@ -562,7 +596,7 @@ class TestSMPProfile(TableTestBase, WithUploadedFile):
 
     @pytest.mark.parametrize(
         "table, attribute, expected_value", [
-            (Site, "name", ""),  # TODO: how do we parse id here,
+            (Site, "name", "COGM_Fakepitid123"),
             (Site, "datetime", datetime(
                 2020, 1, 31, 22, 42, 14, 0, tzinfo=timezone.utc)
              ),
@@ -571,6 +605,8 @@ class TestSMPProfile(TableTestBase, WithUploadedFile):
              ),
             (Campaign, "name", "Grand Mesa"),
             (Instrument, "name", "snowmicropen"),
+            (MeasurementType, "name", "force"),
+            (MeasurementType, "units", "Newtons"),
         ]
     )
     def test_metadata(self, table, attribute, expected_value, uploaded_file):
