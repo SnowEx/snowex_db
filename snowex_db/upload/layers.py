@@ -71,7 +71,7 @@ class UploadProfileData(BaseUpload):
         try:
             data = SnowExProfileDataCollection.from_csv(
                 profile_filename, timezone=self._timezone,
-                header_sep=self._header_sep, id=self._id,
+                header_sep=self._header_sep, site_id=self._id,
                 campaign_name=self._campaign_name
             )
         except pd.errors.ParserError as e:
