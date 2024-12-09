@@ -21,7 +21,7 @@ classifiers = [
 dependencies = [
     "snowexsql<0.6",
     "snowmicropyn",
-    "insitupy==0.1.2",
+    "insitupy==0.2.0",
     "boto3<1.24",
     "rasterio<1.4",
     "timezonefinder<7",

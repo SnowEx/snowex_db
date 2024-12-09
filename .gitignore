@@ -31,6 +31,8 @@ scripts/upload/test*.txt
 scripts/download/data/*
 venv/
 
+tests/credentials.json
+
 # IDE files
 .idea/*
 .vscode/*

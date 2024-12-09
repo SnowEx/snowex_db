@@ -35,7 +35,34 @@ def is_point_data(columns):
     return result
 
 
-def manage_degrees(info):
+def manage_degree_values(v):
+    """
+    Handle parsing of degree strings that may have special characters
+    Args:
+        v: value theoretically a degree
+
+    Returns:
+
+    """
+    if isinstance(v, str) and v is not None:
+        # Remove any degrees symbols
+        v = v.replace('\u00b0', '')
+        v = v.replace('Â', '')
+
+        # Sometimes a range is used for the slope. Always pick the
+        # larger value
+        if '-' in v:
+            v = v.split('-')[-1]
+
+        if v.lower() == 'flat':
+            v = '0'
+
+        if v.isnumeric():
+            v = float(v)
+    return v
+
+
+def manage_degrees_keys(info):
     """
     Manages and interprets string values relating to degrees. Removes
     degrees symbols and interprets key word flat for slope.
@@ -52,22 +79,7 @@ def manage_degrees(info):
     for k in ['aspect', 'slope_angle', 'air_temp']:
         if k in info.keys():
             v = info[k]
-            if isinstance(v, str) and v is not None:
-                # Remove any degrees symbols
-                v = v.replace('\u00b0', '')
-                v = v.replace('Â', '')
-
-                # Sometimes a range is used for the slope. Always pick the
-                # larger value
-                if '-' in v:
-                    v = v.split('-')[-1]
-
-                if v.lower() == 'flat':
-                    v = '0'
-
-                if v.isnumeric():
-                    v = float(v)
-                info[k] = v
+            info[k] = manage_degree_values(v)
     return info
 
 
@@ -108,7 +120,7 @@ def is_number(s):
         return False
 
 
-def convert_cardinal_to_degree(cardinal):
+def convert_cardinal_to_degree(cardinal) -> float:
     """
     Converts cardinal directions to degrees. Also removes any / or - that
     might get used to say between two cardinal directions
