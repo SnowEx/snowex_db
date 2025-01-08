@@ -53,6 +53,9 @@ class UploadProfileData(BaseUpload):
         # Is this file for derived measurements
         self._derived = kwargs.get("derived", False)
 
+        # SMP passed in
+        self._instrument_model = kwargs.get("instrument_model")
+        self._comments = kwargs.get("comments")
 
         # Read in data
         self.data = self._read(profile_filename)
@@ -99,13 +102,6 @@ class UploadProfileData(BaseUpload):
             return df
         metadata = profile.metadata
         variable = profile.variable
-        # TODO: build more metadata
-        #   Row based timezone? (alaska)
-        #   Row based crs? (alaska)
-        #   depth_is_metadata (
-        #       This may not be relevant since point data is in a different table,
-        #       But this means depth is a descriptor not the main value
-        #   )
 
         # The type of measurement
         df['type'] = [variable.code] * len(df)
@@ -131,6 +127,10 @@ class UploadProfileData(BaseUpload):
             # Make comments to pit comments
             df["comments"] = [profile.metadata.comments] * len(df)
 
+        # In case of SMP, pass comments in
+        if self._comments is not None:
+            df["comments"] = [self._comments] * len(df)
+
         # Add flags to the comments.
         flag_string = metadata.flags
         if flag_string:
@@ -144,6 +144,8 @@ class UploadProfileData(BaseUpload):
             df["instrument"] = [self._instrument] * len(df)
         if 'doi' not in columns:
             df["doi"] = [self._doi] * len(df)
+        if 'instrument_model' not in columns:
+            df['instrument_model'] = self._instrument_model
 
         return df
 
@@ -269,9 +271,11 @@ class UploadProfileData(BaseUpload):
 
         """
         # Add instrument
-        # TODO: what comes from row vs metadata?
         instrument = self._check_or_add_object(
-            session, Instrument, dict(name=row['instrument'])
+            session, Instrument, dict(
+                name=row['instrument'],
+                model=row['instrument_model']
+            )
         )
 
         # Add doi
@@ -325,26 +329,9 @@ class UploadProfileBatch(BatchBase):
         """
         An overwritten push function to account for managing SMP meta data.
         """
-
         self.start = time.time()
 
         i = 0
-
-        # TODO: uncertain here
-        # if self.smp_log_f is not None:
-        #     self.smp_log = SMPMeasurementLog(self.smp_log_f)
-        # else:
-        #     self.smp_log = None
-
-        # Keep track of whether we are using a site details file for each profile
-        smp_file = False
-
-        # Read the data and organize it, remap the names
-        # if not isinstance(self.smp_log, type(None)):
-        #     self.log.info(
-        #         'Processing SMP profiles with SMP measurement log...')
-        #     smp_file = True
-        #     self.meta['header_sep'] = ':'
 
         # Loop over all the ssa files and upload them
         if self.n_files != -1:

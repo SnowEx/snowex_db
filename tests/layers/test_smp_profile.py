@@ -20,9 +20,11 @@ class TestSMPProfile(TableTestBase, WithUploadedFile):
         'timezone': 'UTC',
         'header_sep': ':',
         'instrument': 'snowmicropen',
+        'instrument_model': '06',
         'id': "COGM_Fakepitid123",
         'campaign_name': "Grand Mesa",
-        "derived": True
+        "derived": True,
+        'comments': 'Filename: S06M0874_2N12_20200131.CSV'
     }
     UploaderClass = UploadProfileData
     TableClass = LayerData
@@ -30,21 +32,6 @@ class TestSMPProfile(TableTestBase, WithUploadedFile):
     @pytest.fixture(scope="class")
     def uploaded_file(self, db, data_dir):
         self.upload_file(str(data_dir.joinpath("S06M0874_2N12_20200131.CSV")))
-
-    # def test_instrument_id_comment(self):
-    #     """
-    #     Test that the SMP serial ID is added to the comment column of a smp profile inspit of an instrument being passed
-    #     """
-    #     result = self.session.query(LayerData.comments).limit(1).one()
-    #     assert 'serial no. = 06' in result[0]
-    #
-    # def test_original_fname_comment(self):
-    #     """
-    #     Test that the original SMP file name is added to the comment column of a smp profile. This is done for
-    #     provenance so users can determine the original dataset location
-    #     """
-    #     result = self.session.query(LayerData.comments).limit(1).one()
-    #     assert f'fname = {os.path.basename(self.args[0])}' in result[0]
 
     @pytest.mark.parametrize(
         "table, attribute, expected_value", [
@@ -57,12 +44,17 @@ class TestSMPProfile(TableTestBase, WithUploadedFile):
              ),
             (Campaign, "name", "Grand Mesa"),
             (Instrument, "name", "snowmicropen"),
+            (Instrument, "model", "06"),
             (MeasurementType, "name", ["force"]),
             (MeasurementType, "units", ["n"]),
             (MeasurementType, "derived", [True])
         ]
     )
     def test_metadata(self, table, attribute, expected_value, uploaded_file):
+        # need:
+        #  * instrument.name = smp
+        #  * instrument.model = smp instrument id - SMP Serial Number: 19
+        #  * comments = "Filename: filename"
         self._check_metadata(table, attribute, expected_value)
 
     @pytest.mark.parametrize(
@@ -70,6 +62,7 @@ class TestSMPProfile(TableTestBase, WithUploadedFile):
         "filter_value, expected",
         [
             ('force', 'value', 'depth', -53.17, [0.331]),
+            ('force', 'comments', 'depth', -53.17, ['Filename: S06M0874_2N12_20200131.CSV'])
         ]
     )
     def test_value(
