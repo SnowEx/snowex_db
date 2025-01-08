@@ -17,6 +17,13 @@ class PointsBase(TableTestBase):
     UploaderClass = PointDataCSV
 
 
+class TestDensityAlaska(TableTestBase):
+    """
+    # TODO: Test that row based tzinfo and crs works (for alaska data)
+    """
+    pass
+
+
 class TestSnowDepths(PointsBase):
     """
     Class to test general behavior for the database, checking data types, and geopandas compliance. Also check that

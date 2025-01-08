@@ -1,9 +1,15 @@
-from os.path import dirname, join
-
 from numpy.testing import assert_almost_equal
+from snowexsql.tables import MeasurementType
 from sqlalchemy import asc
 
-from snowexsql.db import get_db, initialize
+from tests.db_setup import DBSetup, db_session_with_credentials
+
+
+def safe_float(r):
+    try:
+        return float(r)
+    except Exception:
+        return r
 
 
 def pytest_generate_tests(metafunc):
@@ -19,37 +25,6 @@ def pytest_generate_tests(metafunc):
             metafunc.parametrize(
                 argnames, [[funcargs[name] for name in argnames] for funcargs in funcarglist]
             )
-
-
-class DBSetup:
-    """
-    Base class for all our tests. Ensures that we clean up after every class that's run
-    """
-
-    @classmethod
-    def setup_class(self):
-        """
-        Setup the database one time for testing
-        """
-        self.db = 'localhost/test'
-        self.data_dir = join(dirname(__file__), 'data')
-        creds = join(dirname(__file__), 'credentials.json')
-
-        self.engine, self.session, self.metadata = get_db(self.db, credentials=creds, return_metadata=True)
-
-        initialize(self.engine)
-
-    @classmethod
-    def teardown_class(self):
-        """
-        Remove the databse
-        """
-        self.metadata.drop_all(bind=self.engine)
-        self.session.close()  # optional, depends on use case
-
-    def teardown(self):
-        self.session.flush()
-        self.session.rollback()
 
 
 class TableTestBase(DBSetup):
@@ -68,47 +43,16 @@ class TableTestBase(DBSetup):
     # Always define this using a table class from data.py and is used for ORM
     TableClass = None
 
-    # First filter to be applied is count_attribute == data_name
-    count_attribute = 'type'
+    def filter_measurement_type(self, session, measurement_type, query=None):
+        if query is None:
+            query = session.query(self.TableClass)
 
-    # Define params which is a dictionary of test names and their args
-    params = {
-        'test_count': [dict(data_name=None, expected_count=None)],
-        'test_value': [
-            dict(data_name=None, attribute_to_check=None, filter_attribute=None, filter_value=None, expected=None)],
-        'test_unique_count': [dict(data_name=None, attribute_to_count=None, expected_count=None)]
-    }
+        query = query.join(
+            self.TableClass.measurement_type
+        ).filter(MeasurementType.name == measurement_type)
+        return query
 
-    @classmethod
-    def setup_class(self):
-        """
-        Setup the database one time for testing
-        """
-        super().setup_class()
-
-        # Batches always provide a list of files
-        if type(self.args[0]) == list:
-            self.args[0] = [join(self.data_dir, f) for f in self.args[0]]
-        # Single uploaders only upload a single file
-        else:
-            self.args[0] = join(self.data_dir, self.args[0])
-
-        # In case we have a smp_log file make it point to the data folder too
-        if 'smp_log_f' in self.kwargs.keys():
-            if self.kwargs['smp_log_f'] != None:
-                self.kwargs['smp_log_f'] = join(self.data_dir, self.kwargs['smp_log_f'])
-
-        self.kwargs['db_name'] = self.db
-        self.kwargs['credentials'] = join(dirname(__file__), 'credentials.json')
-        u = self.UploaderClass(*self.args, **self.kwargs)
-
-        # Allow for batches and single upload
-        if 'batch' in self.UploaderClass.__name__.lower():
-            u.push()
-        else:
-            u.submit(self.session)
-
-    def get_query(self, filter_attribute, filter_value, query=None):
+    def get_query(self, session, filter_attribute, filter_value, query=None):
         """
         Return the base query using an attribute and value that it is supposed
         to be
@@ -122,52 +66,60 @@ class TableTestBase(DBSetup):
         """
 
         if query is None:
-            query = self.session.query(self.TableClass)
+            query = session.query(self.TableClass)
 
         fa = getattr(self.TableClass, filter_attribute)
         q = query.filter(fa == filter_value).order_by(asc(fa))
         return q
 
-    def test_count(self, data_name, expected_count):
+    def check_count(self, data_name):
         """
         Test the record count of a data type
         """
-        q = self.get_query(self.count_attribute, data_name)
-        records = q.all()
-        assert len(records) == expected_count
+        with db_session_with_credentials(
+                self.database_name(), self.CREDENTIAL_FILE
+        ) as (session, engine):
+            q = self.filter_measurement_type(session, data_name)
+            records = q.all()
+        return len(records)
 
-    def test_value(self, data_name, attribute_to_check, filter_attribute, filter_value, expected):
+    def check_value(
+            self, measurement_type, attribute_to_check, filter_attribute,
+            filter_value, expected
+    ):
         """
         Test that the first value in a filtered record search is as expected
         """
         # Filter  to the data type were querying
-        q = self.get_query(self.count_attribute, data_name)
+        with db_session_with_credentials(
+                self.database_name(), self.CREDENTIAL_FILE
+        ) as (session, engine):
+            q = self.filter_measurement_type(session, measurement_type)
 
-        # Add another filter by some attribute
-        q = self.get_query(filter_attribute, filter_value, query=q)
+            # Add another filter by some attribute
+            q = self.get_query(session, filter_attribute, filter_value, query=q)
 
-        records = q.all()
+            records = q.all()
         if records:
-            received = getattr(records[0], attribute_to_check)
+            received = [getattr(r, attribute_to_check) for r in records]
+            received = [safe_float(r) for r in received]
         else:
             received = None
-
-        try:
-            received = float(received)
-        except:
-            pass
 
         if type(received) == float:
             assert_almost_equal(received, expected, 6)
         else:
             assert received == expected
 
-    def test_unique_count(self, data_name, attribute_to_count, expected_count):
+    def check_unique_count(self, data_name, attribute_to_count, expected_count):
         """
         Test that the number of unique values in a given attribute is as expected
         """
         # Add another filter by some attribute
-        q = self.get_query(self.count_attribute, data_name)
-        records = q.all()
+        with db_session_with_credentials(
+                self.database_name(), self.CREDENTIAL_FILE
+        ) as (session, engine):
+            q = self.filter_measurement_type(session, data_name)
+            records = q.all()
         received = len(set([getattr(r, attribute_to_count) for r in records]))
         assert received == expected_count

@@ -69,7 +69,6 @@ class UploadProfileData:
         return df
 
     def _handle_flags(self, df):
-
         if "flags" in df.columns:
             # Max length of the flags column
             max_len = LayerData.flags.type.length

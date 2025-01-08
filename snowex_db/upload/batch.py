@@ -11,7 +11,6 @@ from snowex_db import db_session
 from snowex_db.interpretation import get_InSar_flight_comment
 from snowex_db.metadata import (DataHeader, SMPMeasurementLog,
                                 read_InSar_annotation)
-from snowex_db.upload.layers import UploadProfileData
 from snowex_db.upload.rasters import UploadRaster
 from snowex_db.utilities import assign_default_kwargs, get_logger
 
@@ -39,14 +38,12 @@ class BatchBase:
                 etc.
     """
 
-    defaults = {'db_name': 'localhost/snowex',
-                'credentials': 'credentials.json',
-                'debug': True,
-                'n_files': -1}
-
     UploaderClass = None
 
-    def __init__(self, filenames, **kwargs):
+    def __init__(
+            self, filenames, db_name, credentials, n_files=-1, debug=False,
+            **kwargs
+    ):
         """
         Assigns attributes from kwargs and their defaults from self.defaults
         Also opens and assigns the database connection
@@ -64,13 +61,17 @@ class BatchBase:
                     comment.
         """
         self.filenames = filenames
-        self.meta = assign_default_kwargs(self, kwargs, self.defaults)
+        self.db_name = db_name
+        self.credentials = credentials
+        self._kwargs = kwargs
         # Grab logger
         self.log = get_logger(__name__)
 
         # Performance tracking
         self.errors = []
         self.uploaded = 0
+        self.n_files = n_files
+        self.debug = debug
 
         self.log.info('Preparing to upload {} files...'.format(len(filenames)))
 
@@ -98,7 +99,7 @@ class BatchBase:
             # later
             if not self.debug:
                 try:
-                    self._push_one(f, **self.meta)
+                    self._push_one(f, **self._kwargs)
 
                 except Exception as e:
                     self.log.error('Error with {}'.format(f))
@@ -157,70 +158,6 @@ class UploadSiteDetailsBatch(BatchBase):
     UploaderClass = DataHeader
 
 
-class UploadProfileBatch(BatchBase):
-    """
-    Class for submitting multiple files of profile type data.
-
-    Attributes:
-        smp_log_f: CSV providing metadata for profile_filenames.
-    """
-    # Extend the kwargs defaults
-    defaults = {'smp_log_f': None, **BatchBase.defaults}
-
-    UploaderClass = UploadProfileData
-
-    def push(self):
-        """
-        An overwritten push function to account for managing SMP meta data.
-        """
-
-        self.start = time.time()
-
-        i = 0
-
-        if self.smp_log_f is not None:
-            self.smp_log = SMPMeasurementLog(self.smp_log_f)
-        else:
-            self.smp_log = None
-
-        # Keep track of whether we are using a site details file for each profile
-        smp_file = False
-
-        # Read the data and organize it, remap the names
-        if not isinstance(self.smp_log, type(None)):
-            self.log.info(
-                'Processing SMP profiles with SMP measurement log...')
-            smp_file = True
-            self.meta['header_sep'] = ':'
-
-        # Loop over all the ssa files and upload them
-        if self.n_files != -1:
-            self.filenames[0:self.n_files]
-
-        for i, f in enumerate(self.filenames):
-            meta = self.meta.copy()
-
-            if smp_file:
-                extras = self.smp_log.get_metadata(f)
-                meta.update(extras)
-
-            # If were not debugging script allow exceptions and report them
-            # later
-            if not self.debug:
-                try:
-                    self._push_one(f, **meta)
-
-                except Exception as e:
-                    self.log.error('Error with {}'.format(f))
-                    self.log.error(e)
-                    self.errors.append((f, e))
-
-            else:
-                self._push_one(f, **meta)
-
-        self.report(i + 1)
-
-
 class UploadRasterBatch(BatchBase):
     """
     Given a folder, looks through and uploads all rasters with the matching
@@ -254,7 +191,7 @@ class UploadUAVSARBatch(BatchBase):
                  'cor': 'correlation'}
 
     # Extend the kwargs by adding a geotiff dir for the uavsar conversion
-    defaults = {'geotiff_dir': None, **BatchBase.defaults}
+    # defaults = {'geotiff_dir': None, **BatchBase.defaults}
 
     UploaderClass = UploadRaster
 
