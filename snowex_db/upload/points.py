@@ -11,7 +11,8 @@ from geoalchemy2 import WKTElement
 from snowexsql.tables import (
     PointData, MeasurementType, Instrument, DOI, Campaign, Observer
 )
-from ..metadata import ExtendedSnowExMetadataParser, SnowExProfileMetadata
+from ..metadata import SnowExProfileMetadata
+from ..point_metadata import PointSnowExMetadataParser
 from ..string_management import parse_none
 from ..point_data import PointDataCollection, SnowExPointData
 
@@ -44,7 +45,7 @@ class PointDataCSV(BaseUpload):
     UNITS_MAP = {'depth': 'cm', 'two_way_travel': 'ns', 'swe': 'mm',
              'density': 'kg/m^3'}
 
-    META_PARSER = ExtendedSnowExMetadataParser
+    META_PARSER = PointSnowExMetadataParser
 
     def __init__(self, profile_filename, timezone="US/Mountain", **kwargs):
         self.filename = profile_filename
@@ -62,13 +63,13 @@ class PointDataCSV(BaseUpload):
         self._comments = kwargs.get("comments")
 
         # Assign if details are row based (generally for the SWE files)
-        self._row_based_crs = self.kwargs.get("row_based_crs", False)
-        self._row_based_tz = self.kwargs.get("row_based_timezone", False)
+        self._row_based_crs = kwargs.get("row_based_crs", False)
+        self._row_based_tz = kwargs.get("row_based_timezone", False)
         # TODO: what do we do here?
         if self._row_based_tz:
             in_timezone = None
         else:
-            in_timezone = kwargs['in_timezone']
+            in_timezone = timezone
 
         # Read in data
         self.data = self._read(profile_filename, in_timezone=in_timezone)
@@ -77,13 +78,13 @@ class PointDataCSV(BaseUpload):
         """
         Read in the csv
         """
-        # TODO: DRY up?
         try:
-            # TODO: row based
+            # TODO: row based crs, tz options
             data = PointDataCollection.from_csv(
                 filename, timezone=self._timezone,
                 header_sep=self._header_sep, site_id=self._id,
-                campaign_name=self._campaign_name
+                campaign_name=self._campaign_name,
+                units_map=self.UNITS_MAP
             )
         except pd.errors.ParserError as e:
             LOG.error(e)
@@ -150,6 +151,11 @@ class PointDataCSV(BaseUpload):
 
         if 'instrument' not in columns:
             df["instrument"] = [self._instrument] * len(df)
+
+        # Map the measurement names or default to original
+        df["instrument"] = df['instrument'].map(
+            lambda x: self.MEASUREMENT_NAMES.get(x, x)
+        )
         if 'doi' not in columns:
             df["doi"] = [self._doi] * len(df)
         if 'instrument_model' not in columns:

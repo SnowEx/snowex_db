@@ -1,19 +1,21 @@
 import logging
 from typing import List
 
+import numpy as np
 import pandas as pd
-from pathlib import Path
+import geopandas as gpd
 
 from .metadata import ExtendedSnowExMetadataParser
-from insitupy.variables import MeasurementDescription
 from insitupy.profiles.base import MeasurementData
 from insitupy.profiles.metadata import ProfileMetaData
+
+from .point_metadata import PointSnowExMetadataParser
 
 LOG = logging.getLogger(__name__)
 
 
 class SnowExPointData(MeasurementData):
-    META_PARSER = ExtendedSnowExMetadataParser
+    META_PARSER = PointSnowExMetadataParser
 
     @staticmethod
     def read_csv_dataframe(profile_filename, columns, header_position):
@@ -42,12 +44,51 @@ class SnowExPointData(MeasurementData):
 
         return df
 
+    def _format_df(self, input_df):
+        """
+        Format the incoming df with the column headers and other info we want
+        This will filter to a single measurement as well as the expected
+        shared columns like depth
+        """
+        self._set_column_mappings(input_df)
+
+        # Verify the sample column exists and rename to variable
+        df = self._check_sample_columns(input_df)
+
+        n_entries = len(df)
+        df["datetime"] = [self._dt] * n_entries
+
+        # parse the location
+        lat, lon = self.latlon
+        location = gpd.points_from_xy(
+            [lon] * n_entries, [lat] * n_entries
+        )
+
+        df = gpd.GeoDataFrame(
+            df, geometry=location
+        ).set_crs("EPSG:4326")
+        df = df.replace(-9999, np.NaN)
+
+        return df
+
+    @classmethod
+    def shared_column_options(cls):
+        variables_class = cls.META_PARSER.PRIMARY_VARIABLES_CLASS
+        return [
+            variables_class.INSTRUMENT, variables_class.DATE,
+            variables_class.TIME, variables_class.DATETIME,
+            variables_class.LATITUDE, variables_class.LONGITUDE,
+            variables_class.EASTING, variables_class.NORTHING,
+            variables_class.ELEVATION,
+            variables_class.INSTRUMENT_MODEL,
+        ]
+
 
 class PointDataCollection:
     """
     This could be a collection of profiles
     """
-    META_PARSER = ExtendedSnowExMetadataParser
+    META_PARSER = PointSnowExMetadataParser
     DATA_CLASS = SnowExPointData
 
     def __init__(self, series: List[SnowExPointData], metadata: ProfileMetaData):
@@ -89,11 +130,18 @@ class PointDataCollection:
                 fname, columns, header_pos
             )
 
-        variable_columns = list(column_mapping.keys())
+        shared_column_options = cls.DATA_CLASS.shared_column_options()
+        shared_columns = [
+            c for c, v in column_mapping.items()
+            if v in shared_column_options
+        ]
+        variable_columns = [
+            c for c in column_mapping.keys() if c not in shared_columns
+        ]
 
         # Create an object for each measurement
         for column in variable_columns:
-            target_df = df.loc[:, [column]]
+            target_df = df.loc[:, shared_columns + [column]]
             result.append(cls.DATA_CLASS(
                 target_df, metadata,
                 column_mapping[column],  # variable is a MeasurementDescription
@@ -118,7 +166,7 @@ class PointDataCollection:
     @classmethod
     def from_csv(
         cls, fname, timezone="US/Mountain", header_sep=",", site_id=None,
-        campaign_name=None, allow_map_failure=False
+        campaign_name=None, allow_map_failure=False, units_map=None
     ):
         """
         Find all variables in a single csv file
@@ -137,7 +185,8 @@ class PointDataCollection:
         # parse mlutiple files and create an iterable of ProfileData
         meta_parser = cls.META_PARSER(
             fname, timezone, header_sep=header_sep, _id=site_id,
-            campaign_name=campaign_name, allow_map_failures=allow_map_failure
+            campaign_name=campaign_name, allow_map_failures=allow_map_failure,
+            units_map=units_map
         )
         # Parse the metadata and column info
         metadata, columns, columns_map, header_pos = meta_parser.parse()

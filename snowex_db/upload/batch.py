@@ -9,8 +9,7 @@ from os.path import abspath, basename, expanduser, join
 
 from snowex_db import db_session
 from snowex_db.interpretation import get_InSar_flight_comment
-from snowex_db.metadata import (DataHeader, SMPMeasurementLog,
-                                read_InSar_annotation)
+from snowex_db.metadata import (DataHeader, read_InSar_annotation)
 from snowex_db.upload.rasters import UploadRaster
 from snowex_db.utilities import assign_default_kwargs, get_logger
 

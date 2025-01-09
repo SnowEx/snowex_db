@@ -103,183 +103,6 @@ def read_InSar_annotation(ann_file):
     return data
 
 
-class SMPMeasurementLog(object):
-    """
-    Opens and processes the log that describes the SMP measurments. This file
-    contains notes on all the measurements taken.
-
-    This class build a dataframe from this file. It also reorganizes the
-    file contents to be more standardized with our database.
-    Some of this includes merging information in the comments.
-
-    File should have the headers:
-              Date,
-              Pit ID
-              SMP instrument #
-              Fname sufix
-              Orientation
-              Snow depth
-              Flag
-              Observer
-              Comments
-
-    Attributes:
-        observer_map: Dictionary mapping name initials to full verbose names
-        orientation_map: Dictionary mapping the measurement locations relative
-                         to the pit
-        header: Dictionary containing other header information regarding the
-                details of measurements
-        df: Dataframe containing rows of details describing each measurement
-
-    """
-
-    def __init__(self, filename):
-        self.log = get_logger(__name__)
-
-        self.header, self.df = self._read(filename)
-
-        # Cardinal map to interpet the orientation
-        self.cardinal_map = {'N': 'North', 'NE': 'Northeast', 'E': 'East',
-                             'SE': 'Southeast', 'S': 'South', 'SW': 'Southwest',
-                             'W': 'West', 'NW': 'Northwest', 'C': 'Center'}
-
-    def _read(self, filename):
-        """
-        Read the CSV file thet contains SMP log inforamtion. Also reads in the
-        header and creates a few attributes from that information:
-            1. observer_map
-            2. orientation_map
-        """
-        self.log.info('Reading SMP file log header')
-
-        header_pos = 9
-        header = read_n_lines(filename, header_pos + 1)
-        self.observer_map = self._build_observers(header)
-
-        # parse/rename column names
-        line = header[header_pos]
-        str_cols = [standardize_key(col)
-                    for col in line.lower().split(',') if col.strip()]
-
-        # Assume columns are populated left to right so if we have empty ones
-        # they are assumed at the end
-        n_cols = len(str_cols)
-        str_cols = remap_data_names(str_cols, DataHeader.rename)
-
-        dtype = {k: str for k in str_cols}
-        df = pd.read_csv(
-            filename, header=header_pos, names=str_cols,
-            usecols=range(n_cols), encoding='latin',
-            # parse_dates=[0],
-            dtype=dtype
-        )
-        # WHY IS THIS NEEDED?
-        df["date"] = pd.to_datetime(df["date"])
-
-        # Insure all values are 4 digits. Seems like some were not by accident
-        df['fname_sufix'] = df['fname_sufix'].apply(lambda v: v.zfill(4))
-
-        df = self.interpret_dataframe(df)
-
-        return header, df
-
-    def interpret_dataframe(self, df):
-        """
-        Using various info collected from the dataframe header modify the data
-        frame entries to be more verbose and standardize the database
-
-        Args:
-            df: pandas.Dataframe
-
-        Returns:
-            new_df: pandas.Dataframe with modifications
-        """
-        # Apply observer map
-        df = self.interpret_observers(df)
-
-        # Apply orientation map
-
-        # Pit ID is actually the Site ID here at least in comparison to the
-        df['site_id'] = df['pit_id'].copy()
-
-        return df
-
-    def _build_observers(self, header):
-        """
-        Interprets the header of the smp file log which has a map to the
-        names of the oberservers names. This creates a dictionary mapping those
-        string names
-        """
-        # Map for observer names and their
-        observer_map = {}
-
-        for line in header:
-            ll = line.lower()
-
-            # Create a name map for the observers and there initials
-            if 'observer' in ll:
-                data = [d.strip() for d in line.split(':')[-1].split(',')]
-                data = [d for d in data if d]
-
-                for d in data:
-                    info = [clean_str(s).strip(')') for s in d.split('(')]
-                    name = info[0]
-                    initials = info[1]
-                    observer_map[initials] = name
-                break
-
-        return observer_map
-
-    def interpret_observers(self, df):
-        """
-        Rename all the observers with initials in the observer_map which is
-        interpeted from the header
-
-        Args:
-            df: dataframe containing a column observer
-        Return:
-            new_df: df with the observers column replaced with more verbose
-                    names
-        """
-        new_df = df.copy()
-        new_df['observers'] = \
-            new_df['observers'].apply(lambda x: self.observer_map[x])
-        return new_df
-
-    def interpret_sample_strategy(self, df):
-        """
-        Look through all the measurements posted by site and attempt to
-        determine the sample strategy
-
-        Args:
-            df: Dataframe containing all the data from the dataframe
-        Returns:
-            new_df: Same dataframe with a new column containing the sampling
-                    strategy
-        """
-
-        pits = pd.unique(df['pit_id'])
-
-        for p in pits:
-            ind = df['pit_id'] == p
-            temp = df.loc[ind]
-            orientations = pd.unique(temp['orientation'])
-
-    def get_metadata(self, smp_file):
-        """
-        Builds a dictionary of extra header information useful for SMP
-        files which lack some info regarding submission to the db
-
-        S06M0874_2N12_20200131.CSV, 0874 is the suffix
-
-        """
-        s = basename(smp_file).split('.')[0].split('_')
-        suffix = s[0].split('M')[-1]
-        ind = self.df['fname_sufix'] == suffix
-        meta = self.df.loc[ind]
-        return meta.iloc[0].to_dict()
-
-
 class ExtendedSnowExMetadataVariables(SnowExMetadataVariables):
     IGNORE = MeasurementDescription(
         "ignore", "Ignore this",
@@ -389,70 +212,9 @@ class ExtendedSnowExPrimaryVariables(SnowExPrimaryVariables):
         "parameter_codes", "Parameter Codes",
         ["parameter_codes"]
     )
-    TWO_WAY_TRAVEL = MeasurementDescription(
-        'two_way_travel', "Two way travel",
-        ['twt', 'twt_ns']
-    )
     FLAGS = MeasurementDescription(
         'flags', "Measurements flags",
         ['flag']
-    )
-    RH_10FT = MeasurementDescription(
-        "relative_humidity_10ft",
-        "Relative humidity measured at 10 ft tower level",
-        ['rh_10ft']
-    )
-    BP = MeasurementDescription(
-        'barometric_pressure', "Barometric pressure",
-        ['bp_kpa_avg']
-    )
-    AIR_TEMP_10FT = MeasurementDescription(
-        'air_temperature_10ft',
-        "Air temperature measured at 10 ft tower level",
-        ['airtc_10ft_avg']
-    )
-    WIND_SPEED_10FT = MeasurementDescription(
-        'wind_speed_10ft',
-        "Vector mean wind speed measured at 10 ft tower level",
-        ['wsms_10ft_avg']
-    )
-    WIND_DIR_10ft = MeasurementDescription(
-        'wind_direction_10ft',
-        "Vector mean wind direction measured at 10 ft tower level",
-        ['winddir_10ft_d1_wvt']
-    )
-    SW_IN = MeasurementDescription(
-        'incoming_shortwave',
-        "Shortwave radiation measured with upward-facing sensor",
-        ['sup_avg']
-    )
-    SW_OUT = MeasurementDescription(
-        'outgoing_shortwave',
-        "Shortwave radiation measured with downward-facing sensor",
-        ['sdn_avg']
-    )
-    LW_IN = MeasurementDescription(
-        'incoming_longwave',
-        "Longwave radiation measured with upward-facing sensor",
-        ['lupco_avg']
-    )
-    LW_OUT = MeasurementDescription(
-        'outgoing_longwave',
-        "Longwave radiation measured with downward-facing sensor",
-        ['ldnco_avg']
-    )
-    SM_20CM = MeasurementDescription(
-        'soil_moisture_20cm', "Soil moisture measured at 10 cm below the soil",
-        ['sm_20cm_avg']
-    )
-    ST_20CM = MeasurementDescription(
-        'soil_temperature_20cm',
-        "Soil temperature measured at 10 cm below the soil",
-        ['tc_20cm_avg']
-    )
-    SNOW_VOID = MeasurementDescription(
-        "snow_void", "Void depth in the snow measurement",
-        ["snow void", "snow_void"], True
     )
     IGNORE = MeasurementDescription(
         "ignore", "Ignore this",
@@ -516,8 +278,9 @@ class ExtendedSnowExMetadataParser(SnowExMetadataParser):
         Returns:
             (metadata object, column list, position of header in file)
         """
-        (meta_lines, columns,
-         columns_map, header_position) = self.find_header_info(self._fname)
+        (
+            meta_lines, columns, columns_map, header_position
+        ) = self.find_header_info(self._fname)
         self._rough_obj = self._preparse_meta(meta_lines)
         # Create a standard metadata object
         metadata = SnowExProfileMetadata(
