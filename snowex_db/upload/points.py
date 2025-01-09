@@ -63,7 +63,6 @@ class PointDataCSV(BaseUpload):
         self._comments = kwargs.get("comments")
 
         # Assign if details are row based (generally for the SWE files)
-        self._row_based_crs = kwargs.get("row_based_crs", False)
         self._row_based_tz = kwargs.get("row_based_timezone", False)
         # TODO: what do we do here?
         if self._row_based_tz:
@@ -84,7 +83,8 @@ class PointDataCSV(BaseUpload):
                 filename, timezone=self._timezone,
                 header_sep=self._header_sep, site_id=self._id,
                 campaign_name=self._campaign_name,
-                units_map=self.UNITS_MAP
+                units_map=self.UNITS_MAP,
+                row_based_timezone=self._row_based_tz
             )
         except pd.errors.ParserError as e:
             LOG.error(e)
@@ -173,8 +173,8 @@ class PointDataCSV(BaseUpload):
         """
 
         # Construct a dataframe with all metadata
-        for profile in self.data.profiles:
-            df = self.build_data(profile)
+        for series in self.data.series:
+            df = self.build_data(series)
 
             # Grab each row, convert it to dict and join it with site info
             if not df.empty:
