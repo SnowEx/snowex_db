@@ -129,25 +129,10 @@ class PointDataCSV(BaseUpload):
         if 'comments' in columns:
             df['comments'] = df['comments'].apply(
                 lambda x: x.strip(' ') if isinstance(x, str) else x)
-            # Add pit comments
-            if series.metadata.comments:
-                df["comments"] += series.metadata.comments
-        else:
-            # Make comments to pit comments
-            df["comments"] = [series.metadata.comments] * len(df)
 
         # In case of SMP, pass comments in
         if self._comments is not None:
             df["comments"] = [self._comments] * len(df)
-
-        # Add flags to the comments.
-        flag_string = metadata.flags
-        if flag_string:
-            flag_string = " Flags: " + flag_string
-            if 'comments' in columns:
-                df["comments"] += flag_string
-            else:
-                df["comments"] = flag_string
 
         if 'instrument' not in columns:
             df["instrument"] = [self._instrument] * len(df)
@@ -183,11 +168,11 @@ class PointDataCSV(BaseUpload):
                         str(row["geometry"]),
                         srid=int(df.crs.srs.replace("EPSG:", ""))
                     )
-                    campaign, observer_list, site = self._add_metadata(
-                        session, profile.metadata, row=row
+                    metadata_dict = self._add_metadata(
+                        session, series.metadata, row=row
                     )
                     d = self._add_entry(
-                        session, row, campaign, observer_list, site
+                        session, row, **metadata_dict
                     )
                     # session.bulk_save_objects(objects) does not resolve
                     # foreign keys, DO NOT USE IT
@@ -212,11 +197,8 @@ class PointDataCSV(BaseUpload):
         Returns:
 
         """
-        # Add campaign
-        if metadata.campaign_name:
-            campaign_name = metadata.campaign_name
-        else:
-            campaign_name = row["campaign"]
+        # TODO: how to pass in campaign
+        campaign_name = row["campaign"]
         if campaign_name is None:
             raise DataValidationError("Campaign cannot be None")
         campaign = self._check_or_add_object(
