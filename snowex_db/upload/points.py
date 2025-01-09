@@ -2,27 +2,20 @@
 Module for classes that upload single files to the database.
 """
 
-import os
-from subprocess import STDOUT, check_output
 from pathlib import Path
 import pandas as pd
-from geoalchemy2.elements import RasterElement, WKTElement
-from os.path import basename, exists, join
-from os import makedirs, remove
-import boto3
+import geopandas as gpd
 import logging
-from timezonefinder import TimezoneFinder
-from snowexsql.db import get_table_attributes
-from snowexsql.tables import ImageData, LayerData, PointData
+from typing import List
+from geoalchemy2 import WKTElement
+from snowexsql.tables import (
+    PointData, MeasurementType, Instrument, DOI, Campaign, Observer
+)
+from ..metadata import ExtendedSnowExMetadataParser, SnowExProfileMetadata
+from ..string_management import parse_none
+from ..point_data import PointDataCollection, SnowExPointData
 
-from ..interpretation import add_date_time_keys, standardize_depth
-from ..metadata import DataHeader
-from ..string_management import parse_none, remap_data_names
-from ..utilities import (assign_default_kwargs, get_file_creation_date,
-                        get_logger)
-from ..projection import reproject_point_in_dict
 from .base import BaseUpload
-from snowexsql.tables import Instrument, Campaign, Observer, DOI, MeasurementType, Site
 
 
 LOG = logging.getLogger("snowex_db.upload.points")
@@ -31,187 +24,281 @@ LOG = logging.getLogger("snowex_db.upload.points")
 class DataValidationError(ValueError):
     pass
 
+# TODO: do we need to make a SnowExPointDataCollection similar to
+#   SnowExProfileDataCollection, since some files will have more than one point
+#   measurement per file? This is true for GPR, summary swe, etc
+# TODO: start with test datasets for simpler examples
+
 
 class PointDataCSV(BaseUpload):
     """
     Class for submitting whole csv files of point data
     """
+    expected_attributes = [c for c in dir(PointData) if c[0] != '_']
+    TABLE_CLASS = PointData
 
     # Remapping for special keywords for snowdepth measurements
-    measurement_names = {'mp': 'magnaprobe', 'm2': 'mesa', 'pr': 'pit ruler'}
+    MEASUREMENT_NAMES = {'mp': 'magnaprobe', 'm2': 'mesa', 'pr': 'pit ruler'}
 
     # Units to apply
-    units = {'depth': 'cm', 'two_way_travel': 'ns', 'swe': 'mm',
+    UNITS_MAP = {'depth': 'cm', 'two_way_travel': 'ns', 'swe': 'mm',
              'density': 'kg/m^3'}
 
-    # Class attributes to apply defaults
-    defaults = {'debug': True,
-                'in_timezone': None}
+    META_PARSER = ExtendedSnowExMetadataParser
 
-    def __init__(self, filename, **kwargs):
-        """
-        Args:
-            filename: Path to a csv of data to upload as point data
-            debug: Boolean indicating whether to print out debug info
-            in_timezone: Pytz valid timezone for the incoming data
-        """
+    def __init__(self, profile_filename, timezone="US/Mountain", **kwargs):
+        self.filename = profile_filename
+        self._timezone = timezone
+        self._doi = kwargs.get("doi")
+        self._instrument = kwargs.get("instrument")
+        self._header_sep = kwargs.get("header_sep", ",")
+        self._id = kwargs.get("id")
+        self._campaign_name = kwargs.get("campaign_name")
+        # Is this file for derived measurements
+        self._derived = kwargs.get("derived", False)
 
-        self.log = get_logger(__name__)
-
-        # Assign defaults for this class
-        self.kwargs = assign_default_kwargs(self, kwargs, self.defaults)
+        # SMP passed in
+        self._instrument_model = kwargs.get("instrument_model")
+        self._comments = kwargs.get("comments")
 
         # Assign if details are row based (generally for the SWE files)
         self._row_based_crs = self.kwargs.get("row_based_crs", False)
         self._row_based_tz = self.kwargs.get("row_based_timezone", False)
+        # TODO: what do we do here?
         if self._row_based_tz:
             in_timezone = None
         else:
             in_timezone = kwargs['in_timezone']
 
-        # Use the files creation date as the date accessed for NSIDC citation
-        self.date_accessed = get_file_creation_date(filename)
+        # Read in data
+        self.data = self._read(profile_filename, in_timezone=in_timezone)
 
-        # NOTE: This will error if in_timezone is not provided
-        self.hdr = DataHeader(
-            filename, in_timezone=in_timezone,
-            **self.kwargs
-        )
-        self.df = self._read(filename)
-
-        # Performance tracking
-        self.errors = []
-        self.points_uploaded = 0
-
-    def _read(self, filename):
+    def _read(self, filename, in_timezone=None):
         """
         Read in the csv
         """
-
-        self.log.info('Reading in CSV data from {}'.format(filename))
-        df = pd.read_csv(filename, header=self.hdr.header_pos,
-                         names=self.hdr.columns,
-                         dtype={'date': str, 'time': str})
-
-        # Assign the measurement tool verbose name
-        if 'instrument' in df.columns:
-            self.log.info('Renaming instruments to more verbose names...')
-            df['instrument'] = \
-                df['instrument'].apply(
-                    lambda x: remap_data_names(
-                        x, self.measurement_names))
-
-        # Add date and time keys
-        self.log.info('Adding date and time to metadata...')
-        # Date/time was only provided in the header
-        if 'date' in self.hdr.info.keys() and 'date' not in df.columns:
-            df['date'] = self.hdr.info['date']
-            df['time'] = self.hdr.info['time']
-        else:
-            # date/time was provided in the
-            if self._row_based_tz:
-                # row based in timezone
-                df = df.apply(
-                    lambda data: add_date_time_keys(
-                        data,
-                        in_timezone=TimezoneFinder().timezone_at(
-                            lng=data['longitude'], lat=data['latitude']
-                        )
-                    ), axis=1
-                )
-            else:
-                # file based timezone
-                df = df.apply(lambda data: add_date_time_keys(
-                    data, in_timezone=self.in_timezone), axis=1)
-
-        # 1. Only submit valid columns to the DB
-        self.log.info('Adding valid keyword arguments to metadata...')
-        valid = get_table_attributes(PointData)
-
-        # 2. Add northing/Easting/latitude/longitude if necessary
-        proj_columns = ['northing', 'easting', 'latitude', 'longitude']
-        if any(k in df.columns for k in proj_columns):
-            self.log.info('Adding UTM Northing/Easting to data...')
-            df = df.apply(lambda row: reproject_point_in_dict(row), axis=1)
-
-        # Use header projection info
-        elif any(k in self.hdr.info.keys() for k in proj_columns):
-            for k in proj_columns:
-                df[k] = self.hdr.info[k]
-
-        # Add geometry
-        if self._row_based_crs:
-            # EPSG at row level here (EPSG:269...)
-            df['geom'] = df.apply(lambda row: WKTElement(
-                'POINT({} {})'.format(
-                    row['easting'],
-                    row['northing']),
-                srid=int(row['epsg'])), axis=1)
-        else:
-            # EPSG at the file level
-            df['geom'] = df.apply(lambda row: WKTElement(
-                'POINT({} {})'.format(
-                    row['easting'],
-                    row['northing']),
-                srid=self.hdr.info['epsg']), axis=1)
-
-        # 2. Add all kwargs that were valid
-        for v in valid:
-            if v in self.kwargs.keys():
-                df[v] = self.kwargs[v]
-
-        # Add a camera id to the description if camera is in the cols
-        # (For camera derived snow depths)
-        if 'camera' in df.columns:
-            self.log.info('Adding camera id to equipment column...')
-            df['equipment'] = df.apply(
-                lambda row: f'camera id = {row["camera"]}', axis=1
+        # TODO: DRY up?
+        try:
+            # TODO: row based
+            data = PointDataCollection.from_csv(
+                filename, timezone=self._timezone,
+                header_sep=self._header_sep, site_id=self._id,
+                campaign_name=self._campaign_name
             )
+        except pd.errors.ParserError as e:
+            LOG.error(e)
+            raise RuntimeError(f"Failed reading {filename}")
 
-        # 3. Remove columns that are not valid
-        drops = \
-            [c for c in df.columns if c not in valid and c not in self.hdr.data_names]
-        self.log.info(
-            'Dropping {} as they are not valid columns in the database...'.format(
-                ', '.join(drops)))
-        df = df.drop(columns=drops)
+        return data
 
-        # replace all nans or string nones with None (none type)
-        df = df.apply(lambda x: parse_none(x))
-
-        # Assign the access date for citation
-        df['date_accessed'] = self.date_accessed
-
-        return df
-
-    def build_data(self, data_name):
+    def build_data(self, series: SnowExPointData) -> gpd.GeoDataFrame:
         """
-        Pad the dataframe with metadata or make info more verbose
+        Build out the original dataframe with the metadata to avoid doing it
+        during the submission loop. Removes all other main profile columns and
+        assigns data_name as the value column
+
+        Args:
+            series: The object of a variable of point data
+
+        Returns:
+            df: Dataframe ready for submission
         """
-        # Assign our main value to the value column
-        df = self.df.copy()
-        df['value'] = self.df[data_name].copy()
-        df['type'] = data_name
+        # TODO: DRY up?
+        df = series.df.copy()
+        if df.empty:
+            LOG.debug("df is empty, returning")
+            return df
+        metadata = series.metadata
+        variable = series.variable
 
-        # Add units
-        if data_name in self.units.keys():
-            df['units'] = self.units[data_name]
+        # The type of measurement
+        df['type'] = [variable.code] * len(df)
 
-        df = df.drop(columns=self.hdr.data_names)
+        # Manage nans and nones
+        for c in df.columns:
+            df[c] = df[c].apply(lambda x: parse_none(x))
+        df['value'] = df[variable.code].astype(str)
+
+        if 'units' not in df.columns:
+            unit_str = series.units_map.get(variable.code)
+            df['units'] = [unit_str] * len(df)
+
+        columns = df.columns.values
+        # Clean up comments a bit
+        if 'comments' in columns:
+            df['comments'] = df['comments'].apply(
+                lambda x: x.strip(' ') if isinstance(x, str) else x)
+            # Add pit comments
+            if series.metadata.comments:
+                df["comments"] += series.metadata.comments
+        else:
+            # Make comments to pit comments
+            df["comments"] = [series.metadata.comments] * len(df)
+
+        # In case of SMP, pass comments in
+        if self._comments is not None:
+            df["comments"] = [self._comments] * len(df)
+
+        # Add flags to the comments.
+        flag_string = metadata.flags
+        if flag_string:
+            flag_string = " Flags: " + flag_string
+            if 'comments' in columns:
+                df["comments"] += flag_string
+            else:
+                df["comments"] = flag_string
+
+        if 'instrument' not in columns:
+            df["instrument"] = [self._instrument] * len(df)
+        if 'doi' not in columns:
+            df["doi"] = [self._doi] * len(df)
+        if 'instrument_model' not in columns:
+            df['instrument_model'] = self._instrument_model
 
         return df
 
     def submit(self, session):
-        # Loop through all the entries and add them to the db
-        for pt in self.hdr.data_names:
-            objects = []
-            df = self.build_data(pt)
-            self.log.info('Submitting {:,} points of {} to the database...'.format(
-                len(df.index), pt))
-            for i, row in df.iterrows():
-                d = self._add_entry(**row)
-                # d = PointData(**row)
-                objects.append(d)
-            session.bulk_save_objects(objects)
-            session.commit()
-            self.points_uploaded += len(objects)
+        """
+        Submit values to the db from dictionary. Manage how some profiles have
+        multiple values and get submitted individual
+
+        Args:
+            session: SQLAlchemy session
+        """
+
+        # Construct a dataframe with all metadata
+        for profile in self.data.profiles:
+            df = self.build_data(profile)
+
+            # Grab each row, convert it to dict and join it with site info
+            if not df.empty:
+                for row in df.to_dict(orient="records"):
+                    row["geometry"] = WKTElement(
+                        str(row["geometry"]),
+                        srid=int(df.crs.srs.replace("EPSG:", ""))
+                    )
+                    campaign, observer_list, site = self._add_metadata(
+                        session, profile.metadata, row=row
+                    )
+                    d = self._add_entry(
+                        session, row, campaign, observer_list, site
+                    )
+                    # session.bulk_save_objects(objects) does not resolve
+                    # foreign keys, DO NOT USE IT
+                    session.add(d)
+                    session.commit()
+            else:
+                # procedure to still upload metadata (sites, etc)
+                LOG.warning(
+                    f'Point data file {self.filename} is empty.'
+                )
+
+    def _add_metadata(
+            self, session, metadata: SnowExProfileMetadata, row: dict = None
+    ):
+        """
+        Add the metadata entry and return objects
+        Args:
+            session: db session object
+            metadata: ProfileMetadata information
+            row: Optional entry for row based info
+
+        Returns:
+
+        """
+        # Add campaign
+        campaign = self._check_or_add_object(
+            session, Campaign, dict(name=metadata.campaign_name)
+        )
+        # add list of observers
+        observer_list = []
+        observer_names = metadata.observers or []
+        if observer_names:
+            if len(observer_names) > 1:
+                raise DataValidationError(
+                    "You cannot have more than 1 observer "
+                    "for a PointData entry"
+                )
+            observer = self._check_or_add_object(
+                session, Observer, dict(name=observer_names[0])
+            )
+            observer_list.append(observer)
+        else:
+            observer = None
+
+        if row is None:
+            # Datetime from metadata
+            dt = metadata.date_time
+            # Form geom from lat and lon
+            geom = WKTElement(
+                f"Point ({metadata.longitude} {metadata.latitude})",
+                srid=4326
+            )
+        else:
+            geom = row["geometry"]
+            dt = row["datetime"]
+
+        # extra metadata kwargs for point data
+        metadata_dict = dict(
+            campaign=campaign,
+            observer=observer,
+            geom=geom,
+            datetime=dt,
+
+        )
+        return metadata_dict
+
+    def _add_entry(
+            self, session, row: dict, **kwargs
+    ):
+        """
+
+        Args:
+            session: db session object
+            row: dataframe row of data to add
+            kwargs: other items belonging to the entry
+
+        Returns:
+
+        """
+        # Add instrument
+        instrument = self._check_or_add_object(
+            session, Instrument, dict(
+                name=row['instrument'],
+                model=row['instrument_model']
+            )
+        )
+
+        # Add doi
+        doi_string = row["doi"]
+        if doi_string is not None:
+            doi = self._check_or_add_object(
+                session, DOI, dict(doi=doi_string)
+            )
+        else:
+            doi = None
+
+        # Add measurement type
+        measurement_type = row["type"]
+        measurement_obj = self._check_or_add_object(
+            # Add units and 'derived' flag for the measurement
+            session, MeasurementType, dict(
+                name=measurement_type,
+                units=row["units"],
+                derived=self._derived
+            )
+        )
+
+        # Now that the other objects exist, create the entry,
+        # notice we only need the instrument object
+        new_entry = self.TABLE_CLASS(
+            # Linked tables
+            instrument=instrument,
+            doi=doi,
+            measurement_type=measurement_obj,
+            comments=row["comments"],
+            value=row["value"],
+            # Arguments from kwargs
+            **kwargs
+        )
+        return new_entry
