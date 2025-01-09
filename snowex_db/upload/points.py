@@ -213,36 +213,28 @@ class PointDataCSV(BaseUpload):
 
         """
         # Add campaign
+        if metadata.campaign_name:
+            campaign_name = metadata.campaign_name
+        else:
+            campaign_name = row["campaign"]
+        if campaign_name is None:
+            raise DataValidationError("Campaign cannot be None")
         campaign = self._check_or_add_object(
-            session, Campaign, dict(name=metadata.campaign_name)
+            session, Campaign, dict(name=campaign_name)
         )
-        # add list of observers
-        observer_list = []
-        observer_names = metadata.observers or []
-        if observer_names:
-            if len(observer_names) > 1:
-                raise DataValidationError(
-                    "You cannot have more than 1 observer "
-                    "for a PointData entry"
-                )
+        # add observer
+        observer = None
+        if metadata.observers:
+            observer_name = metadata.observers[0]
+        else:
+            observer_name = row.get("observer")
+        if observer_name:
             observer = self._check_or_add_object(
-                session, Observer, dict(name=observer_names[0])
+                session, Observer, dict(name=observer_name)
             )
-            observer_list.append(observer)
-        else:
-            observer = None
 
-        if row is None:
-            # Datetime from metadata
-            dt = metadata.date_time
-            # Form geom from lat and lon
-            geom = WKTElement(
-                f"Point ({metadata.longitude} {metadata.latitude})",
-                srid=4326
-            )
-        else:
-            geom = row["geometry"]
-            dt = row["datetime"]
+        geom = row["geometry"]
+        dt = row["datetime"]
 
         # extra metadata kwargs for point data
         metadata_dict = dict(

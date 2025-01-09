@@ -5,7 +5,6 @@ import numpy as np
 import pandas as pd
 import geopandas as gpd
 
-from .metadata import ExtendedSnowExMetadataParser
 from insitupy.profiles.base import MeasurementData
 from insitupy.profiles.metadata import ProfileMetaData
 
@@ -44,6 +43,40 @@ class SnowExPointData(MeasurementData):
 
         return df
 
+    def _get_location(self, row):
+        """
+        fill in the location info for a row
+        Args:
+            row: pandas row
+        """
+        lat, lon, *_ = self.META_PARSER.parse_location_from_row(row)
+        row["latitude"] = lat
+        row["longitude"] = lon
+        return row
+
+    def _get_datetime(self, row):
+        """
+        fill in the datetime info for a row
+        Args:
+            row: pandas row
+        """
+        result = self.META_PARSER.datetime_from_row(
+            row, 
+        )
+        row["datetime"] = result
+        return row
+
+    @classmethod
+    def _get_campaign(cls, row):
+        """
+        fill in the campaign info for a row
+        Args:
+            row: pandas row
+        """
+        result = cls.META_PARSER.parse_campaign_from_row(row)
+        row["campaign"] = result
+        return row
+
     def _format_df(self, input_df):
         """
         Format the incoming df with the column headers and other info we want
@@ -55,14 +88,15 @@ class SnowExPointData(MeasurementData):
         # Verify the sample column exists and rename to variable
         df = self._check_sample_columns(input_df)
 
-        n_entries = len(df)
-        df["datetime"] = [self._dt] * n_entries
-
+        df = df.apply(self._get_datetime, axis=1)
+        df = df.apply(self._get_campaign, axis=1)
         # parse the location
-        lat, lon = self.latlon
+        df = df.apply(self._get_location, axis=1)
+
         location = gpd.points_from_xy(
-            [lon] * n_entries, [lat] * n_entries
+            df["longitude"], df["latitude"]
         )
+        df = df.drop(columns=["longitude", "latitude"])
 
         df = gpd.GeoDataFrame(
             df, geometry=location
