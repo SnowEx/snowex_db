@@ -242,9 +242,14 @@ class PointDataCSV(BaseUpload):
 
         """
         # Add instrument
+        instrument_name = row['instrument']
+        # Map the instrument name if we have a mapping for it
+        instrument_name = self.MEASUREMENT_NAMES.get(
+            instrument_name.lower(), instrument_name
+        )
         instrument = self._check_or_add_object(
             session, Instrument, dict(
-                name=row['instrument'],
+                name=instrument_name,
                 model=row['instrument_model']
             )
         )
