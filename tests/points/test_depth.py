@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 import pytest
 from geoalchemy2 import WKTElement
 from snowexsql.tables import PointData, DOI, Campaign, Instrument, \
-    MeasurementType
+    MeasurementType, PointObservation
 
 from snowex_db.upload.points import PointDataCSV
 from tests.helpers import WithUploadedFile
@@ -27,6 +27,17 @@ class TestDepth(TableTestBase, WithUploadedFile):
     @pytest.fixture(scope="class")
     def uploaded_file(self, db, data_dir):
         self.upload_file(str(data_dir.joinpath("depths.csv")))
+
+    def filter_measurement_type(self, session, measurement_type, query=None):
+        if query is None:
+            query = session.query(self.TableClass)
+
+        query = query.join(
+            self.TableClass.observation
+        ).join(
+            PointObservation.measurement_type
+        ).filter(MeasurementType.name == measurement_type)
+        return query
 
     @pytest.mark.parametrize(
         "table, attribute, expected_value", [

@@ -12,6 +12,8 @@ from snowexsql.tables import (
     PointData, MeasurementType, Instrument, DOI, Campaign, Observer,
     PointObservation
 )
+from snowexsql.tables.campaign_observation import CampaignObservation
+
 from ..metadata import SnowExProfileMetadata
 from ..point_metadata import PointSnowExMetadataParser
 from ..string_management import parse_none
@@ -282,7 +284,7 @@ class PointDataCSV(BaseUpload):
                 date=kwargs["datetime"],
                 instrument=instrument,
                 doi=doi,
-                type=row["type"],
+                # type=row["type"],  # THIS TYPE IS RESERVED FOR POLYMORPHIC STUFF
                 measurement_type=measurement_obj,
                 observer=kwargs["observer"],
                 campaign=kwargs["campaign"],
@@ -291,6 +293,7 @@ class PointDataCSV(BaseUpload):
 
         # Now that the other objects exist, create the entry,
         # notice we only need the instrument object
+        # TODO: how do we add in type=depth?
         new_entry = self.TABLE_CLASS(
             # Linked tables
             value=row["value"],
