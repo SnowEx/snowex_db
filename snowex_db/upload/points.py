@@ -9,7 +9,8 @@ import logging
 from typing import List
 from geoalchemy2 import WKTElement
 from snowexsql.tables import (
-    PointData, MeasurementType, Instrument, DOI, Campaign, Observer
+    PointData, MeasurementType, Instrument, DOI, Campaign, Observer,
+    PointObservation
 )
 from ..metadata import SnowExProfileMetadata
 from ..point_metadata import PointSnowExMetadataParser
@@ -62,6 +63,9 @@ class PointDataCSV(BaseUpload):
         self._instrument_model = kwargs.get("instrument_model")
         self._comments = kwargs.get("comments")
 
+        # Observer name for the whole file
+        self._observer = kwargs.get("observer")
+
         # Assign if details are row based (generally for the SWE files)
         self._row_based_tz = kwargs.get("row_based_timezone", False)
         # TODO: what do we do here?
@@ -109,7 +113,6 @@ class PointDataCSV(BaseUpload):
         if df.empty:
             LOG.debug("df is empty, returning")
             return df
-        metadata = series.metadata
         variable = series.variable
 
         # The type of measurement
@@ -145,6 +148,8 @@ class PointDataCSV(BaseUpload):
             df["doi"] = [self._doi] * len(df)
         if 'instrument_model' not in columns:
             df['instrument_model'] = self._instrument_model
+        if 'observer' not in columns:
+            df['observer'] = self._observer
 
         return df
 
@@ -197,23 +202,19 @@ class PointDataCSV(BaseUpload):
         Returns:
 
         """
-        # TODO: how to pass in campaign
-        campaign_name = row["campaign"]
+        # pass in campaign
+        campaign_name = row["campaign"] or self._campaign_name
         if campaign_name is None:
             raise DataValidationError("Campaign cannot be None")
         campaign = self._check_or_add_object(
             session, Campaign, dict(name=campaign_name)
         )
         # add observer
-        observer = None
-        if metadata.observers:
-            observer_name = metadata.observers[0]
-        else:
-            observer_name = row.get("observer")
-        if observer_name:
-            observer = self._check_or_add_object(
-                session, Observer, dict(name=observer_name)
-            )
+        observer_name = row.get("observer") or self._observer
+        observer_name = observer_name or "unknown"
+        observer = self._check_or_add_object(
+            session, Observer, dict(name=observer_name)
+        )
 
         geom = row["geometry"]
         dt = row["datetime"]
@@ -224,7 +225,6 @@ class PointDataCSV(BaseUpload):
             observer=observer,
             geom=geom,
             datetime=dt,
-
         )
         return metadata_dict
 
@@ -268,17 +268,33 @@ class PointDataCSV(BaseUpload):
                 derived=self._derived
             )
         )
+        # HasDOI, HasInstrument, HasMeasurementType, HasObserver, InCampaign
+        observation = self._check_or_add_object(
+            # Add units and 'derived' flag for the measurement
+            session, PointObservation, dict(
+                # name="",  #?
+                description=row.get("comments"),
+                date=kwargs["datetime"],
+                instrument=instrument,
+                doi=doi,
+                type=row["type"],
+                measurement_type=measurement_obj,
+                observer=kwargs["observer"],
+                campaign=kwargs["campaign"],
+            )
+        )
 
         # Now that the other objects exist, create the entry,
         # notice we only need the instrument object
         new_entry = self.TABLE_CLASS(
             # Linked tables
-            instrument=instrument,
-            doi=doi,
-            measurement_type=measurement_obj,
-            comments=row["comments"],
             value=row["value"],
+            units=row["units"],  # TODO: isn't this in measurement obj?
+            observation=observation,
             # Arguments from kwargs
-            **kwargs
+            datetime=kwargs["datetime"],
+            geom=kwargs['geom']
+
         )
+
         return new_entry

@@ -2,11 +2,13 @@ import json
 from contextlib import contextmanager
 from os.path import dirname, join
 
+from snowexsql.tables.campaign_observation import CampaignObservation
 from sqlalchemy import orm
 
 from snowexsql.db import get_db, initialize
 from snowexsql.tables import (Campaign, DOI, Instrument, LayerData,
-                              MeasurementType, Observer, Site)
+                              MeasurementType, Observer, Site,
+                              PointObservation, PointData)
 from snowexsql.tables.site import SiteObservers
 import pytest
 
@@ -64,6 +66,8 @@ class DBSetup:
         """
         self.session.query(LayerData).delete()
         self.session.query(SiteObservers).delete()
+        self.session.query(PointData).delete()
+        self.session.query(CampaignObservation).delete()
         self.session.query(Observer).delete()
         self.session.query(Site).delete()
         self.session.query(Instrument).delete()

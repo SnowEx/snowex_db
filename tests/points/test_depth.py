@@ -18,7 +18,8 @@ class TestDepth(TableTestBase, WithUploadedFile):
 
     kwargs = {
         'timezone': 'MST',
-        'doi': "some_point_doi"
+        'doi': "some_point_doi",
+        "campaign_name": "Grand Mesa"
     }
     UploaderClass = PointDataCSV
     TableClass = PointData
