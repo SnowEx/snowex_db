@@ -8,8 +8,8 @@ Added ssa measurements to the database.
 import glob
 from os.path import abspath, join
 
-from snowex_db.batch import UploadProfileBatch
-
+from snowex_db.upload.layers import UploadProfileData
+from snowex_db.utilities import db_session_with_credentials
 
 def main():
 
@@ -17,19 +17,14 @@ def main():
     directory = abspath('../download/data/SNOWEX/SNEX20_SSA.001/')
     filenames = glob.glob(join(directory, '*/*.csv'))
 
-    # Instantiate the uploader
-    b = UploadProfileBatch(
-        filenames,
-        debug=False,
-        doi="https://doi.org/10.5067/SNMM6NGGKWIT",
-        in_timezone='MST'
-    )
-
-    # Submit to the db
-    b.push()
+    with db_session_with_credentials('localhost/snowex', './credentials.json') as (
+    session, engine):
+        for f in filenames[0:5]:
+                uploader = UploadProfileData(f, doi="https://doi.org/10.5067/SNMM6NGGKWIT", timezone='MST')
+                uploader.submit(session)
 
     # Return the number of errors so run.py can keep track
-    return len(b.errors)
+    # return len(b.errors)
 
 
 if __name__ == '__main__':
