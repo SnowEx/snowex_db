@@ -1,0 +1,10 @@
+metadata:
+  COMMENTS:
+    name: "comments"
+    description: "Comments"
+    mappings: "comments"
+  LATITUDE:
+    name: "latitude"
+    description: "Latidude [deg]"
+    mappings: "lat", "latitude"
+variables:

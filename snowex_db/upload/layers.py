@@ -44,11 +44,17 @@ class UploadProfileData(BaseUpload):
         self.log = get_logger(__name__)
 
         self.filename = profile_filename
+        # Input timezone
         self._timezone = timezone
+        # dataset DOI
         self._doi = kwargs.get("doi")
+        # Instrument name
         self._instrument = kwargs.get("instrument")
+        # header separator of key, value
         self._header_sep = kwargs.get("header_sep", ",")
+        # site id
         self._id = kwargs.get("id")
+        # campaign name
         self._campaign_name = kwargs.get("campaign_name")
         # Is this file for derived measurements
         self._derived = kwargs.get("derived", False)
@@ -139,13 +145,6 @@ class UploadProfileData(BaseUpload):
                 df["comments"] += flag_string
             else:
                 df["comments"] = flag_string
-
-        if 'instrument' not in columns:
-            df["instrument"] = [self._instrument] * len(df)
-        if 'doi' not in columns:
-            df["doi"] = [self._doi] * len(df)
-        if 'instrument_model' not in columns:
-            df['instrument_model'] = self._instrument_model
 
         return df
 
@@ -273,16 +272,15 @@ class UploadProfileData(BaseUpload):
         # Add instrument
         instrument = self._check_or_add_object(
             session, Instrument, dict(
-                name=row['instrument'],
-                model=row['instrument_model']
+                name=self._instrument,
+                model=self._instrument_model
             )
         )
 
         # Add doi
-        doi_string = row["doi"]
-        if doi_string is not None:
+        if self._doi is not None:
             doi = self._check_or_add_object(
-                session, DOI, dict(doi=doi_string)
+                session, DOI, dict(doi=self._doi)
             )
         else:
             doi = None
