@@ -7,8 +7,7 @@ Read in the SnowEx 2020 profiles from pits.
 """
 
 import glob
-from os.path import join
-from pathlib import Path
+from os.path import join, abspath
 
 from snowex_db.upload.layers import UploadProfileData
 from snowexsql.db import db_session_with_credentials
@@ -19,8 +18,7 @@ def main():
 
     # Obtain a list of Grand mesa pits
 
-    directory = Path(__file__).parent.parent / \
-                "download/data/SNOWEX/SNEX20_GM_SP.001/"
+    directory = abspath('../download/data/SNOWEX/SNEX20_GM_SP.001/')
     # Grab all the csvs in the pits folder
     filenames = glob.glob(join(directory, '*/*.csv'))
     # Grab all the site details files
