@@ -286,7 +286,8 @@ class ExtendedSnowExMetadataVariables(SnowExMetadataVariables):
         [
             "profile_id", "timing",  # SSA things
             "smp_serial_number", "original_total_samples",  # SMP things
-            "data_subsampled_to", "wise_serial_no",
+            "data_subsampled_to",
+            "wise_serial_no"  # snow pit things
             "parameter_codes",
             "precip_rate"  # prefer precip_type
         ], auto_remap=False

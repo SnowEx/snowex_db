@@ -3,7 +3,7 @@ requires = ["hatchling", "hatch-vcs"]
 build-backend = "hatchling.build"
 
 [project]
-name = "snowexdb"
+name = "snowex_db"
 dynamic = ["version"]
 description = "SQL Database software for SnowEx data"
 keywords = ["snowexdb", "snowexsql", "sql", "database", "snow"]
