@@ -230,7 +230,9 @@ class UploadProfileData(BaseUpload):
             dt = row["datetime"]
 
         site = self._check_or_add_object(
-            session, Site, dict(name=site_id),
+            session, Site,
+            dict(name=site_id, datetime=dt),  # just check site id
+            # add with all params IFF site id does not exist
             object_kwargs=dict(
                 name=site_id, campaign=campaign,
                 datetime=dt,

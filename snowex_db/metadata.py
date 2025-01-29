@@ -463,6 +463,7 @@ class ExtendedSnowExPrimaryVariables(SnowExPrimaryVariables):
             "original_index", 'id', 'freq_mhz', 'camera',
             'avgvelocity', 'equipment', 'version_number',
             'time_start/end'
+            "avgdensity", "avg_density"
         ]
     )
     SAMPLE_SIGNAL = MeasurementDescription(
