@@ -2,7 +2,6 @@
 Script used to create the database and tables for the first time
 """
 from snowexsql.db import get_db, initialize
-# from snowex_db.utilities import get_LOGger
 from sqlalchemy import text as sqltext
 import argparse
 import logging
@@ -10,7 +9,7 @@ import logging
 LOG = logging.getLogger(__name__)
 
 
-def main(overwrite=False, db='snowex', credentials='./credentials.json'):
+def main(overwrite=False, credentials='./credentials.json'):
     """
     Main function to manage creating our tables in the databases
 
@@ -19,7 +18,7 @@ def main(overwrite=False, db='snowex', credentials='./credentials.json'):
         db: Name of a local database to write tables to
     """
 
-    engine, session = get_db(f"localhost/{db}", credentials=credentials)
+    engine, session = get_db(credentials)
 
     if overwrite:
         initialize(engine)
@@ -54,8 +53,6 @@ def main(overwrite=False, db='snowex', credentials='./credentials.json'):
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='Script to create our databases using the python library')
-    parser.add_argument('--db', dest='db', default='snowex',
-                        help='Name of the database locally to add tables to')
     parser.add_argument('--overwrite', dest='overwrite', action='store_true',
                         help='Whether or not to bypass the overwriting prompt and auto overwrite everything. Should '
                              'be used for the install only .')
@@ -74,5 +71,5 @@ if __name__ == '__main__':
         if a.lower() == 'y':
             overwrite = True
 
-    main(overwrite=overwrite, db=args.db, credentials=args.credentials)
+    main(overwrite=overwrite, credentials=args.credentials)
 
