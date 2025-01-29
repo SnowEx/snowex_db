@@ -7,49 +7,36 @@ Read in the SnowEx 2020 profiles from pits.
 """
 
 import glob
-from os import listdir
-from os.path import abspath, basename, join, relpath
+from os.path import join
+from pathlib import Path
 
-from snowex_db.batch import UploadProfileBatch, UploadSiteDetailsBatch
-
+from snowex_db.upload.layers import UploadProfileData
+from snowexsql.db import db_session_with_credentials
 
 def main():
     debug = True
     doi = "https://doi.org/10.5067/DUD2VZEVBJ7S"
 
     # Obtain a list of Grand mesa pits
-    data_dir = abspath('../download/data/SNOWEX/SNEX20_GM_SP.001')
 
+    directory = Path(__file__).parent.parent / \
+                "download/data/SNOWEX/SNEX20_GM_SP.001/"
     # Grab all the csvs in the pits folder
-    filenames = glob.glob(join(data_dir, '*/*.csv'))
-
+    filenames = glob.glob(join(directory, '*/*.csv'))
     # Grab all the site details files
-    sites = glob.glob(join(data_dir, '*/*site*.csv'))
-    summaries = glob.glob(join(data_dir, '*/*Summary*.csv'))
-
-    # Remove the site details from the total file list to get only the
+    sites = glob.glob(join(directory, '*/*site*.csv'))
+    summaries = glob.glob(join(directory, '*/*Summary*.csv'))
+    # Remove the site details from the total file list to get only the profiles
     profiles = list(set(filenames) - set(sites) - set(summaries))
 
-    # Submit all profiles
-    b = UploadProfileBatch(
-        filenames=profiles,
-        debug=debug,
-        doi=doi,
-        in_timezone='MST'
-    )
-    b.push()
+    with db_session_with_credentials() as (_engine, session):
+        for f in sites[0:4]:
+            uploader = UploadProfileData(f, doi=doi, timezone='MST')
+            uploader.submit(session)
 
-    # Upload all the site data
-    s = UploadSiteDetailsBatch(
-        sites,
-        debug=debug,
-        doi=doi,
-        in_timezone='MST'
-    )
-    s.push()
-
-    return len(b.errors) + len(s.errors)
-
+        for f in profiles[0:4]:          
+            uploader = UploadProfileData(f, doi=doi, timezone='MST')
+            uploader.submit(session)
 
 if __name__ == '__main__':
     main()
