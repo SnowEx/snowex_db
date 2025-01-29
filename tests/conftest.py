@@ -1,6 +1,10 @@
+import os
 from pathlib import Path
 
 import pytest
+
+# Environment variable to load the correct credentials
+os.environ['SNOWEXSQL_TESTS'] = 'True'
 
 
 @pytest.fixture(scope="session")
