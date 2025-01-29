@@ -5,9 +5,7 @@ Added ssa measurements to the database.
 2B. python add_ssa.py # To run individually
 """
 
-import glob
-from os.path import abspath, join
-
+from pathlib import Path
 from snowex_db.upload.layers import UploadProfileData
 from snowexsql.db import db_session_with_credentials
 import logging
@@ -18,8 +16,8 @@ LOG = logging.getLogger('SSA Upload')
 def main():
 
     # Obtain a list of SSA profiles
-    directory = abspath('../download/data/SNOWEX/SNEX20_SSA.001/')
-    filenames = glob.glob(join(directory, '*/*.csv'))
+    directory = Path('../download/data/SNOWEX/SNEX20_SSA.001/').absolute()
+    filenames = [f for f in directory.glob('*/*.csv')]
 
     LOG.info(f"Preparing to upload {len(filenames)} files to db.")
 
