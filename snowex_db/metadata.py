@@ -286,7 +286,9 @@ class ExtendedSnowExMetadataVariables(SnowExMetadataVariables):
         [
             "profile_id", "timing",  # SSA things
             "smp_serial_number", "original_total_samples",  # SMP things
-            "data_subsampled_to"
+            "data_subsampled_to", "wise_serial_no",
+            "parameter_codes",
+            "precip_rate"  # prefer precip_type
         ], auto_remap=False
     )
     FLAGS = MeasurementDescription(
@@ -312,7 +314,7 @@ class ExtendedSnowExMetadataVariables(SnowExMetadataVariables):
     )
     COMMENTS = MeasurementDescription(
         "comments", "Comments in the header", [
-            "comments", "pit comments"
+            "comments", "pit comments", "pit_comments"
         ], auto_remap=True
     )
     SLOPE = MeasurementDescription(
@@ -362,7 +364,8 @@ class ExtendedSnowExMetadataVariables(SnowExMetadataVariables):
         ], auto_remap=True
     )
     PRECIP = MeasurementDescription(
-        "precip", "Site notes on precipitation", ["precip"], auto_remap=True
+        "precip", "Site notes on precipitation",
+        ["precip", "precip_type"], auto_remap=True
     )
     WIND = MeasurementDescription(
         "wind", "Site notes on wind", ["wind"], auto_remap=True
@@ -458,7 +461,8 @@ class ExtendedSnowExPrimaryVariables(SnowExPrimaryVariables):
         "ignore", "Ignore this",
         [
             "original_index", 'id', 'freq_mhz', 'camera',
-            'avgvelocity', 'equipment', 'version_number'
+            'avgvelocity', 'equipment', 'version_number',
+            'time_start/end'
         ]
     )
     SAMPLE_SIGNAL = MeasurementDescription(

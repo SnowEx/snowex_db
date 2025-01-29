@@ -8,7 +8,7 @@ from os.path import abspath, join
 from pathlib import Path
 
 from snowex_db.upload.layers import UploadProfileData
-from snowex_db.utilities import db_session_with_credentials
+from snowexsql.db import db_session_with_credentials
 
 tz_map = {'US/Pacific': ['CA', 'NV', 'WA'],
           'US/Mountain': ['CO', 'ID', 'NM', 'UT', 'MT'],
@@ -35,9 +35,7 @@ def main():
         "SNEX21_TS_SP_Summary_SWE_v01_modified.csv"
     ]
 
-    with db_session_with_credentials(
-            db_name, "./credentials.json"
-    ) as (session, engine):
+    with db_session_with_credentials("./credentials.json") as (engine, session):
         # Upload all the site details files
         site_files = list(data_dir.glob('**/*siteDetails*.csv'))
         # Upload each site file
@@ -50,21 +48,21 @@ def main():
             u.submit(session)
 
         # find and upload all data files
-        for data_file in data_dir.glob("**/*_data_.*_v01\csv"):
+        for data_file in data_dir.glob("**/*_data_*_v01.csv"):
             if "_gapFilledDensity_" in data_file.name:
                 # Use no-gap-filled density for the sole reason that
                 # Gap filled density for profiles where the scale was broken
                 # are just an empty file after the headers. We should
                 # Record that Nan density was collected for the profile
                 print(f"Not uploading gap filled density {data_file}")
-
-            # Instantiate the uploader
-            u = UploadProfileData(
-                str(data_file),
-                doi=doi,
-                timezone='MST',
-            )
-            u.submit(session)
+            else:
+                # Instantiate the uploader
+                u = UploadProfileData(
+                    str(data_file),
+                    doi=doi,
+                    timezone='MST',
+                )
+                u.submit(session)
 
 
 if __name__ == '__main__':
