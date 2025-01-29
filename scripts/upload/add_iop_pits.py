@@ -30,11 +30,11 @@ def main():
     profiles = list(set(filenames) - set(sites) - set(summaries))
 
     with db_session_with_credentials() as (_engine, session):
-        for f in sites[0:4]:
+        for f in sites:
             uploader = UploadProfileData(f, doi=doi, timezone='MST')
             uploader.submit(session)
 
-        for f in profiles[0:4]:          
+        for f in profiles:          
             uploader = UploadProfileData(f, doi=doi, timezone='MST')
             uploader.submit(session)
 
