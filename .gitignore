@@ -25,6 +25,8 @@ docs/snowex_db.rst
 docs/_build/*
 
 scripts/upload/test*.txt
+scripts/upload/credentials.json
+
 scripts/download/data/*
 venv/
 
