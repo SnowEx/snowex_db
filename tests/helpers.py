@@ -1,10 +1,11 @@
 import numpy as np
 from shapely.wkb import loads as load_wkb
 from shapely.wkt import loads as load_wkt
-from snowexsql.tables import Observer, MeasurementType
+from snowexsql.db import db_session_with_credentials
+from snowexsql.tables import MeasurementType, Observer
 
-from snowex_db.upload.layers import UploadProfileData, UploadProfileBatch
-from tests.db_setup import DBSetup, db_session_with_credentials
+from snowex_db.upload.layers import UploadProfileBatch, UploadProfileData
+from tests.db_setup import DBSetup
 
 
 class WithUploadedFile(DBSetup):
@@ -12,9 +13,7 @@ class WithUploadedFile(DBSetup):
     kwargs = {}
 
     def upload_file(self, fname):
-        with db_session_with_credentials(
-                self.database_name(), self.CREDENTIAL_FILE
-        ) as (session, engine):
+        with db_session_with_credentials() as (engine, session):
             u = self.UploaderClass(fname, **self.kwargs)
 
             # Allow for batches and single upload
@@ -24,17 +23,13 @@ class WithUploadedFile(DBSetup):
                 u.submit(session)
 
     def get_value(self, table, attribute):
-        with db_session_with_credentials(
-                self.database_name(), self.CREDENTIAL_FILE
-        ) as (session, engine):
+        with db_session_with_credentials() as (engine, session):
             obj = getattr(table, attribute)
             result = session.query(obj).all()
         return result[0][0]
 
     def get_values(self, table, attribute):
-        with db_session_with_credentials(
-                self.database_name(), self.CREDENTIAL_FILE
-        ) as (session, engine):
+        with db_session_with_credentials() as (engine, session):
             obj = getattr(table, attribute)
             result = session.query(obj).all()
         return [r[0] for r in result]
@@ -61,8 +56,6 @@ class WithUploadBatchFiles(WithUploadedFile):
     UploaderClass = UploadProfileBatch
 
     def upload_file(self, fnames):
-        u = self.UploaderClass(
-            fnames, self.database_name(), self.CREDENTIAL_FILE,
-            **self.kwargs)
+        u = self.UploaderClass(**self.kwargs)
 
         u.push()

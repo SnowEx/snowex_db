@@ -20,9 +20,6 @@ snowex_cog_storage/
 coverage.xml
 htmlcov/*
 
-# Configuration files
-credentials.json
-
 docs/modules.rst
 docs/snowex_db.rst
 docs/_build/*
@@ -30,8 +27,6 @@ docs/_build/*
 scripts/upload/test*.txt
 scripts/download/data/*
 venv/
-
-tests/credentials.json
 
 # IDE files
 .idea/*
