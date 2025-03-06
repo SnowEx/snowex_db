@@ -5,10 +5,21 @@ but to provide some use in the code set.
 
 import datetime
 import logging
+from contextlib import contextmanager
 from os import walk
 from os.path import getctime, join
 
 import coloredlogs
+from snowexsql.db import get_db
+
+
+@contextmanager
+def db_session_with_credentials(db_name, credentials_file):
+    # use default_name
+    db_name = db_name
+    engine, session = get_db(db_name, credentials=credentials_file)
+    yield session, engine
+    session.close()
 
 
 def get_logger(name, debug=True, ext_logger=None):
