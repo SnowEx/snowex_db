@@ -4,6 +4,7 @@ import pytest
 from geoalchemy2 import WKTElement
 from snowexsql.tables import PointData, DOI, Campaign, Instrument, \
     MeasurementType, PointObservation
+from snowexsql.tables.campaign_observation import CampaignObservation
 
 from snowex_db.upload.points import PointDataCSV
 from tests.helpers import WithUploadedFile
@@ -19,7 +20,8 @@ class TestDepth(TableTestBase, WithUploadedFile):
     kwargs = {
         'timezone': 'MST',
         'doi': "some_point_doi",
-        "campaign_name": "Grand Mesa"
+        "campaign_name": "Grand Mesa",
+        "name": "example_point_name"
     }
     UploaderClass = PointDataCSV
     TableClass = PointData
@@ -43,10 +45,15 @@ class TestDepth(TableTestBase, WithUploadedFile):
         "table, attribute, expected_value", [
             (Campaign, "name", "Grand Mesa"),
             (Instrument, "name", "magnaprobe"),
+            (Instrument, "model", "CRREL_B"),
             (MeasurementType, "name", ['depth']),
             (MeasurementType, "units", ['cm']),
             (MeasurementType, "derived", [False]),
-            (DOI, "doi", "some_point_doi")
+            (DOI, "doi", "some_point_doi"),
+            (CampaignObservation, "name", "example_point_name"),
+            (PointData, "geom",
+                WKTElement('POINT (-108.13515 39.03045)', srid=4326)
+             ),
         ]
     )
     def test_metadata(self, table, attribute, expected_value, uploaded_file):
@@ -57,14 +64,9 @@ class TestDepth(TableTestBase, WithUploadedFile):
             ('depth', 'value', 'id', 1, [94]),
             (
                 'depth', "datetime", 'id', 1, [datetime(
-                    2020, 1, 28, 11, 48, tzinfo=timezone.utc)
+                    2020, 1, 28, 18, 48, tzinfo=timezone.utc)
                 ]
              ),
-            (
-                'depth', "geom", 'id', 1, [WKTElement(
-                    'POINT (-108.13516, 39.03045)', srid=4326)
-                ]
-            ),
         ]
     )
     def test_value(

@@ -67,6 +67,8 @@ class PointDataCSV(BaseUpload):
 
         # Observer name for the whole file
         self._observer = kwargs.get("observer")
+        # assign name to each measurement if given
+        self._name = kwargs.get("name")
 
         # Assign if details are row based (generally for the SWE files)
         self._row_based_tz = kwargs.get("row_based_timezone", False)
@@ -139,19 +141,19 @@ class PointDataCSV(BaseUpload):
         if self._comments is not None:
             df["comments"] = [self._comments] * len(df)
 
-        if 'instrument' not in columns:
-            df["instrument"] = [self._instrument] * len(df)
+        # Fill in more optional overrides
+        for column_name, param in [
+            ('instrument', self._instrument),
+            ('doi', self._doi), ('instrument_model', self._instrument_model),
+            ('observer', self._observer), ('name', self._name)
+        ]:
+            if column_name not in columns:
+                df[column_name] = [param] * len(df)
 
         # Map the measurement names or default to original
         df["instrument"] = df['instrument'].map(
             lambda x: self.MEASUREMENT_NAMES.get(x, x)
         )
-        if 'doi' not in columns:
-            df["doi"] = [self._doi] * len(df)
-        if 'instrument_model' not in columns:
-            df['instrument_model'] = self._instrument_model
-        if 'observer' not in columns:
-            df['observer'] = self._observer
 
         return df
 
@@ -279,7 +281,7 @@ class PointDataCSV(BaseUpload):
         observation = self._check_or_add_object(
             # Add units and 'derived' flag for the measurement
             session, PointObservation, dict(
-                # name="",  #?
+                name=row["name"],
                 description=row.get("comments"),
                 date=kwargs["datetime"],
                 instrument=instrument,
