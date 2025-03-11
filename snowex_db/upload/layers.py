@@ -216,6 +216,15 @@ class UploadProfileData(BaseUpload):
             )
             observer_list.append(observer)
 
+        # Add doi
+        doi_string = row["doi"]
+        if doi_string is not None:
+            doi = self._check_or_add_object(
+                session, DOI, dict(doi=doi_string)
+            )
+        else:
+            doi = None
+
         # Add site
         site_id = metadata.site_name
         if row is None:
@@ -236,6 +245,7 @@ class UploadProfileData(BaseUpload):
                 name=site_id, campaign=campaign,
                 datetime=dt,
                 geom=geom,
+                doi=doi,
                 observers=observer_list,
                 aspect=metadata.aspect,
                 slope_angle=metadata.slope,
@@ -278,15 +288,6 @@ class UploadProfileData(BaseUpload):
             )
         )
 
-        # Add doi
-        doi_string = row["doi"]
-        if doi_string is not None:
-            doi = self._check_or_add_object(
-                session, DOI, dict(doi=doi_string)
-            )
-        else:
-            doi = None
-
         # Add measurement type
         measurement_type = row["type"]
         measurement_obj = self._check_or_add_object(
@@ -303,7 +304,6 @@ class UploadProfileData(BaseUpload):
         new_entry = self.TABLE_CLASS(
             # Linked tables
             instrument=instrument,
-            doi=doi,
             measurement_type=measurement_obj,
             site=site,
             # Arguments from kwargs

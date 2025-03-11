@@ -11,24 +11,24 @@ from tests.helpers import WithUploadedFile
 from tests.sql_test_base import TableTestBase
 
 
-class TestDepth(TableTestBase, WithUploadedFile):
+class TestGPR(TableTestBase, WithUploadedFile):
     """
     Test that a density file is uploaded correctly including sample
     averaging for the main value.
     """
 
     kwargs = {
-        'timezone': 'MST',
-        'doi': "some_point_doi",
+        'timezone': "UTC",
+        'doi': "some_gpr_point_doi",
         "campaign_name": "Grand Mesa",
-        "name": "example_point_name"
+        "name": "GPR DATA"
     }
     UploaderClass = PointDataCSV
     TableClass = PointData
 
     @pytest.fixture(scope="class")
     def uploaded_file(self, db, data_dir):
-        self.upload_file(str(data_dir.joinpath("depths.csv")))
+        self.upload_file(str(data_dir.joinpath("gpr.csv")))
 
     def filter_measurement_type(self, session, measurement_type, query=None):
         if query is None:
@@ -41,13 +41,32 @@ class TestDepth(TableTestBase, WithUploadedFile):
         ).filter(MeasurementType.name == measurement_type)
         return query
 
+    #             # Test the actual value of the dataset
+    #             dict(data_name='two_way_travel', attribute_to_check='value', filter_attribute='date', filter_value=gpr_dt,
+    #                  expected=8.3),
+    #             dict(data_name='density', attribute_to_check='value', filter_attribute='date', filter_value=gpr_dt,
+    #                  expected=250.786035454008),
+    #             dict(data_name='depth', attribute_to_check='value', filter_attribute='date', filter_value=gpr_dt,
+    #                  expected=102.662509421414),
+    #             dict(data_name='swe', attribute_to_check='value', filter_attribute='date', filter_value=gpr_dt,
+    #                  expected=257.463237275561),
+    #             # Test our unit assignment
+    #             dict(data_name='two_way_travel', attribute_to_check='units', filter_attribute='date', filter_value=gpr_dt,
+    #                  expected='ns'),
+    #             dict(data_name='density', attribute_to_check='units', filter_attribute='date', filter_value=gpr_dt,
+    #                  expected='kg/m^3'),
+    #             dict(data_name='depth', attribute_to_check='units', filter_attribute='date', filter_value=gpr_dt,
+    #                  expected='cm'),
+    #             dict(data_name='swe', attribute_to_check='units', filter_attribute='date', filter_value=gpr_dt,
+    #                  expected='mm'),
+    #         ],
     @pytest.mark.parametrize(
         "table, attribute, expected_value", [
             (Campaign, "name", "Grand Mesa"),
             (Instrument, "name", "magnaprobe"),
             (Instrument, "model", "CRREL_B"),
             (MeasurementType, "name", ['depth']),
-            (MeasurementType, "units", ['cm']),
+            (MeasurementType, "units", ['cm', 'ns', 'otherstuff']),
             (MeasurementType, "derived", [False]),
             (DOI, "doi", "some_point_doi"),
             (CampaignObservation, "name", "example_point_name"),
@@ -88,8 +107,8 @@ class TestDepth(TableTestBase, WithUploadedFile):
 
     @pytest.mark.parametrize(
         "data_name, attribute_to_count, expected", [
-            ("depth", "value", 9),
-            ("depth", "units", 1)
+            ("depth", "value", 10),
+            ("swe", "units", 1)
         ]
     )
     def test_unique_count(self, data_name, attribute_to_count, expected, uploaded_file):

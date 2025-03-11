@@ -11,6 +11,12 @@ LOG = logging.getLogger()
 
 
 class PointPrimaryVariables(SnowExPrimaryVariables):
+    DENSITY = MeasurementDescription(
+        "density", "measured snow density",
+        [
+            "density", 'density_mean', 'avgdensity'
+        ], auto_remap=True
+    )
     TWO_WAY_TRAVEL = MeasurementDescription(
         'two_way_travel', "Two way travel",
         ['twt', 'twt_ns']
@@ -86,6 +92,15 @@ class PointPrimaryVariables(SnowExPrimaryVariables):
         'time', "Measurement time",
         ['time_gmt', 'time']
     )
+    UTCYEAR = MeasurementDescription(
+        'utcyear', "UTC Year", ['utcyear'], auto_remap=True
+    )
+    UTCDOY = MeasurementDescription(
+        'utcdoy', "UTC day of year", ['utcdoy'], auto_remap=True
+    )
+    UTCTOD = MeasurementDescription(
+        'utctod', 'UTC Time of Day', ['utctod'], auto_remap=True
+    )
     LATITUDE = MeasurementDescription(
         'latitude', "Latitude",
         ['lat', 'latitude'], auto_remap=True
@@ -119,7 +134,7 @@ class PointPrimaryVariables(SnowExPrimaryVariables):
     IGNORE = MeasurementDescription(
         "ignore", "Ignore this",
         [
-            'id', 'version_number'
+            'id', 'version_number', 'avgvelocity'
         ]
     )
 

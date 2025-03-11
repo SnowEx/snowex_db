@@ -143,14 +143,23 @@ class SnowExPointData(MeasurementData):
 
     @classmethod
     def shared_column_options(cls):
+        """
+        These are columns of interest, but not the primary variable
+        of interest
+        Returns:
+
+        """
         variables_class = cls.META_PARSER.PRIMARY_VARIABLES_CLASS
         return [
             variables_class.INSTRUMENT, variables_class.DATE,
             variables_class.TIME, variables_class.DATETIME,
+            variables_class.UTCDOY, variables_class.UTCTOD,
+            variables_class.UTCYEAR,
             variables_class.LATITUDE, variables_class.LONGITUDE,
             variables_class.EASTING, variables_class.NORTHING,
             variables_class.ELEVATION,
             variables_class.INSTRUMENT_MODEL,
+            variables_class.UTM_ZONE
         ]
 
 

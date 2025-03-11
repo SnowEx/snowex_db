@@ -283,7 +283,7 @@ class PointDataCSV(BaseUpload):
             session, PointObservation, dict(
                 name=row["name"],
                 description=row.get("comments"),
-                date=kwargs["datetime"],
+                datetime=kwargs["datetime"],
                 instrument=instrument,
                 doi=doi,
                 # type=row["type"],  # THIS TYPE IS RESERVED FOR POLYMORPHIC STUFF
@@ -302,7 +302,6 @@ class PointDataCSV(BaseUpload):
             units=row["units"],  # TODO: isn't this in measurement obj?
             observation=observation,
             # Arguments from kwargs
-            datetime=kwargs["datetime"],
             geom=kwargs['geom']
 
         )
