@@ -1,8 +1,9 @@
 from numpy.testing import assert_almost_equal
+from snowexsql.db import db_session_with_credentials
 from snowexsql.tables import MeasurementType
 from sqlalchemy import asc
 
-from tests.db_setup import DBSetup, db_session_with_credentials
+from tests.db_setup import DBSetup
 
 
 def safe_float(r):
@@ -76,9 +77,7 @@ class TableTestBase(DBSetup):
         """
         Test the record count of a data type
         """
-        with db_session_with_credentials(
-                self.database_name(), self.CREDENTIAL_FILE
-        ) as (session, engine):
+        with db_session_with_credentials() as (engine, session):
             q = self.filter_measurement_type(session, data_name)
             records = q.all()
         return len(records)
@@ -91,9 +90,7 @@ class TableTestBase(DBSetup):
         Test that the first value in a filtered record search is as expected
         """
         # Filter  to the data type were querying
-        with db_session_with_credentials(
-                self.database_name(), self.CREDENTIAL_FILE
-        ) as (session, engine):
+        with db_session_with_credentials() as (engine, session):
             q = self.filter_measurement_type(session, measurement_type)
 
             # Add another filter by some attribute
@@ -116,9 +113,7 @@ class TableTestBase(DBSetup):
         Test that the number of unique values in a given attribute is as expected
         """
         # Add another filter by some attribute
-        with db_session_with_credentials(
-                self.database_name(), self.CREDENTIAL_FILE
-        ) as (session, engine):
+        with db_session_with_credentials() as (engine, session):
             q = self.filter_measurement_type(session, data_name)
             records = q.all()
         received = len(set([getattr(r, attribute_to_count) for r in records]))
