@@ -172,6 +172,11 @@ class PointDataCSV(BaseUpload):
 
             # Grab each row, convert it to dict and join it with site info
             if not df.empty:
+                # TODO: do a group by date
+                #   group by instrument
+                #   add instrument to name if name if instrument is not None
+                #       might be instrument model and instrument model
+                # or do I need to groupby, does get or create handle that?
                 for row in df.to_dict(orient="records"):
                     row["geometry"] = WKTElement(
                         str(row["geometry"]),
@@ -180,6 +185,7 @@ class PointDataCSV(BaseUpload):
                     metadata_dict = self._add_metadata(
                         session, series.metadata, row=row
                     )
+                    # TODO: instrument name logic here?
                     d = self._add_entry(
                         session, row, **metadata_dict
                     )
@@ -277,13 +283,24 @@ class PointDataCSV(BaseUpload):
                 derived=self._derived
             )
         )
-        # HasDOI, HasInstrument, HasMeasurementType, HasObserver, InCampaign
+        # Add the instrument info to the name
+        measurement_name = row["name"] + instrument.name
+        if instrument.model is not None:
+            measurement_name += instrument.model
+
         observation = self._check_or_add_object(
-            # Add units and 'derived' flag for the measurement
             session, PointObservation, dict(
                 name=row["name"],
+                date=kwargs["datetime"].date(),
+                instrument=instrument,
+                doi=doi,
+                measurement_type=measurement_obj,
+            ),
+            object_kwargs=dict(
+                name=row["name"],
+                # TODO: we lose out on row-based comments here
                 description=row.get("comments"),
-                datetime=kwargs["datetime"],
+                date=kwargs["datetime"].date(),
                 instrument=instrument,
                 doi=doi,
                 # type=row["type"],  # THIS TYPE IS RESERVED FOR POLYMORPHIC STUFF
@@ -301,6 +318,7 @@ class PointDataCSV(BaseUpload):
             value=row["value"],
             units=row["units"],  # TODO: isn't this in measurement obj?
             observation=observation,
+            datetime=row["datetime"],
             # Arguments from kwargs
             geom=kwargs['geom']
 

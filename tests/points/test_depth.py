@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timezone, date
 
 import pytest
 from geoalchemy2 import WKTElement
@@ -54,9 +54,7 @@ class TestDepth(TableTestBase, WithUploadedFile):
             (PointData, "geom",
                 WKTElement('POINT (-108.13515 39.03045)', srid=4326)
              ),
-            (PointObservation, "datetime", datetime(
-                    2020, 1, 28, 18, 48, tzinfo=timezone.utc
-            )),
+            (PointObservation, "date", date(2020, 1, 28)),
         ]
     )
     def test_metadata(self, table, attribute, expected_value, uploaded_file):
@@ -66,6 +64,7 @@ class TestDepth(TableTestBase, WithUploadedFile):
         "data_name, attribute_to_check, filter_attribute, filter_value, expected", [
             ('depth', 'value', 'id', 1, [94]),
             ('depth', 'units', 'id', 1, ['cm']),
+            ('depth', 'datetime', 'id', 1, [datetime(2020, 1, 28, 18, 48, tzinfo=timezone.utc)]),
         ]
     )
     def test_value(
