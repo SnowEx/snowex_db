@@ -50,7 +50,7 @@ class TestDepth(TableTestBase, WithUploadedFile):
             (MeasurementType, "units", ['cm']),
             (MeasurementType, "derived", [False]),
             (DOI, "doi", "some_point_doi"),
-            (CampaignObservation, "name", "example_point_name"),
+            (CampaignObservation, "name", "example_point_name_magnaprobeCRREL_B"),
             (PointData, "geom",
                 WKTElement('POINT (-108.13515 39.03045)', srid=4326)
              ),

@@ -284,20 +284,20 @@ class PointDataCSV(BaseUpload):
             )
         )
         # Add the instrument info to the name
-        measurement_name = row["name"] + instrument.name
+        measurement_name = f"{row['name']}_{instrument.name}"
         if instrument.model is not None:
             measurement_name += instrument.model
 
         observation = self._check_or_add_object(
             session, PointObservation, dict(
-                name=row["name"],
+                name=measurement_name,
                 date=kwargs["datetime"].date(),
                 instrument=instrument,
                 doi=doi,
                 measurement_type=measurement_obj,
             ),
             object_kwargs=dict(
-                name=row["name"],
+                name=measurement_name,
                 # TODO: we lose out on row-based comments here
                 description=row.get("comments"),
                 date=kwargs["datetime"].date(),
