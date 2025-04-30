@@ -4,6 +4,9 @@ from typing import List
 import numpy as np
 import pandas as pd
 import geopandas as gpd
+from insitupy.campaigns.snowex import SnowExProfileData
+from insitupy.io.dates import DateManager
+from insitupy.io.locations import LocationManager
 
 from insitupy.profiles.base import MeasurementData
 from insitupy.profiles.metadata import ProfileMetaData
@@ -15,7 +18,11 @@ LOG = logging.getLogger(__name__)
 
 
 class SnowExPointData(MeasurementData):
-    META_PARSER = PointSnowExMetadataParser
+    # TODO: move these paths to the point
+    DEFAULT_METADATA_VARIABLE_FILES = SnowExProfileData.DEFAULT_METADATA_VARIABLE_FILES
+    DEFAULT_PRIMARY_VARIABLE_FILES = MeasurementData.DEFAULT_PRIMARY_VARIABLE_FILES + [
+        <new file here>
+    ]
 
     def __init__(
         self, input_df: pd.DataFrame, metadata: ProfileMetaData,
@@ -82,7 +89,8 @@ class SnowExPointData(MeasurementData):
         Args:
             row: pandas row
         """
-        lat, lon, *_ = self.META_PARSER.parse_location_from_row(row)
+        # TODO: more of this new parsing
+        lat, lon, *_ = LocationManager.parse(row)
         row["latitude"] = lat
         row["longitude"] = lon
         return row
@@ -97,6 +105,8 @@ class SnowExPointData(MeasurementData):
         if self._row_based_timezone:
             # TODO: do we have to look it up?
             raise NotImplementedError("?")
+        result = DateManager.handle_separate_datetime(row)
+        # TODO: what about in timezone?, how did that work?
         result = self.META_PARSER.datetime_from_row(row, tz)
         row["datetime"] = result
         return row
@@ -108,6 +118,7 @@ class SnowExPointData(MeasurementData):
         Args:
             row: pandas row
         """
+        # TODO: this?
         result = cls.META_PARSER.parse_campaign_from_row(row)
         row["campaign"] = result
         return row
@@ -149,6 +160,7 @@ class SnowExPointData(MeasurementData):
         Returns:
 
         """
+        # TODO: This?, no longer a class option
         variables_class = cls.META_PARSER.PRIMARY_VARIABLES_CLASS
         return [
             variables_class.INSTRUMENT, variables_class.DATE,
@@ -203,6 +215,7 @@ class PointDataCollection:
 
         """
         result = []
+        # TODO: how does the metadata parser fit into this?
         if columns is None and header_pos is None:
             LOG.warning(f"File {fname} is empty of rows")
             df = pd.DataFrame()

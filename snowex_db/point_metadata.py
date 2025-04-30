@@ -10,6 +10,7 @@ from snowex_db.metadata import ExtendedSnowExPrimaryVariables, \
 LOG = logging.getLogger()
 
 
+# TODO: convert this to a file
 class PointPrimaryVariables(SnowExPrimaryVariables):
     DENSITY = MeasurementDescription(
         "density", "measured snow density",
@@ -143,8 +144,6 @@ class PointSnowExMetadataParser(SnowExMetadataParser):
     """
     Extend the parser to update the extended varaibles
     """
-    PRIMARY_VARIABLES_CLASS = PointPrimaryVariables
-    METADATA_VARIABLE_CLASS = ExtendedSnowExMetadataVariables
 
     def find_header_info(self, filename=None):
         """
