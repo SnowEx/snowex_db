@@ -48,8 +48,6 @@ class PointDataCSV(BaseUpload):
     UNITS_MAP = {'depth': 'cm', 'two_way_travel': 'ns', 'swe': 'mm',
              'density': 'kg/m^3'}
 
-    META_PARSER = PointSnowExMetadataParser
-
     def __init__(self, profile_filename, timezone="US/Mountain", **kwargs):
         self.filename = profile_filename
         self._timezone = timezone

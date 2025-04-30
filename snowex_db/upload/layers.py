@@ -22,7 +22,7 @@ from .base import BaseUpload
 from ..metadata import SnowExProfileMetadata
 
 
-from ..profile_data import SnowExProfileDataCollection
+from ..profile_data import ExtendedSnowExProfileDataCollection
 
 
 LOG = logging.getLogger("snowex_db.upload.layers")
@@ -60,7 +60,7 @@ class UploadProfileData(BaseUpload):
         # Read in data
         self.data = self._read(profile_filename)
 
-    def _read(self, profile_filename) -> SnowExProfileDataCollection:
+    def _read(self, profile_filename) -> ExtendedSnowExProfileDataCollection:
         """
         Read in a profile file. Managing the number of lines to skip and
         adjusting column names
@@ -72,7 +72,7 @@ class UploadProfileData(BaseUpload):
             list of ProfileData objects
         """
         try:
-            data = SnowExProfileDataCollection.from_csv(
+            data = ExtendedSnowExProfileDataCollection.from_csv(
                 profile_filename, timezone=self._timezone,
                 header_sep=self._header_sep, site_id=self._id,
                 campaign_name=self._campaign_name

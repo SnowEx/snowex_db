@@ -167,7 +167,6 @@ class PointDataCollection:
     """
     This could be a collection of profiles
     """
-    META_PARSER = PointSnowExMetadataParser
     DATA_CLASS = SnowExPointData
 
     def __init__(self, series: List[SnowExPointData], metadata: ProfileMetaData):
@@ -256,7 +255,7 @@ class PointDataCollection:
         """
         # TODO: DRY up?
         # parse mlutiple files and create an iterable of ProfileData
-        meta_parser = cls.META_PARSER(
+        meta_parser = PointSnowExMetadataParser(
             fname, timezone, header_sep=header_sep, _id=site_id,
             campaign_name=campaign_name, allow_map_failures=allow_map_failure,
             units_map=units_map

@@ -1,0 +1,23 @@
+DENSITY:
+  auto_remap: true
+  code: density
+  description: measured snow density
+  map_from:
+  - density
+  - density_mean
+  - avg_density
+  match_on_code: true
+IGNORE:
+  auto_remap: false
+  code: ignore
+  description: Ignore this
+  map_from:
+  - original_index
+  - id
+  - freq_mhz
+  - camera
+  - avgvelocity
+  - equipment
+  - version_number
+  - avg_density  # Ignore density from LWC files
+  match_on_code: true

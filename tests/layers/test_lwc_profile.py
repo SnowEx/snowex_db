@@ -15,7 +15,9 @@ class TestLWCProfile(TableTestBase, WithUploadedFile):
     Test the permittivity file is uploaded correctly
     """
 
-    kwargs = {'timezone': 'MST'}
+    kwargs = {
+        'timezone': 'MST', 'doi': "some_lwc_doi"
+    }
     UploaderClass = UploadProfileData
     TableClass = LayerData
 
@@ -55,7 +57,8 @@ class TestLWCProfile(TableTestBase, WithUploadedFile):
 
     @pytest.mark.parametrize(
         "data_name, expected", [
-            ("permittivity", 8)
+            ("permittivity", 8),
+            ("density", 0)
         ]
     )
     def test_count(self, data_name, expected, uploaded_file):
@@ -128,7 +131,7 @@ class TestLWCProfileB(TableTestBase, WithUploadedFile):
         "data_name, expected", [
             ("permittivity", 16),
             ('liquid_water_content', 16),
-            ('density', 8)
+            ('density', 0)  # Make sure no density data, right?
         ]
     )
     def test_count(self, data_name, expected, uploaded_file):
