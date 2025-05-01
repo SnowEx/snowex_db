@@ -1,4 +1,5 @@
 import logging
+from pathlib import Path
 from typing import List
 
 import numpy as np
@@ -7,10 +8,11 @@ import geopandas as gpd
 from insitupy.campaigns.snowex import SnowExProfileData
 from insitupy.io.dates import DateManager
 from insitupy.io.locations import LocationManager
+from insitupy.io.yaml_codes import YamlCodes
 
 from insitupy.profiles.base import MeasurementData
 from insitupy.profiles.metadata import ProfileMetaData
-from insitupy.variables import MeasurementDescription
+from insitupy.variables import MeasurementDescription, ExtendableVariables
 
 from .point_metadata import PointSnowExMetadataParser
 
@@ -18,16 +20,18 @@ LOG = logging.getLogger(__name__)
 
 
 class SnowExPointData(MeasurementData):
-    # TODO: move these paths to the point
+    OUT_TIMEZONE = "UTC"
     DEFAULT_METADATA_VARIABLE_FILES = SnowExProfileData.DEFAULT_METADATA_VARIABLE_FILES
     DEFAULT_PRIMARY_VARIABLE_FILES = MeasurementData.DEFAULT_PRIMARY_VARIABLE_FILES + [
-        <new file here>
+        Path(__file__).parent.joinpath(
+            "./point_primary_variable_overrides.yaml"
+        )
     ]
 
     def __init__(
         self, input_df: pd.DataFrame, metadata: ProfileMetaData,
         variable: MeasurementDescription,
-        original_file=None, units_map=None, allow_map_failure=False,
+        original_file=None, meta_parser=None, allow_map_failure=False,
         row_based_timezone=False,
         timezone=None
     ):
@@ -40,7 +44,8 @@ class SnowExPointData(MeasurementData):
             metadata: ProfileMetaData object
             variable: description of variable
             original_file: optional track original file
-            units_map: optional dictionary of column name to unit
+            meta_parser: MetaDataParser object. This will hold our variables
+                map and units map
             allow_map_failures: if a mapping fails, warn us and use the
                 original string (default False)
             row_based_timezone: does each row have a unique timezone implied
@@ -52,7 +57,7 @@ class SnowExPointData(MeasurementData):
         super().__init__(
             input_df, metadata, variable,
             original_file=original_file,
-            units_map=units_map,
+            meta_parser=meta_parser,
             allow_map_failure=allow_map_failure
         )
 
@@ -89,7 +94,6 @@ class SnowExPointData(MeasurementData):
         Args:
             row: pandas row
         """
-        # TODO: more of this new parsing
         lat, lon, *_ = LocationManager.parse(row)
         row["latitude"] = lat
         row["longitude"] = lon
@@ -105,9 +109,23 @@ class SnowExPointData(MeasurementData):
         if self._row_based_timezone:
             # TODO: do we have to look it up?
             raise NotImplementedError("?")
-        result = DateManager.handle_separate_datetime(row)
-        # TODO: what about in timezone?, how did that work?
-        result = self.META_PARSER.datetime_from_row(row, tz)
+
+        datetime = None
+        # In case we found a date entry that has date and time
+        if row.get(YamlCodes.DATE_TIME) is not None:
+            str_date = str(
+                row[YamlCodes.DATE_TIME].replace('T', '-')
+            )
+            datetime = pd.to_datetime(str_date)
+
+        if datetime is None:
+            datetime = DateManager.handle_separate_datetime(row)
+
+        result = DateManager.adjust_timezone(
+            datetime,
+            in_timezone=tz,
+            out_timezone=self.OUT_TIMEZONE
+        )
         row["datetime"] = result
         return row
 
@@ -118,9 +136,7 @@ class SnowExPointData(MeasurementData):
         Args:
             row: pandas row
         """
-        # TODO: this?
-        result = cls.META_PARSER.parse_campaign_from_row(row)
-        row["campaign"] = result
+        row["campaign"] = row.get(YamlCodes.SITE_NAME)
         return row
 
     def _format_df(self, input_df):
@@ -152,28 +168,6 @@ class SnowExPointData(MeasurementData):
 
         return df
 
-    @classmethod
-    def shared_column_options(cls):
-        """
-        These are columns of interest, but not the primary variable
-        of interest
-        Returns:
-
-        """
-        # TODO: This?, no longer a class option
-        variables_class = cls.META_PARSER.PRIMARY_VARIABLES_CLASS
-        return [
-            variables_class.INSTRUMENT, variables_class.DATE,
-            variables_class.TIME, variables_class.DATETIME,
-            variables_class.UTCDOY, variables_class.UTCTOD,
-            variables_class.UTCYEAR,
-            variables_class.LATITUDE, variables_class.LONGITUDE,
-            variables_class.EASTING, variables_class.NORTHING,
-            variables_class.ELEVATION,
-            variables_class.INSTRUMENT_MODEL,
-            variables_class.UTM_ZONE
-        ]
-
 
 class PointDataCollection:
     """
@@ -196,7 +190,7 @@ class PointDataCollection:
     @classmethod
     def _read_csv(
         cls, fname, columns, column_mapping, header_pos,
-        metadata: ProfileMetaData, units_map,
+        metadata: ProfileMetaData, meta_parser: PointSnowExMetadataParser,
         timezone=None, row_based_timezone=False
     ) -> List[SnowExPointData]:
         """
@@ -206,7 +200,7 @@ class PointDataCollection:
             column_mapping: mapping of column name to variable description
             header_pos: skiprows for pd.read_csv
             metadata: metadata for each object
-            units_map: map of column name to unit
+            meta_parser: parser for the metadata
             timezone: input timezone
             row_based_timezone: is the timezone row based?
 
@@ -224,7 +218,23 @@ class PointDataCollection:
                 fname, columns, header_pos,
             )
 
-        shared_column_options = cls.DATA_CLASS.shared_column_options()
+        shared_column_options = [
+            meta_parser.primary_variables.entries["INSTRUMENT"],
+            meta_parser.primary_variables.entries["DATE"],
+            meta_parser.primary_variables.entries["TIME"],
+            meta_parser.primary_variables.entries["DATETIME"],
+            meta_parser.primary_variables.entries["UTCDOY"],
+            meta_parser.primary_variables.entries["UTCTOD"],
+            meta_parser.primary_variables.entries["UTCYEAR"],
+            meta_parser.primary_variables.entries["LATITUDE"],
+            meta_parser.primary_variables.entries["LONGITUDE"],
+            meta_parser.primary_variables.entries["EASTING"],
+            meta_parser.primary_variables.entries["NORTHING"],
+            meta_parser.primary_variables.entries["ELEVATION"],
+            meta_parser.primary_variables.entries["INSTRUMENT_MODEL"],
+            meta_parser.primary_variables.entries["UTM_ZONE"]
+        ]
+
         shared_columns = [
             c for c, v in column_mapping.items()
             if v in shared_column_options
@@ -240,7 +250,7 @@ class PointDataCollection:
                 target_df, metadata,
                 column_mapping[column],  # variable is a MeasurementDescription
                 original_file=fname,
-                units_map=units_map,
+                meta_parser=meta_parser,
                 timezone=timezone, row_based_timezone=row_based_timezone
             ))
 
@@ -250,7 +260,9 @@ class PointDataCollection:
     def from_csv(
         cls, fname, timezone="US/Mountain", header_sep=",", site_id=None,
         campaign_name=None, allow_map_failure=False, units_map=None,
-        row_based_timezone=False
+        row_based_timezone=False,
+        metadata_variable_files=None,
+        primary_variable_files=None,
     ):
         """
         Find all variables in a single csv file
@@ -261,15 +273,26 @@ class PointDataCollection:
             site_id: Site id override for the metadata
             campaign_name: Campaign.name override for the metadata
             allow_map_failure: allow metadata and column unknowns
+            units_map: units map for the metadata
             row_based_timezone: is the timezone row based
+            metadata_variable_files: list of files to override the metadata
+                variables
+            primary_variable_files: list of files to override the
+                primary variables
 
         Returns:
             This class with a collection of profiles and metadata
         """
-        # TODO: DRY up?
-        # parse mlutiple files and create an iterable of ProfileData
+        primary_variables = ExtendableVariables(
+            primary_variable_files or cls.DATA_CLASS.DEFAULT_PRIMARY_VARIABLE_FILES
+        )
+        metadata_variables = ExtendableVariables(
+            metadata_variable_files or cls.DATA_CLASS.DEFAULT_METADATA_VARIABLE_FILES,
+        )
+        # parse multiple files and create an iterable of ProfileData
         meta_parser = PointSnowExMetadataParser(
-            fname, timezone, header_sep=header_sep, _id=site_id,
+            fname, timezone, primary_variables, metadata_variables,
+            header_sep=header_sep, _id=site_id,
             campaign_name=campaign_name, allow_map_failures=allow_map_failure,
             units_map=units_map
         )
@@ -278,7 +301,7 @@ class PointDataCollection:
         # read in the actual data
         profiles = cls._read_csv(
             fname, columns, columns_map, header_pos, metadata,
-            meta_parser.units_map,
+            meta_parser,
             timezone=timezone, row_based_timezone=row_based_timezone
         )
 
