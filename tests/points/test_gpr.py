@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timezone, date
 
 import pytest
 from geoalchemy2 import WKTElement
@@ -16,12 +16,13 @@ class TestGPR(TableTestBase, WithUploadedFile):
     Test that a density file is uploaded correctly including sample
     averaging for the main value.
     """
-
+    gpr_dt = date(2019, 1, 28)
     kwargs = {
         'timezone': "UTC",
         'doi': "some_gpr_point_doi",
         "campaign_name": "Grand Mesa",
-        "name": "GPR DATA"
+        "name": "GPR DATA",
+        "instrument": "gpr"
     }
     UploaderClass = PointDataCSV
     TableClass = PointData
@@ -60,6 +61,7 @@ class TestGPR(TableTestBase, WithUploadedFile):
     #             dict(data_name='swe', attribute_to_check='units', filter_attribute='date', filter_value=gpr_dt,
     #                  expected='mm'),
     #         ],
+    # TODO: put ^those tests in here
     @pytest.mark.parametrize(
         "table, attribute, expected_value", [
             (Campaign, "name", "Grand Mesa"),

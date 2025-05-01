@@ -170,23 +170,20 @@ class PointDataCSV(BaseUpload):
 
             # Grab each row, convert it to dict and join it with site info
             if not df.empty:
-                # TODO: do a group by date
-                #   group by instrument
-                #   add instrument to name if name if instrument is not None
-                #       might be instrument model and instrument model
-                # or do I need to groupby, does get or create handle that?
+                # IMPORTANT: Add observations first, so we can use them in the
+                # entries
+                self._add_campaign_observation(
+                    session, df
+                )
+
                 for row in df.to_dict(orient="records"):
                     row["geometry"] = WKTElement(
                         str(row["geometry"]),
                         srid=int(df.crs.srs.replace("EPSG:", ""))
                     )
-                    metadata_dict = self._add_metadata(
-                        session, series.metadata, row=row
-                    )
+
                     # TODO: instrument name logic here?
-                    d = self._add_entry(
-                        session, row, **metadata_dict
-                    )
+                    d = self._add_entry(session, row)
                     # session.bulk_save_objects(objects) does not resolve
                     # foreign keys, DO NOT USE IT
                     session.add(d)
@@ -197,116 +194,142 @@ class PointDataCSV(BaseUpload):
                     f'Point data file {self.filename} is empty.'
                 )
 
-    def _add_metadata(
-            self, session, metadata: SnowExProfileMetadata, row: dict = None
-    ):
+    def _observation_name_from_row(self, row):
+        value = f"{row['name']}_{row['instrument']}"
+        if row.get('instrument_model'):
+            value += row['instrument_model']
+        return value
+    
+    def _get_first_check_unique(self, df, key):
         """
-        Add the metadata entry and return objects
-        Args:
-            session: db session object
-            metadata: ProfileMetadata information
-            row: Optional entry for row based info
+        Get the first entry for a given key of the dataframe and check if
+        it is unique. If not, raise a DataValidationError
+        """
+        unique_values = df[key].unique()
+        if len(unique_values) > 1:
+            raise DataValidationError(
+                f"Multiple values for {key} found: {unique_values}"
+            )
+        return unique_values[0]
 
+    def _add_campaign_observation(self, session, df):
+        """
+        Add the campaign observation and each of the entries it is linked to
         Returns:
 
         """
-        # pass in campaign
-        campaign_name = row["campaign"] or self._campaign_name
-        if campaign_name is None:
-            raise DataValidationError("Campaign cannot be None")
-        campaign = self._check_or_add_object(
-            session, Campaign, dict(name=campaign_name)
-        )
-        # add observer
-        observer_name = row.get("observer") or self._observer
-        observer_name = observer_name or "unknown"
-        observer = self._check_or_add_object(
-            session, Observer, dict(name=observer_name)
-        )
-
-        geom = row["geometry"]
-        dt = row["datetime"]
-
-        # extra metadata kwargs for point data
-        metadata_dict = dict(
-            campaign=campaign,
-            observer=observer,
-            geom=geom,
-            datetime=dt,
-        )
-        return metadata_dict
+        df["date"] = pd.to_datetime(df["datetime"]).dt.date
+        # Group by our observation keys to add into the database
+        for keys, grouped_df in df.groupby(
+                ['instrument', 'instrument_model', 'name', 'type', 'date'],
+                dropna=False
+        ):
+            # Process each unique combination of keys (key) and its corresponding group (grouped_df)
+            # Add instrument
+            instrument_name = self._get_first_check_unique(grouped_df, 'instrument')
+            # Map the instrument name if we have a mapping for it
+            instrument_name = self.MEASUREMENT_NAMES.get(
+                instrument_name.lower(), instrument_name
+            )
+            instrument = self._check_or_add_object(
+                session, Instrument, dict(
+                    name=instrument_name,
+                    model=self._get_first_check_unique(grouped_df, 'instrument_model')
+                )
+            )
+    
+            # Add measurement type
+            measurement_type = self._get_first_check_unique(grouped_df, "type")
+            measurement_obj = self._check_or_add_object(
+                # Add units and 'derived' flag for the measurement
+                session, MeasurementType, dict(
+                    name=measurement_type,
+                    units=self._get_first_check_unique(grouped_df, "units"),
+                    derived=self._derived
+                )
+            )
+            
+            # Check name is unique
+            self._get_first_check_unique(df, "name")
+            # Get the measurement name
+            measurement_name = self._observation_name_from_row(grouped_df.iloc[0])
+    
+            # Add doi
+            doi_string = self._get_first_check_unique(df, "doi")
+            if doi_string is not None:
+                doi = self._check_or_add_object(
+                    session, DOI, dict(doi=doi_string)
+                )
+            else:
+                doi = None
+            # pass in campaign
+            campaign_name = self._get_first_check_unique(
+                df, "campaign"
+            ) or self._campaign_name
+            if campaign_name is None:
+                raise DataValidationError("Campaign cannot be None")
+            campaign = self._check_or_add_object(
+                session, Campaign, dict(name=campaign_name)
+            )
+            # add observer
+            observer_name = self._get_first_check_unique(
+                df, "observer"
+            ) or self._observer
+            observer_name = observer_name or "unknown"
+            observer = self._check_or_add_object(
+                session, Observer, dict(name=observer_name)
+            )
+            description = None
+            if ["comments"] in grouped_df.columns.values:
+                description = self._get_first_check_unique(
+                    grouped_df, "comments"
+                ),
+    
+            observation = self._check_or_add_object(
+                session, PointObservation, dict(
+                    name=measurement_name,
+                    date=self._get_first_check_unique(grouped_df, "date"),
+                    instrument=instrument,
+                    doi=doi,
+                    measurement_type=measurement_obj,
+                ),
+                object_kwargs=dict(
+                    name=measurement_name,
+                    # TODO: we lose out on row-based comments here
+                    description=description,
+                    date=self._get_first_check_unique(grouped_df, "date"),
+                    instrument=instrument,
+                    doi=doi,
+                    # type=row["type"],  # THIS TYPE IS RESERVED FOR POLYMORPHIC STUFF
+                    measurement_type=measurement_obj,
+                    observer=observer,
+                    campaign=campaign,
+                )
+            )
 
     def _add_entry(
-            self, session, row: dict, **kwargs
+            self, session, row: dict
     ):
         """
 
         Args:
             session: db session object
             row: dataframe row of data to add
-            kwargs: other items belonging to the entry
-
         Returns:
 
         """
-        # Add instrument
-        instrument_name = row['instrument']
-        # Map the instrument name if we have a mapping for it
-        instrument_name = self.MEASUREMENT_NAMES.get(
-            instrument_name.lower(), instrument_name
+        observation_kwargs = dict(
+            name=self._observation_name_from_row(row),
+            date=row["datetime"].date()
         )
-        instrument = self._check_or_add_object(
-            session, Instrument, dict(
-                name=instrument_name,
-                model=row['instrument_model']
+        # Get the observation object
+        observation = session.query(PointObservation).filter_by(
+            **observation_kwargs
+        ).first()
+        if not observation:
+            raise RuntimeError(
+                f"No corresponding PointObservation for {observation_kwargs}"
             )
-        )
-
-        # Add doi
-        doi_string = row["doi"]
-        if doi_string is not None:
-            doi = self._check_or_add_object(
-                session, DOI, dict(doi=doi_string)
-            )
-        else:
-            doi = None
-
-        # Add measurement type
-        measurement_type = row["type"]
-        measurement_obj = self._check_or_add_object(
-            # Add units and 'derived' flag for the measurement
-            session, MeasurementType, dict(
-                name=measurement_type,
-                units=row["units"],
-                derived=self._derived
-            )
-        )
-        # Add the instrument info to the name
-        measurement_name = f"{row['name']}_{instrument.name}"
-        if instrument.model is not None:
-            measurement_name += instrument.model
-
-        observation = self._check_or_add_object(
-            session, PointObservation, dict(
-                name=measurement_name,
-                date=kwargs["datetime"].date(),
-                instrument=instrument,
-                doi=doi,
-                measurement_type=measurement_obj,
-            ),
-            object_kwargs=dict(
-                name=measurement_name,
-                # TODO: we lose out on row-based comments here
-                description=row.get("comments"),
-                date=kwargs["datetime"].date(),
-                instrument=instrument,
-                doi=doi,
-                # type=row["type"],  # THIS TYPE IS RESERVED FOR POLYMORPHIC STUFF
-                measurement_type=measurement_obj,
-                observer=kwargs["observer"],
-                campaign=kwargs["campaign"],
-            )
-        )
 
         # Now that the other objects exist, create the entry,
         # notice we only need the instrument object
@@ -318,7 +341,7 @@ class PointDataCSV(BaseUpload):
             observation=observation,
             datetime=row["datetime"],
             # Arguments from kwargs
-            geom=kwargs['geom']
+            geom=row['geometry']
 
         )
 
