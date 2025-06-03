@@ -80,6 +80,7 @@ INSTRUMENT_MODEL:
   description: Instrument Model
   map_from:
   - equipment
+  - camera
   match_on_code: true
 LATITUDE:
   auto_remap: true

@@ -7,11 +7,11 @@ from snowexsql.tables import PointData, DOI, Campaign, Instrument, \
 from snowexsql.tables.campaign_observation import CampaignObservation
 
 from snowex_db.upload.points import PointDataCSV
-from tests.helpers import WithUploadedFile
-from tests.sql_test_base import TableTestBase
+
+from _base import PointBaseTesting
 
 
-class TestGPR(TableTestBase, WithUploadedFile):
+class TestGPR(PointBaseTesting):
     """
     Test that a density file is uploaded correctly including sample
     averaging for the main value.

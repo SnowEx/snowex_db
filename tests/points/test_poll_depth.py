@@ -7,10 +7,11 @@ from snowexsql.tables import PointData, DOI, Campaign, Instrument, \
 from snowexsql.tables.campaign_observation import CampaignObservation
 
 from snowex_db.upload.points import PointDataCSV
-from tests.points._base import PointBaseTesting
+
+from _base import PointBaseTesting
 
 
-class TestDepth(PointBaseTesting):
+class TestPollDepth(PointBaseTesting):
     """
     Test that a density file is uploaded correctly including sample
     averaging for the main value.
@@ -18,42 +19,32 @@ class TestDepth(PointBaseTesting):
 
     kwargs = {
         'timezone': 'MST',
-        'doi': "some_point_doi",
+        'doi': "some_point_doi_poles",
         "campaign_name": "Grand Mesa",
-        "name": "example_point_name"
+        "name": "example_pole_point_name",
+        "instrument": "camera",
     }
     UploaderClass = PointDataCSV
     TableClass = PointData
 
     @pytest.fixture(scope="class")
     def uploaded_file(self, db, data_dir):
-        self.upload_file(str(data_dir.joinpath("depths.csv")))
-
-    def filter_measurement_type(self, session, measurement_type, query=None):
-        if query is None:
-            query = session.query(self.TableClass)
-
-        query = query.join(
-            self.TableClass.observation
-        ).join(
-            PointObservation.measurement_type
-        ).filter(MeasurementType.name == measurement_type)
-        return query
+        self.upload_file(str(data_dir.joinpath("pole_depths.csv")))
 
     @pytest.mark.parametrize(
         "table, attribute, expected_value", [
             (Campaign, "name", "Grand Mesa"),
-            (Instrument, "name", "mesa"),
-            (Instrument, "model", "Mesa2_1"),
+            (Instrument, "name", "camera"),
+            (Instrument, "model", "E6A"),
             (MeasurementType, "name", ['depth']),
             (MeasurementType, "units", ['cm']),
             (MeasurementType, "derived", [False]),
-            (DOI, "doi", "some_point_doi"),
-            (CampaignObservation, "name", "example_point_name_M2Mesa2_1_depth"),
+            (DOI, "doi", "some_point_doi_poles"),
+            (CampaignObservation, "name", "example_pole_point_name_cameraE6A_depth"),
             (PointData, "geom",
-                WKTElement('POINT (-108.13515 39.03045)', srid=4326)
+                WKTElement('POINT (-108.184794 39.008078)', srid=4326)
              ),
-            (PointObservation, "date", date(2020, 2, 4)),
+            (PointObservation, "date", date(2019, 11, 27)),
         ]
     )
     def test_metadata(self, table, attribute, expected_value, uploaded_file):
@@ -61,9 +52,9 @@ class TestDepth(PointBaseTesting):
 
     @pytest.mark.parametrize(
         "data_name, attribute_to_check, filter_attribute, filter_value, expected", [
-            ('depth', 'value', 'id', 1, [94]),
-            ('depth', 'units', 'id', 1, ['cm']),
-            ('depth', 'datetime', 'id', 1, [datetime(2020, 1, 28, 18, 48, tzinfo=timezone.utc)]),
+            ('depth', 'value', 'date', date(2020, 2, 1), [101.2728]),
+            ('depth', 'units', 'date', date(2020, 2, 1), ['cm']),
+            ('depth', 'datetime', 'date', date(2020, 2, 1), [datetime(2020, 2, 1, 20, 0, tzinfo=timezone.utc)]),
         ]
     )
     def test_value(
@@ -77,7 +68,7 @@ class TestDepth(PointBaseTesting):
 
     @pytest.mark.parametrize(
         "data_name, expected", [
-            ("depth", 10)
+            ("depth", 14)
         ]
     )
     def test_count(self, data_name, expected, uploaded_file):
@@ -86,7 +77,7 @@ class TestDepth(PointBaseTesting):
 
     @pytest.mark.parametrize(
         "data_name, attribute_to_count, expected", [
-            ("depth", "value", 9),
+            ("depth", "value", 14),
             ("depth", "units", 1)
         ]
     )
