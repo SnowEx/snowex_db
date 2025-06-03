@@ -66,6 +66,7 @@ IGNORE:
   - id
   - version_number
   - avgvelocity
+  - count
   match_on_code: true
 INSTRUMENT:
   auto_remap: true

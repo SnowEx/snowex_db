@@ -94,7 +94,18 @@ class SnowExPointData(MeasurementData):
         Args:
             row: pandas row
         """
-        lat, lon, *_ = LocationManager.parse(row)
+        try:
+            lat, lon, *_ = LocationManager.parse(row)
+        except ValueError as e:
+            if self.metadata is not None:
+                LOG.warning(
+                    f"Row {row.name} does not have a valid location. "
+                    "Attempting to use header metadata."
+                )
+                lat, lon = self.metadata.latitude, self.metadata.longitude
+            else:
+                raise RuntimeError("No valid location found in row or metadata.")
+
         row["latitude"] = lat
         row["longitude"] = lon
         return row
@@ -109,23 +120,28 @@ class SnowExPointData(MeasurementData):
         if self._row_based_timezone:
             # TODO: do we have to look it up?
             raise NotImplementedError("?")
+        try:
+            datetime = None
+            # In case we found a date entry that has date and time
+            if row.get(YamlCodes.DATE_TIME) is not None:
+                str_date = str(
+                    row[YamlCodes.DATE_TIME].replace('T', '-')
+                )
+                datetime = pd.to_datetime(str_date)
 
-        datetime = None
-        # In case we found a date entry that has date and time
-        if row.get(YamlCodes.DATE_TIME) is not None:
-            str_date = str(
-                row[YamlCodes.DATE_TIME].replace('T', '-')
+            if datetime is None:
+                datetime = DateManager.handle_separate_datetime(row)
+
+            result = DateManager.adjust_timezone(
+                datetime,
+                in_timezone=tz,
+                out_timezone=self.OUT_TIMEZONE
             )
-            datetime = pd.to_datetime(str_date)
-
-        if datetime is None:
-            datetime = DateManager.handle_separate_datetime(row)
-
-        result = DateManager.adjust_timezone(
-            datetime,
-            in_timezone=tz,
-            out_timezone=self.OUT_TIMEZONE
-        )
+        except ValueError as e:
+            if self.metadata is not None:
+                result = self.metadata.date_time
+            else:
+                raise e
         row["datetime"] = result
         return row
 

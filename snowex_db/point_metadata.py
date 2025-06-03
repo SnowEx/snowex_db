@@ -1,6 +1,7 @@
 import logging
 
 from insitupy.io.metadata import MetaDataParser
+from insitupy.profiles.metadata import ProfileMetaData
 
 LOG = logging.getLogger()
 
@@ -77,4 +78,25 @@ class PointSnowExMetadataParser(MetaDataParser):
         ) = self.find_header_info(self._fname)
         self._rough_obj = self._preparse_meta(meta_lines)
         # We do not have header metadata for point files
-        return None, columns, columns_map, header_position
+        if not self.rough_obj:
+            LOG.debug(
+                "No metadata found in the file header, "
+                "using default no extra metadata"
+            )
+            metadata = None
+        else:
+            # In the case we have metadata (like for a perimeter file)
+            LOG.debug(
+                f"Metadata found in the file header: {self.rough_obj}"
+            )
+            metadata = ProfileMetaData(
+                site_name=self.parse_id(),
+                date_time=self.parse_date_time(),
+                latitude=self.parse_latitude(),
+                longitude=self.parse_longitude(),
+                utm_epsg=str(self.parse_utm_epsg()),
+                campaign_name=self.parse_campaign_name(),
+                flags=self.parse_flags(),
+                observers=self.parse_observers()
+            )
+        return metadata, columns, columns_map, header_position

@@ -1,3 +1,4 @@
+import numpy as np
 import pytest
 from numpy.testing import assert_almost_equal
 from snowexsql.db import db_session_with_credentials
@@ -106,6 +107,9 @@ class TableTestBase(DBSetup):
 
         if type(received) == float:
             assert_almost_equal(received, expected, 6), f"Assertion failed: Expected {expected}, but got {received}"
+        elif isinstance(received, list):
+            # Compare arrays, treating NaNs as equal
+            assert np.array_equal(np.array(received), np.array(expected), equal_nan=True)
         else:
             assert pytest.approx(received) == expected, f"Assertion failed: Expected {expected}, but got {received}"
 
