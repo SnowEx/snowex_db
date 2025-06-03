@@ -107,7 +107,7 @@ class TableTestBase(DBSetup):
 
         if type(received) == float:
             assert_almost_equal(received, expected, 6), f"Assertion failed: Expected {expected}, but got {received}"
-        elif isinstance(received, list):
+        elif isinstance(received, list) and np.issubdtype(np.array(received).dtype, np.number):
             # Compare arrays, treating NaNs as equal
             assert np.array_equal(np.array(received), np.array(expected), equal_nan=True)
         else:
