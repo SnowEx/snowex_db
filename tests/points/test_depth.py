@@ -44,17 +44,17 @@ class TestDepth(TableTestBase, WithUploadedFile):
     @pytest.mark.parametrize(
         "table, attribute, expected_value", [
             (Campaign, "name", "Grand Mesa"),
-            (Instrument, "name", "magnaprobe"),
-            (Instrument, "model", "CRREL_B"),
+            (Instrument, "name", "mesa"),
+            (Instrument, "model", "Mesa2_1"),
             (MeasurementType, "name", ['depth']),
             (MeasurementType, "units", ['cm']),
             (MeasurementType, "derived", [False]),
             (DOI, "doi", "some_point_doi"),
-            (CampaignObservation, "name", "example_point_name_magnaprobeCRREL_B"),
+            (CampaignObservation, "name", "example_point_name_M2Mesa2_1_depth"),
             (PointData, "geom",
                 WKTElement('POINT (-108.13515 39.03045)', srid=4326)
              ),
-            (PointObservation, "date", date(2020, 1, 28)),
+            (PointObservation, "date", date(2020, 2, 4)),
         ]
     )
     def test_metadata(self, table, attribute, expected_value, uploaded_file):
