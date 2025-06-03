@@ -42,7 +42,25 @@ class TestGPR(TableTestBase, WithUploadedFile):
         ).filter(MeasurementType.name == measurement_type)
         return query
 
-    #             # Test the actual value of the dataset
+    @pytest.mark.parametrize(
+        "table, attribute, expected_value", [
+            (Campaign, "name", "Grand Mesa"),
+            (Instrument, "name", "gpr"),
+            (Instrument, "model", None),
+            (MeasurementType, "name", ['two_way_travel', 'density', 'depth', "swe"]),
+            (MeasurementType, "units", ['ns', 'kg/m^3', 'cm', 'mm']),
+            (MeasurementType, "derived", [False, False, False, False]),
+            (DOI, "doi", "some_gpr_point_doi"),
+            (CampaignObservation, "name", "GPR DATA_gpr_two_way_travel"),
+            (PointData, "geom",
+                WKTElement('POINT (-108.19088935297108 39.03437443810879)', srid=4326)
+             ),
+            (PointObservation, "date", date(2019, 1, 28)),
+        ]
+    )
+    def test_metadata(self, table, attribute, expected_value, uploaded_file):
+        self._check_metadata(table, attribute, expected_value)
+
     #             dict(data_name='two_way_travel', attribute_to_check='value', filter_attribute='date', filter_value=gpr_dt,
     #                  expected=8.3),
     #             dict(data_name='density', attribute_to_check='value', filter_attribute='date', filter_value=gpr_dt,
@@ -51,42 +69,14 @@ class TestGPR(TableTestBase, WithUploadedFile):
     #                  expected=102.662509421414),
     #             dict(data_name='swe', attribute_to_check='value', filter_attribute='date', filter_value=gpr_dt,
     #                  expected=257.463237275561),
-    #             # Test our unit assignment
-    #             dict(data_name='two_way_travel', attribute_to_check='units', filter_attribute='date', filter_value=gpr_dt,
-    #                  expected='ns'),
-    #             dict(data_name='density', attribute_to_check='units', filter_attribute='date', filter_value=gpr_dt,
-    #                  expected='kg/m^3'),
-    #             dict(data_name='depth', attribute_to_check='units', filter_attribute='date', filter_value=gpr_dt,
-    #                  expected='cm'),
-    #             dict(data_name='swe', attribute_to_check='units', filter_attribute='date', filter_value=gpr_dt,
-    #                  expected='mm'),
-    #         ],
-    # TODO: put ^those tests in here
-    @pytest.mark.parametrize(
-        "table, attribute, expected_value", [
-            (Campaign, "name", "Grand Mesa"),
-            (Instrument, "name", "magnaprobe"),
-            (Instrument, "model", "CRREL_B"),
-            (MeasurementType, "name", ['depth']),
-            (MeasurementType, "units", ['cm', 'ns', 'otherstuff']),
-            (MeasurementType, "derived", [False]),
-            (DOI, "doi", "some_point_doi"),
-            (CampaignObservation, "name", "example_point_name"),
-            (PointData, "geom",
-                WKTElement('POINT (-108.13515 39.03045)', srid=4326)
-             ),
-            (PointObservation, "datetime", datetime(
-                    2020, 1, 28, 18, 48, tzinfo=timezone.utc
-            )),
-        ]
-    )
-    def test_metadata(self, table, attribute, expected_value, uploaded_file):
-        self._check_metadata(table, attribute, expected_value)
-
     @pytest.mark.parametrize(
         "data_name, attribute_to_check, filter_attribute, filter_value, expected", [
-            ('depth', 'value', 'id', 1, [94]),
-            ('depth', 'units', 'id', 1, ['cm']),
+            ('two_way_travel', 'value', 'date', date(2019, 1, 28), [8.3, 10.0058518216919]),
+            ('density', 'value', 'date', date(2019, 1, 28), [250.786035454008, 280.938399439763]),
+            ('depth', 'value', 'date', date(2019, 1, 28),
+             [102.662509421414, 121.213915188656]),
+            ('swe', 'value', 'date', date(2019, 1, 28),
+             [257.463237275561, 340.536433229281]),
         ]
     )
     def test_value(
@@ -100,7 +90,10 @@ class TestGPR(TableTestBase, WithUploadedFile):
 
     @pytest.mark.parametrize(
         "data_name, expected", [
-            ("depth", 10)
+            ("depth", 10),
+            ("swe", 10),
+            ("two_way_travel", 10),
+            ("density", 10),
         ]
     )
     def test_count(self, data_name, expected, uploaded_file):

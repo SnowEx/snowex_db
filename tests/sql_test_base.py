@@ -1,3 +1,4 @@
+import pytest
 from numpy.testing import assert_almost_equal
 from snowexsql.db import db_session_with_credentials
 from snowexsql.tables import MeasurementType
@@ -104,9 +105,9 @@ class TableTestBase(DBSetup):
             received = None
 
         if type(received) == float:
-            assert_almost_equal(received, expected, 6)
+            assert_almost_equal(received, expected, 6), f"Assertion failed: Expected {expected}, but got {received}"
         else:
-            assert received == expected
+            assert pytest.approx(received) == expected, f"Assertion failed: Expected {expected}, but got {received}"
 
     def check_unique_count(self, data_name, attribute_to_count, expected_count):
         """

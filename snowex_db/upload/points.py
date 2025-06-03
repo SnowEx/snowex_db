@@ -45,8 +45,10 @@ class PointDataCSV(BaseUpload):
     MEASUREMENT_NAMES = {'mp': 'magnaprobe', 'm2': 'mesa', 'pr': 'pit ruler'}
 
     # Units to apply
-    UNITS_MAP = {'depth': 'cm', 'two_way_travel': 'ns', 'swe': 'mm',
-             'density': 'kg/m^3'}
+    UNITS_MAP = {
+        'depth': 'cm', 'two_way_travel': 'ns', 'swe': 'mm',
+        'density': 'kg/m^3'
+    }
 
     def __init__(self, profile_filename, timezone="US/Mountain", **kwargs):
         self.filename = profile_filename
@@ -128,6 +130,7 @@ class PointDataCSV(BaseUpload):
         if 'units' not in df.columns:
             unit_str = series.units_map.get(variable.code)
             df['units'] = [unit_str] * len(df)
+            # TODO: here
 
         columns = df.columns.values
         # Clean up comments a bit
@@ -172,6 +175,7 @@ class PointDataCSV(BaseUpload):
             if not df.empty:
                 # IMPORTANT: Add observations first, so we can use them in the
                 # entries
+                # TODO: how do these link back?
                 self._add_campaign_observation(
                     session, df
                 )
@@ -198,6 +202,10 @@ class PointDataCSV(BaseUpload):
         value = f"{row['name']}_{row['instrument']}"
         if row.get('instrument_model'):
             value += row['instrument_model']
+        # Add the type of measurement
+        # This is necessary because the GPR returns multiple variables
+        if row.get('type'):
+            value += "_" + row['type']
         return value
     
     def _get_first_check_unique(self, df, key):
@@ -239,7 +247,9 @@ class PointDataCSV(BaseUpload):
             )
     
             # Add measurement type
-            measurement_type = self._get_first_check_unique(grouped_df, "type")
+            measurement_type = self._get_first_check_unique(
+                grouped_df, "type"
+            )
             measurement_obj = self._check_or_add_object(
                 # Add units and 'derived' flag for the measurement
                 session, MeasurementType, dict(
@@ -284,11 +294,12 @@ class PointDataCSV(BaseUpload):
                 description = self._get_first_check_unique(
                     grouped_df, "comments"
                 ),
-    
+
+            date_obj = self._get_first_check_unique(grouped_df, "date")
             observation = self._check_or_add_object(
                 session, PointObservation, dict(
                     name=measurement_name,
-                    date=self._get_first_check_unique(grouped_df, "date"),
+                    date=date_obj,
                     instrument=instrument,
                     doi=doi,
                     measurement_type=measurement_obj,
@@ -297,7 +308,7 @@ class PointDataCSV(BaseUpload):
                     name=measurement_name,
                     # TODO: we lose out on row-based comments here
                     description=description,
-                    date=self._get_first_check_unique(grouped_df, "date"),
+                    date=date_obj,
                     instrument=instrument,
                     doi=doi,
                     # type=row["type"],  # THIS TYPE IS RESERVED FOR POLYMORPHIC STUFF
@@ -331,9 +342,7 @@ class PointDataCSV(BaseUpload):
                 f"No corresponding PointObservation for {observation_kwargs}"
             )
 
-        # Now that the other objects exist, create the entry,
-        # notice we only need the instrument object
-        # TODO: how do we add in type=depth?
+        # Now that the other objects exist, create the entry
         new_entry = self.TABLE_CLASS(
             # Linked tables
             value=row["value"],
