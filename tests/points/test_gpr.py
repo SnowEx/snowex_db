@@ -61,14 +61,6 @@ class TestGPR(PointBaseTesting):
     def test_metadata(self, table, attribute, expected_value, uploaded_file):
         self._check_metadata(table, attribute, expected_value)
 
-    #             dict(data_name='two_way_travel', attribute_to_check='value', filter_attribute='date', filter_value=gpr_dt,
-    #                  expected=8.3),
-    #             dict(data_name='density', attribute_to_check='value', filter_attribute='date', filter_value=gpr_dt,
-    #                  expected=250.786035454008),
-    #             dict(data_name='depth', attribute_to_check='value', filter_attribute='date', filter_value=gpr_dt,
-    #                  expected=102.662509421414),
-    #             dict(data_name='swe', attribute_to_check='value', filter_attribute='date', filter_value=gpr_dt,
-    #                  expected=257.463237275561),
     @pytest.mark.parametrize(
         "data_name, attribute_to_check, filter_attribute, filter_value, expected", [
             ('two_way_travel', 'value', 'date', date(2019, 1, 28), [8.3, 10.0058518216919]),
