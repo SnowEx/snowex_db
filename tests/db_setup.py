@@ -1,13 +1,12 @@
-from snowexsql.tables.base import Base
-from snowexsql.tables.campaign_observation import CampaignObservation
 import pytest
-from snowexsql.db import get_db, initialize
+from snowexsql.tables.campaign_observation import CampaignObservation
 from snowexsql.tables import (
     Campaign, DOI, Instrument, LayerData,
     MeasurementType, Observer, Site,
     PointObservation, PointData,
     ImageData, ImageObservation
 )
+from snowexsql.db import get_db
 from snowexsql.tables.site import SiteObservers
 from sqlalchemy import orm
 
