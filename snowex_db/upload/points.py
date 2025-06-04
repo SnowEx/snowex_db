@@ -130,7 +130,6 @@ class PointDataCSV(BaseUpload):
         if 'units' not in df.columns:
             unit_str = series.units_map.get(variable.code)
             df['units'] = [unit_str] * len(df)
-            # TODO: here
 
         columns = df.columns.values
         # Clean up comments a bit

@@ -81,7 +81,11 @@ class TestLWCProfileB(TableTestBase, WithUploadedFile):
     Test the permittivity file is uploaded correctly
     """
 
-    kwargs = {'timezone': 'MST'}
+    kwargs = {
+        'timezone': 'MST',
+        'instrument': 'this is an instrument',
+        'doi': "somedoi"
+    }
     UploaderClass = UploadProfileData
     TableClass = LayerData
 
@@ -99,7 +103,7 @@ class TestLWCProfileB(TableTestBase, WithUploadedFile):
                 'POINT (-108.06310597266031 39.04495658046074)', srid=4326)
              ),
             (Campaign, "name", "Grand Mesa"),
-            (Instrument, "name", None),
+            (Instrument, "name", "this is an instrument"),
             (MeasurementType, "name", [
                 'density', 'permittivity', 'liquid_water_content'
             ]),

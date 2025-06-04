@@ -217,7 +217,7 @@ class UploadProfileData(BaseUpload):
             observer_list.append(observer)
 
         # Add doi
-        doi_string = row["doi"]
+        doi_string = row['doi'] if row is not None else self._doi
         if doi_string is not None:
             doi = self._check_or_add_object(
                 session, DOI, dict(doi=doi_string)

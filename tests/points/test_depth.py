@@ -61,9 +61,9 @@ class TestDepth(PointBaseTesting):
 
     @pytest.mark.parametrize(
         "data_name, attribute_to_check, filter_attribute, filter_value, expected", [
-            ('depth', 'value', 'id', 1, [94]),
-            ('depth', 'units', 'id', 1, ['cm']),
-            ('depth', 'datetime', 'id', 1, [datetime(2020, 1, 28, 18, 48, tzinfo=timezone.utc)]),
+            ('depth', 'value', 'value', 94.0, [94]),
+            ('depth', 'units', 'value', 94.0, ['cm']),
+            ('depth', 'datetime', 'value', 94.0, [datetime(2020, 1, 28, 18, 48, tzinfo=timezone.utc)]),
         ]
     )
     def test_value(
