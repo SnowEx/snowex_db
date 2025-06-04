@@ -15,7 +15,7 @@ class TestStratigraphyProfile(TableTestBase, WithUploadedFile):
     have integrity
     """
 
-    kwargs = {'timezone': 'MST'}
+    kwargs = {'timezone': 'MST', 'doi': 'Stratigraphy DOI', 'instrument': 'eye ball'}
     UploaderClass = UploadProfileData
     TableClass = LayerData
 
@@ -33,7 +33,7 @@ class TestStratigraphyProfile(TableTestBase, WithUploadedFile):
                 'POINT (-108.1894813320662 39.031261970372725)', srid=4326)
              ),
             (Campaign, "name", "Grand Mesa"),
-            (Instrument, "name", None),
+            (Instrument, "name", "eye ball"),
         ]
     )
     def test_metadata(self, table, attribute, expected_value, uploaded_file):

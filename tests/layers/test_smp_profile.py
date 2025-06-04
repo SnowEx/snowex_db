@@ -24,7 +24,8 @@ class TestSMPProfile(TableTestBase, WithUploadedFile):
         'id': "COGM_Fakepitid123",
         'campaign_name': "Grand Mesa",
         "derived": True,
-        'comments': 'Filename: S06M0874_2N12_20200131.CSV'
+        'comments': 'Filename: S06M0874_2N12_20200131.CSV',
+        "doi": "SMP DOI"
     }
     UploaderClass = UploadProfileData
     TableClass = LayerData

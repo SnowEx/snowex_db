@@ -15,7 +15,7 @@ class TestSSAProfile(TableTestBase, WithUploadedFile):
     Test that all profiles from an SSA file are uploaded correctly
     """
 
-    kwargs = {'in_timezone': 'MST'}
+    kwargs = {'in_timezone': 'MST', 'doi': 'SSA DOI', 'instrument': 'ice cube'}
     UploaderClass = UploadProfileData
     TableClass = LayerData
 
@@ -33,7 +33,7 @@ class TestSSAProfile(TableTestBase, WithUploadedFile):
                 'POINT (-108.1894813320662 39.031261970372725)', srid=4326)
              ),
             (Campaign, "name", "Grand Mesa"),
-            (Instrument, "name", None),
+            (Instrument, "name", "ice cube"),
             (
                 MeasurementType, "name",
                 ['sample_signal', 'reflectance', 'specific_surface_area',

@@ -1,0 +1,226 @@
+AIR_TEMP_10FT:
+  auto_remap: false
+  code: air_temperature_10ft
+  description: Air temperature measured at 10 ft tower level
+  map_from:
+  - airtc_10ft_avg
+  match_on_code: true
+BP:
+  auto_remap: false
+  code: barometric_pressure
+  description: Barometric pressure
+  map_from:
+  - bp_kpa_avg
+  match_on_code: true
+DATE:
+  auto_remap: false
+  code: date
+  description: Measurement Date (only date column)
+  map_from:
+  - date_dd_mmm_yy
+  - date
+  match_on_code: true
+DATETIME:
+  auto_remap: true
+  code: datetime
+  description: Combined date and time
+  map_from:
+  - Date/Local Standard Time
+  - date/local_standard_time
+  - datetime
+  - date&time
+  - date/time
+  - date/local_time
+  match_on_code: true
+DENSITY:
+  auto_remap: true
+  code: density
+  description: measured snow density
+  map_from:
+  - density
+  - density_mean
+  - avgdensity
+  match_on_code: true
+EASTING:
+  auto_remap: true
+  code: easting
+  description: UTM Easting
+  map_from:
+  - easting
+  - utm_wgs84_easting
+  match_on_code: true
+ELEVATION:
+  auto_remap: true
+  code: elevation
+  description: Elevation
+  map_from:
+  - elev_m
+  - elevation
+  - elevationwgs84
+  match_on_code: true
+IGNORE:
+  auto_remap: false
+  code: ignore
+  description: Ignore this
+  map_from:
+  - id
+  - version_number
+  - avgvelocity
+  - count
+  match_on_code: true
+INSTRUMENT:
+  auto_remap: true
+  code: instrument
+  description: Instrument
+  map_from:
+  - measurement_tool
+  match_on_code: true
+INSTRUMENT_MODEL:
+  auto_remap: true
+  code: instrument_model
+  description: Instrument Model
+  map_from:
+  - equipment
+  - camera
+  match_on_code: true
+LATITUDE:
+  auto_remap: true
+  code: latitude
+  description: Latitude
+  map_from:
+  - lat
+  - latitude
+  match_on_code: true
+LONGITUDE:
+  auto_remap: true
+  code: longitude
+  description: Longitude
+  map_from:
+  - long
+  - lon
+  - longitude
+  match_on_code: true
+LW_IN:
+  auto_remap: false
+  code: incoming_longwave
+  description: Longwave radiation measured with upward-facing sensor
+  map_from:
+  - lupco_avg
+  match_on_code: true
+LW_OUT:
+  auto_remap: false
+  code: outgoing_longwave
+  description: Longwave radiation measured with downward-facing sensor
+  map_from:
+  - ldnco_avg
+  match_on_code: true
+NORTHING:
+  auto_remap: true
+  code: northing
+  description: UTM Northing
+  map_from:
+  - northing
+  - utm_wgs84_northing
+  match_on_code: true
+RH_10FT:
+  auto_remap: false
+  code: relative_humidity_10ft
+  description: Relative humidity measured at 10 ft tower level
+  map_from:
+  - rh_10ft
+  match_on_code: true
+SM_20CM:
+  auto_remap: false
+  code: soil_moisture_20cm
+  description: Soil moisture measured at 10 cm below the soil
+  map_from:
+  - sm_20cm_avg
+  match_on_code: true
+SNOW_VOID:
+  auto_remap: true
+  code: snow_void
+  description: Void depth in the snow measurement
+  map_from:
+  - snow void
+  - snow_void
+  match_on_code: true
+ST_20CM:
+  auto_remap: false
+  code: soil_temperature_20cm
+  description: Soil temperature measured at 10 cm below the soil
+  map_from:
+  - tc_20cm_avg
+  match_on_code: true
+SW_IN:
+  auto_remap: false
+  code: incoming_shortwave
+  description: Shortwave radiation measured with upward-facing sensor
+  map_from:
+  - sup_avg
+  match_on_code: true
+SW_OUT:
+  auto_remap: false
+  code: outgoing_shortwave
+  description: Shortwave radiation measured with downward-facing sensor
+  map_from:
+  - sdn_avg
+  match_on_code: true
+TIME:
+  auto_remap: false
+  code: time
+  description: Measurement time
+  map_from:
+  - time_gmt
+  - time
+  match_on_code: true
+TWO_WAY_TRAVEL:
+  auto_remap: false
+  code: two_way_travel
+  description: Two way travel
+  map_from:
+  - twt
+  - twt_ns
+  match_on_code: true
+UTCDOY:
+  auto_remap: true
+  code: utcdoy
+  description: UTC day of year
+  map_from:
+  - utcdoy
+  match_on_code: true
+UTCTOD:
+  auto_remap: true
+  code: utctod
+  description: UTC Time of Day
+  map_from:
+  - utctod
+  match_on_code: true
+UTCYEAR:
+  auto_remap: true
+  code: utcyear
+  description: UTC Year
+  map_from:
+  - utcyear
+  match_on_code: true
+UTM_ZONE:
+  auto_remap: true
+  code: utm_zone
+  description: UTM Zone
+  map_from:
+  - utmzone
+  - utm_zone
+  match_on_code: true
+WIND_DIR_10ft:
+  auto_remap: false
+  code: wind_direction_10ft
+  description: Vector mean wind direction measured at 10 ft tower level
+  map_from:
+  - winddir_10ft_d1_wvt
+  match_on_code: true
+WIND_SPEED_10FT:
+  auto_remap: false
+  code: wind_speed_10ft
+  description: Vector mean wind speed measured at 10 ft tower level
+  map_from:
+  - wsms_10ft_avg
+  match_on_code: true

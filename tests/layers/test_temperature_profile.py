@@ -15,7 +15,7 @@ class TestTemperatureProfile(TableTestBase, WithUploadedFile):
     Test that a temperature profile is uploaded to the DB correctly
     """
 
-    kwargs = {'in_timezone': 'MST'}
+    kwargs = {'in_timezone': 'MST', 'doi': 'Temperature DOI', 'instrument': 'thermometer'}
     UploaderClass = UploadProfileData
     TableClass = LayerData
 
@@ -33,7 +33,7 @@ class TestTemperatureProfile(TableTestBase, WithUploadedFile):
                 'POINT (-108.1894813320662 39.031261970372725)', srid=4326)
              ),
             (Campaign, "name", "Grand Mesa"),
-            (Instrument, "name", None),
+            (Instrument, "name", "thermometer"),
             (MeasurementType, "name", ['snow_temperature']),
             (MeasurementType, "units", ['deg c']),
             (MeasurementType, "derived", [False])

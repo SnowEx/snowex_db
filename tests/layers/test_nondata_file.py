@@ -17,7 +17,7 @@ class TestEmptyProfile(TableTestBase, WithUploadedFile):
     """
 
     args = []
-    kwargs = {'timezone': 'MST'}
+    kwargs = {'timezone': 'MST', 'doi': 'no_doi'}
     UploaderClass = UploadProfileData
     TableClass = LayerData
 
