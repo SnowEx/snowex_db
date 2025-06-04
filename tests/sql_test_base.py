@@ -65,7 +65,7 @@ class TableTestBase(DBSetup):
             filter_value: Value that attribute should be to filter db search
             query: If were extended a query use it instead of forming a new one
         Return:
-            q: Uncompiled SQLalchemy Query object
+            q: Uncompiled SQLAlchemy Query object
         """
 
         if query is None:
