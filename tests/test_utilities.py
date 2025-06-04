@@ -1,14 +1,17 @@
 from datetime import date
-from os.path import dirname
+from os.path import dirname, join
 
 import pytest
 
-from snowex_db.utilities import *
+from snowex_db.utilities import (
+    read_n_lines, find_files, find_kw_in_lines, assign_default_kwargs,
+    get_file_creation_date
+)
 
 
 def test_read_nline():
     """
-    Test we can read a specific numbe of lines from a file
+    Test we can read a specific number of lines from a file
     """
     f = join(dirname(__file__), 'data', 'density.csv')
     line = read_n_lines(f, 1)
@@ -25,12 +28,14 @@ def test_find_files():
     assert len(files) == 2
 
 
-@pytest.mark.parametrize("kw, lines, expected", [
-    # Typical use
-    ('snow', ['snowpits', 'nothing'], 0),
-    # Didn't find anything
-    ('ice', ['snow', 'ex', 'is', 'awesome'], -1)
-])
+@pytest.mark.parametrize(
+    "kw, lines, expected", [
+        # Typical use
+        ('snow', ['snowpits', 'nothing'], 0),
+        # Didn't find anything
+        ('ice', ['snow', 'ex', 'is', 'awesome'], -1),
+    ]
+)
 def test_find_kw_in_lines(kw, lines, expected):
     """
     test finding a keyword in a list of strings
@@ -38,24 +43,39 @@ def test_find_kw_in_lines(kw, lines, expected):
     assert find_kw_in_lines(kw, lines, addon_str='') == expected
 
 
-class TestAssignDefaultKwargs():
+class TestAssignDefaultKwargs:
     """
     Test the function assign_default_kwargs. This class is necessary so
     we can add attributes to it without raising exceptions.
     """
 
-    @pytest.mark.parametrize("kwargs, defaults, leave, expected_kwargs, expected_attr", [
-        # Assert missing attributes are added to object and removed from kwargs
-        ({}, {'test': False}, [], {}, {'test': False}),
-        # Assert we don't overwrite the kwargs provided by user
-        ({'test': True, }, {'test': False}, [], {}, {'test': True}),
-        # Assert we leave non-default keys and still assign defaults
-        ({'stays': True, }, {'test': False}, [], {'stays': True}, {'test': False}),
-        # Assert keys can be left in the mod kwargs but still be used
-        ({'leave_test': True}, {'test': False, 'leave_test': True}, ['leave_test'], {'leave_test': True},
-         {'test': False, 'leave_test': True}),
-    ])
-    def test_assign_default_kwargs(self, kwargs, defaults, leave, expected_kwargs, expected_attr):
+    @pytest.mark.parametrize(
+        "kwargs, defaults, leave, expected_kwargs, expected_attr", [
+            # Assert missing attributes are added to object and removed from kwargs
+            ({}, {'test': False}, [], {}, {'test': False}),
+            # Assert we don't overwrite the kwargs provided by user
+            ({'test': True, }, {'test': False}, [], {}, {'test': True}),
+            # Assert we leave non-default keys and still assign defaults
+            (
+                    {'stays': True, },
+                    {'test': False},
+                    [],
+                    {'stays': True},
+                    {'test': False},
+            ),
+            # Assert keys can be left in the mod kwargs but still be used
+            (
+                    {'leave_test': True},
+                    {'test': False, 'leave_test': True},
+                    ['leave_test'],
+                    {'leave_test': True},
+                    {'test': False, 'leave_test': True},
+            ),
+        ]
+    )
+    def test_assign_default_kwargs(
+        self, kwargs, defaults, leave, expected_kwargs, expected_attr
+    ):
         """
         Test we can assign object attributes to an object given kwargs and defaults
 
