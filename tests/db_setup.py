@@ -1,9 +1,13 @@
+from snowexsql.tables.base import Base
 from snowexsql.tables.campaign_observation import CampaignObservation
 import pytest
 from snowexsql.db import get_db, initialize
-from snowexsql.tables import (Campaign, DOI, Instrument, LayerData,
-                              MeasurementType, Observer, Site,
-                              PointObservation, PointData)
+from snowexsql.tables import (
+    Campaign, DOI, Instrument, LayerData,
+    MeasurementType, Observer, Site,
+    PointObservation, PointData,
+    ImageData, ImageObservation
+)
 from snowexsql.tables.site import SiteObservers
 from sqlalchemy import orm
 
@@ -23,7 +27,9 @@ class DBSetup:
         """
         self.engine, self.session, self.metadata = get_db(return_metadata=True)
 
-        initialize(self.engine)
+        # Use THIS SPECIFIC Metadata to drop and create
+        self.metadata.drop_all(bind=self.engine)
+        self.metadata.create_all(bind=self.engine)
 
     @pytest.fixture(scope="class")
     def db(self):
@@ -41,6 +47,9 @@ class DBSetup:
         self.session.query(LayerData).delete()
         self.session.query(SiteObservers).delete()
         self.session.query(PointData).delete()
+        self.session.query(ImageData).delete()
+        self.session.query(ImageObservation).delete()
+        self.session.query(PointObservation).delete()
         self.session.query(CampaignObservation).delete()
         self.session.query(Observer).delete()
         self.session.query(Site).delete()
@@ -51,3 +60,4 @@ class DBSetup:
         self.session.commit()
 
         self.session.close()
+        self.engine.dispose()
