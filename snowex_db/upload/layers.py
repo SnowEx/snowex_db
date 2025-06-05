@@ -281,12 +281,14 @@ class UploadProfileData(BaseUpload):
 
         """
         # Add instrument
-        instrument = self._check_or_add_object(
-            session, Instrument, dict(
-                name=row['instrument'],
-                model=row['instrument_model']
+        instrument = None
+        if row.get('instrument') is not None:
+            instrument = self._check_or_add_object(
+                session, Instrument, dict(
+                    name=row['instrument'],
+                    model=row['instrument_model']
+                )
             )
-        )
 
         # Add measurement type
         measurement_type = row["type"]
@@ -299,11 +301,8 @@ class UploadProfileData(BaseUpload):
             )
         )
 
-        # Now that the other objects exist, create the entry,
-        # notice we only need the instrument object
-        new_entry = self.TABLE_CLASS(
+        attributes = dict(
             # Linked tables
-            instrument=instrument,
             measurement_type=measurement_obj,
             site=site,
             # Arguments from kwargs
@@ -312,6 +311,12 @@ class UploadProfileData(BaseUpload):
             comments=row["comments"],
             value=row["value"],
         )
+        # Link instrument when present
+        if instrument is not None:
+            attributes['instrument'] = instrument
+        # Now that the other objects exist and create the entry.
+        new_entry = self.TABLE_CLASS(**attributes)
+
         return new_entry
 
 
