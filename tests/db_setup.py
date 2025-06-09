@@ -1,14 +1,7 @@
 import pytest
-from snowexsql.tables.campaign_observation import CampaignObservation
-from snowexsql.tables import (
-    Campaign, DOI, Instrument, LayerData,
-    MeasurementType, Observer, Site,
-    PointObservation, PointData,
-    ImageData, ImageObservation
-)
-from snowexsql.db import get_db
-from snowexsql.tables.site import SiteObservers
 from sqlalchemy import orm
+
+from snowexsql.db import get_db, initialize
 
 # DB Configuration and Session
 SESSION = orm.scoped_session(orm.sessionmaker())
@@ -24,11 +17,8 @@ class DBSetup:
         """
         Setup the database for testing
         """
-        self.engine, self.session, self.metadata = get_db(return_metadata=True)
-
-        # Use THIS SPECIFIC Metadata to drop and create
-        self.metadata.drop_all(bind=self.engine)
-        self.metadata.create_all(bind=self.engine)
+        self.engine, self.session = get_db()
+        initialize(self.engine)
 
     @pytest.fixture(scope="class")
     def db(self):
@@ -43,20 +33,5 @@ class DBSetup:
         NOTE: Not dropping the DB since this is done at every test class
               initialization
         """
-        self.session.query(LayerData).delete()
-        self.session.query(SiteObservers).delete()
-        self.session.query(PointData).delete()
-        self.session.query(ImageData).delete()
-        self.session.query(ImageObservation).delete()
-        self.session.query(PointObservation).delete()
-        self.session.query(CampaignObservation).delete()
-        self.session.query(Observer).delete()
-        self.session.query(Site).delete()
-        self.session.query(Instrument).delete()
-        self.session.query(Campaign).delete()
-        self.session.query(DOI).delete()
-        self.session.query(MeasurementType).delete()
-        self.session.commit()
-
         self.session.close()
         self.engine.dispose()
