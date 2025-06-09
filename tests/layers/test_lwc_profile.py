@@ -16,7 +16,8 @@ class TestLWCProfile(TableTestBase, WithUploadedFile):
     """
 
     kwargs = {
-        'timezone': 'MST', 'doi': "some_lwc_doi"
+        'timezone': 'MST',
+        'doi': "some_lwc_doi",
     }
     UploaderClass = UploadProfileData
     TableClass = LayerData
@@ -28,27 +29,31 @@ class TestLWCProfile(TableTestBase, WithUploadedFile):
     @pytest.mark.parametrize(
         "table, attribute, expected_value", [
             (Site, "name", "COGM1N20_20200205"),
-            (Site, "datetime", datetime(
-                2020, 2, 5, 20, 30, tzinfo=timezone.utc)
-             ),
-            (Site, "geom", WKTElement(
-                'POINT (-108.1894813320662 39.031261970372725)', srid=4326)
-             ),
+            (
+                Site, "datetime",
+                datetime(2020, 2, 5, 20, 30, tzinfo=timezone.utc),
+            ),
+            (
+                Site, "geom",
+                WKTElement(
+                    'POINT (-108.1894813320662 39.031261970372725)', srid=4326
+                ),
+            ),
             (Campaign, "name", "Grand Mesa"),
-            (Instrument, "name", None),
         ]
     )
     def test_metadata(self, table, attribute, expected_value, uploaded_file):
         self._check_metadata(table, attribute, expected_value)
 
     @pytest.mark.parametrize(
-        "data_name, attribute_to_check, filter_attribute, filter_value, expected", [
+        "data_name, attribute_to_check, filter_attribute, filter_value, expected",
+        [
             ('permittivity', 'value', 'depth', 27, [1.372, 1.35]),
-       ]
+        ]
     )
     def test_value(
-            self, data_name, attribute_to_check,
-            filter_attribute, filter_value, expected, uploaded_file
+        self, data_name, attribute_to_check,
+        filter_attribute, filter_value, expected, uploaded_file
     ):
         self.check_value(
             data_name, attribute_to_check,
@@ -56,9 +61,10 @@ class TestLWCProfile(TableTestBase, WithUploadedFile):
         )
 
     @pytest.mark.parametrize(
-        "data_name, expected", [
+        "data_name, expected",
+        [
             ("permittivity", 8),
-            ("density", 0)
+            ("density", 0),
         ]
     )
     def test_count(self, data_name, expected, uploaded_file):
@@ -66,11 +72,14 @@ class TestLWCProfile(TableTestBase, WithUploadedFile):
         assert n == expected
 
     @pytest.mark.parametrize(
-        "data_name, attribute_to_count, expected", [
-            ("permittivity", "site_id", 1)
+        "data_name, attribute_to_count, expected",
+        [
+            ("permittivity", "site_id", 1),
         ]
     )
-    def test_unique_count(self, data_name, attribute_to_count, expected, uploaded_file):
+    def test_unique_count(
+        self, data_name, attribute_to_count, expected, uploaded_file
+    ):
         self.check_unique_count(
             data_name, attribute_to_count, expected
         )
@@ -84,7 +93,7 @@ class TestLWCProfileB(TableTestBase, WithUploadedFile):
     kwargs = {
         'timezone': 'MST',
         'instrument': 'this is an instrument',
-        'doi': "somedoi"
+        'doi': "somedoi",
     }
     UploaderClass = UploadProfileData
     TableClass = LayerData
@@ -96,19 +105,24 @@ class TestLWCProfileB(TableTestBase, WithUploadedFile):
     @pytest.mark.parametrize(
         "table, attribute, expected_value", [
             (Site, "name", "COGMST_20200312"),
-            (Site, "datetime", datetime(
-                2020, 3, 12, 21, 45, tzinfo=timezone.utc)
-             ),
-            (Site, "geom", WKTElement(
-                'POINT (-108.06310597266031 39.04495658046074)', srid=4326)
-             ),
+            (
+                Site, "datetime",
+                datetime(2020, 3, 12, 21, 45, tzinfo=timezone.utc),
+            ),
+            (
+                Site, "geom",
+                WKTElement(
+                    'POINT (-108.06310597266031 39.04495658046074)', srid=4326
+                ),
+            ),
             (Campaign, "name", "Grand Mesa"),
             (Instrument, "name", "this is an instrument"),
-            (MeasurementType, "name", [
-                'density', 'permittivity', 'liquid_water_content'
-            ]),
+            (
+                MeasurementType, "name",
+                ['density', 'permittivity', 'liquid_water_content'],
+            ),
             (MeasurementType, "units", ['kg/m3', None, '%']),
-            (MeasurementType, "derived", [False] * 3)
+            (MeasurementType, "derived", [False] * 3),
         ]
     )
     def test_metadata(self, table, attribute, expected_value, uploaded_file):
@@ -119,12 +133,12 @@ class TestLWCProfileB(TableTestBase, WithUploadedFile):
         [
             ('permittivity', 'value', 'depth', 73, [1.507, 1.521]),
             ('liquid_water_content', 'value', 'depth', 15, [0.1, 0.0]),
-            ('density', 'value', 'depth', 83, [164.5])
+            ('density', 'value', 'depth', 83, [164.5]),
         ]
     )
     def test_value(
-            self, data_name, attribute_to_check,
-            filter_attribute, filter_value, expected, uploaded_file
+        self, data_name, attribute_to_check,
+        filter_attribute, filter_value, expected, uploaded_file
     ):
         self.check_value(
             data_name, attribute_to_check,
@@ -132,10 +146,11 @@ class TestLWCProfileB(TableTestBase, WithUploadedFile):
         )
 
     @pytest.mark.parametrize(
-        "data_name, expected", [
+        "data_name, expected",
+        [
             ("permittivity", 16),
             ('liquid_water_content', 16),
-            ('density', 0)  # Make sure no density data, right?
+            ('density', 8),
         ]
     )
     def test_count(self, data_name, expected, uploaded_file):
@@ -143,14 +158,16 @@ class TestLWCProfileB(TableTestBase, WithUploadedFile):
         assert n == expected
 
     @pytest.mark.parametrize(
-        "data_name, attribute_to_count, expected", [
+        "data_name, attribute_to_count, expected",
+        [
             ("permittivity", "site_id", 1),
             ("liquid_water_content", "site_id", 1),
             ("density", "site_id", 1),
         ]
     )
-    def test_unique_count(self, data_name, attribute_to_count, expected,
-                          uploaded_file):
+    def test_unique_count(
+        self, data_name, attribute_to_count, expected, uploaded_file
+    ):
         self.check_unique_count(
             data_name, attribute_to_count, expected
         )

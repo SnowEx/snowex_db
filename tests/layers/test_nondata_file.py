@@ -17,7 +17,10 @@ class TestEmptyProfile(TableTestBase, WithUploadedFile):
     """
 
     args = []
-    kwargs = {'timezone': 'MST', 'doi': 'no_doi'}
+    kwargs = {
+        'timezone': 'MST',
+        'doi': 'no_doi',
+    }
     UploaderClass = UploadProfileData
     TableClass = LayerData
 
@@ -40,7 +43,10 @@ class TestMetadata(WithUploadedFile):
     Test the large amount of metadata we get from the
     site details file
     """
-    kwargs = {'timezone': 'MST'}
+    kwargs = {
+        'timezone': 'MST',
+        'doi': 'no_doi',
+    }
     UploaderClass = UploadProfileData
 
     @pytest.fixture
@@ -50,14 +56,17 @@ class TestMetadata(WithUploadedFile):
     @pytest.mark.parametrize(
         "table, attribute, expected_value", [
             (Site, "name", "COGM1N20_20200205"),
-            (Site, "datetime", datetime(
-                2020, 2, 5, 20, 30, tzinfo=timezone.utc)
-             ),
-            (Site, "geom", WKTElement(
-                'POINT (-108.1894813320662 39.031261970372725)', srid=4326)
-             ),
+            (
+                Site, "datetime",
+                datetime(2020, 2, 5, 20, 30, tzinfo=timezone.utc),
+            ),
+            (
+                Site, "geom",
+                WKTElement(
+                    'POINT (-108.1894813320662 39.031261970372725)', srid=4326
+                ),
+            ),
             (Campaign, "name", "Grand Mesa"),
-            # (Site, "elevation", "COGM1N20_20200205"),
             (Site, "aspect", 180.0),
             (Site, "slope_angle", 5.0),
             (Site, "air_temp", np.nan),
@@ -72,11 +81,11 @@ class TestMetadata(WithUploadedFile):
             (Site, "vegetation_height", "5, nan"),
             (Site, "tree_canopy", "No Trees"),
             (Site, "site_notes", None),
-            (Observer, "name", ["Chris Hiemstra", "Hans Lievens"])
+            (Observer, "name", ["Chris Hiemstra", "Hans Lievens"]),
         ]
     )
     def test_metadata(
-            self, uploaded_site_details_file, table, attribute,
-            expected_value
+        self, uploaded_site_details_file, table, attribute,
+        expected_value
     ):
         self._check_metadata(table, attribute, expected_value)

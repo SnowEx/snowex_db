@@ -25,7 +25,7 @@ class TestSMPProfile(TableTestBase, WithUploadedFile):
         'campaign_name': "Grand Mesa",
         "derived": True,
         'comments': 'Filename: S06M0874_2N12_20200131.CSV',
-        "doi": "SMP DOI"
+        "doi": "SMP DOI",
     }
     UploaderClass = UploadProfileData
     TableClass = LayerData
@@ -37,18 +37,24 @@ class TestSMPProfile(TableTestBase, WithUploadedFile):
     @pytest.mark.parametrize(
         "table, attribute, expected_value", [
             (Site, "name", "COGM_Fakepitid123"),
-            (Site, "datetime", datetime(
-                2020, 1, 31, 22, 42, 14, 0, tzinfo=timezone.utc)
-             ),
-            (Site, "geom", WKTElement(
-                'POINT (-108.16268920898438 39.03013229370117)', srid=4326)
-             ),
+            (
+                Site, "datetime",
+                datetime(
+                    2020, 1, 31, 22, 42, 14, 0, tzinfo=timezone.utc
+                ),
+            ),
+            (
+                Site, "geom",
+                WKTElement(
+                    'POINT (-108.16268920898438 39.03013229370117)', srid=4326
+                ),
+            ),
             (Campaign, "name", "Grand Mesa"),
             (Instrument, "name", "snowmicropen"),
             (Instrument, "model", "06"),
             (MeasurementType, "name", ["force"]),
             (MeasurementType, "units", ["n"]),
-            (MeasurementType, "derived", [True])
+            (MeasurementType, "derived", [True]),
         ]
     )
     def test_metadata(self, table, attribute, expected_value, uploaded_file):
@@ -63,12 +69,15 @@ class TestSMPProfile(TableTestBase, WithUploadedFile):
         "filter_value, expected",
         [
             ('force', 'value', 'depth', -53.17, [0.331]),
-            ('force', 'comments', 'depth', -53.17, ['Filename: S06M0874_2N12_20200131.CSV'])
+            (
+                'force', 'comments', 'depth', -53.17,
+                ['Filename: S06M0874_2N12_20200131.CSV'],
+            ),
         ]
     )
     def test_value(
-            self, data_name, attribute_to_check,
-            filter_attribute, filter_value, expected, uploaded_file
+        self, data_name, attribute_to_check,
+        filter_attribute, filter_value, expected, uploaded_file
     ):
         self.check_value(
             data_name, attribute_to_check,
@@ -89,8 +98,10 @@ class TestSMPProfile(TableTestBase, WithUploadedFile):
             ("force", "site_id", 1),
         ]
     )
-    def test_unique_count(self, data_name, attribute_to_count, expected,
-                          uploaded_file):
+    def test_unique_count(
+        self, data_name, attribute_to_count, expected,
+        uploaded_file
+    ):
         self.check_unique_count(
             data_name, attribute_to_count, expected
         )
