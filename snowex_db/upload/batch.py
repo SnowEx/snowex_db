@@ -1,17 +1,17 @@
 """
-Module for storing and managing multiple file submissions to the
-the database
+Module for storing and managing multiple file submissions to the database
 """
 
 import glob
 import time
 from os.path import abspath, basename, expanduser, join
 
-from snowex_db import db_session
+from snowexsql.db import db_session_with_credentials
+
 from snowex_db.interpretation import get_InSar_flight_comment
 from snowex_db.metadata import (DataHeader, read_InSar_annotation)
 from snowex_db.upload.rasters import UploadRaster
-from snowex_db.utilities import assign_default_kwargs, get_logger
+from snowex_db.utilities import get_logger
 
 
 class BatchBase:
@@ -20,11 +20,7 @@ class BatchBase:
     uploading, managing logging and timing, and reporting of errors
 
     Attributes:
-        defaults: Dictionary containing keyword arguments that are not to be
-                  passed on to the class.
         filenames: List of files to upload
-        meta: kwargs that were passed excluding those found in defaults,
-              they are passed as kwags to the uploader
         log: Logger object with colored logs installed.
         errors: List of tuple that contain filename, and exception thrown
                 during uploaded
@@ -40,28 +36,20 @@ class BatchBase:
     UploaderClass = None
 
     def __init__(
-            self, filenames, db_name, credentials, n_files=-1, debug=False,
-            **kwargs
+            self, filenames, n_files=-1, debug=False, **kwargs
     ):
         """
-        Assigns attributes from kwargs and their defaults from self.defaults
-        Also opens and assigns the database connection
-
         Args:
-            profile_filenames: List of valid files to be uploaded to the database
-            db_name: String name of database this will interact with, default=localhost/snowex
-
-            debug: Boolean that allows exceptions when uploading files, when
-                 True no exceptions are allowed. Default=True
+            filenames: List of valid files to be uploaded to the database
             n_files: Integer number of files to upload (useful for testing),
                      Default=-1 (meaning all of the files)
+            debug:  Boolean that allows exceptions when uploading files, when
+                    True no exceptions are allowed. Default=True
             kwargs: Any keywords that can be passed along to the UploadProfile
                     Class. Any kwargs not recognized will be merged into a
                     comment.
         """
         self.filenames = filenames
-        self.db_name = db_name
-        self.credentials = credentials
         self._kwargs = kwargs
         # Grab logger
         self.log = get_logger(__name__)
@@ -76,9 +64,9 @@ class BatchBase:
 
     def push(self):
         """
-        Push all the data to the database tracking errors
-        If class is instantiated with debug=True exceptions will
-        error out. Otherwise any errors will be passed over and counted/reported
+        Push all the data to the database while tracking errors. If the class
+        is instantiated with debug=True exceptions will error out. Otherwise,
+        any errors will be passed over and counted/reported
         """
 
         self.start = time.time()
@@ -93,7 +81,6 @@ class BatchBase:
             files = self.filenames
 
         for i, f in enumerate(files):
-
             # If were not debugging script allow exceptions and report them
             # later
             if not self.debug:
@@ -122,8 +109,8 @@ class BatchBase:
         d = self.UploaderClass(f, **kwargs)
 
         # Submit the data to the database
-        self.log.info('Accessing Database {}'.format(self.db_name))
-        with db_session(self.db_name, self.credentials) as (session, engine):
+        self.log.info('Submitting to database')
+        with db_session_with_credentials() as (_engine, session):
             d.submit(session)
         self.uploaded += 1
 
@@ -141,7 +128,7 @@ class BatchBase:
             self.log.error(
                 '{} files failed to upload.'.format(len(self.errors)))
             self.log.error(
-                'The following files failed with their corrsponding errors:')
+                'The following files failed with their corresponding errors:')
 
             for e in self.errors:
                 self.log.error('\t{} - {}'.format(e[0], e[1]))
@@ -211,7 +198,7 @@ class UploadUAVSARBatch(BatchBase):
         pattern = '.'.join(basename(f).split('.')[0:-1]) + '*.tif'
         rasters = glob.glob(join(tiff_dir, pattern))
 
-        # Submit each geotif, modifying meta on the fly
+        # Submit each geotiff, modifying meta on the fly
         for r in rasters:
             # Grab information from the filename
             f_pieces = r.split('.')
@@ -247,7 +234,7 @@ class UploadUAVSARBatch(BatchBase):
             # ...VV_01.int.grd
             comment += ', DEM used = {}'.format(
                 desc['dem used in processing']['value'])
-            # Add the polarization to the the comments
+            # Add the polarization to the comments
             comment += ', Polarization = {}'.format(
                 desc['polarization']['value'])
             meta['description'] = comment
@@ -257,11 +244,8 @@ class UploadUAVSARBatch(BatchBase):
             d = self.UploaderClass(r, **meta)
 
             # Submit the data to the database
-            # Grab db using credentials
-            self.log.info('Accessing Database {}'.format(self.db_name))
-            with db_session(
-                    self.db_name, self.credentials
-            ) as (session, engine):
+            self.log.info('Submitting to database')
+            with db_session_with_credentials() as (_engine, session):
                 d.submit(session)
 
         # Uploaded set

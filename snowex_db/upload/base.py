@@ -1,12 +1,8 @@
-from snowexsql.db import get_db
-from snowexsql.tables import Instrument, Campaign, Observer, DOI, MeasurementType, Site
-
-
 class BaseUpload:
     @staticmethod
     def _check_or_add_object(session, clz, check_kwargs, object_kwargs=None):
         """
-        Check for existing object, add to the database if not found
+        Check for an existing object, add to the database if not found
 
         Args:
             session: database session
