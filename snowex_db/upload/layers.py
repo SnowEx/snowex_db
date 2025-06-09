@@ -142,8 +142,7 @@ class UploadProfileData(BaseUpload):
 
         if 'instrument' not in columns:
             df["instrument"] = [self._instrument] * len(df)
-        if 'doi' not in columns:
-            df["doi"] = [self._doi] * len(df)
+
         if 'instrument_model' not in columns:
             df['instrument_model'] = self._instrument_model
 
@@ -164,14 +163,15 @@ class UploadProfileData(BaseUpload):
 
             # Grab each row, convert it to dict and join it with site info
             if not df.empty:
+                # Metadata for all layers
+                campaign, observer_list, site = self._add_metadata(
+                    session, profile.metadata
+                )
+
                 for row in df.to_dict(orient="records"):
-                    row["geometry"] = WKTElement(
-                        str(row["geometry"]),
-                        srid=int(df.crs.srs.replace("EPSG:", ""))
-                    )
-                    campaign, observer_list, site = self._add_metadata(
-                        session, profile.metadata, row=row
-                    )
+                    if row.get('value') is 'None':
+                        continue
+
                     d = self._add_entry(
                         session, row, campaign, observer_list, site
                     )
@@ -186,28 +186,24 @@ class UploadProfileData(BaseUpload):
                     ' expected. Skipping row submissions, and only inserting'
                     ' metadata.'
                 )
-                _ = self._add_metadata(
-                    session, profile.metadata
-                )
+                _ = self._add_metadata(session, profile.metadata)
 
-    def _add_metadata(
-            self, session, metadata: SnowExProfileMetadata, row: dict = None
-    ):
+    def _add_metadata(self, session, metadata: SnowExProfileMetadata):
         """
-        Add the metadata entry and return objects
+        Add the metadata entry and return objects to associate with each row.
+
         Args:
             session: db session object
             metadata: ProfileMetadata information
-            row: Optional entry for row based info
 
         Returns:
 
         """
-        # Add campaign
+        # Campaign record
         campaign = self._check_or_add_object(
             session, Campaign, dict(name=metadata.campaign_name)
         )
-        # add list of observers
+        # List of observers records
         observer_list = []
         observer_names = metadata.observers or []
         for obs_name in observer_names:
@@ -216,8 +212,8 @@ class UploadProfileData(BaseUpload):
             )
             observer_list.append(observer)
 
-        # Add doi
-        doi_string = row['doi'] if row is not None else self._doi
+        # DOI record
+        doi_string = self._doi
         if doi_string is not None:
             doi = self._check_or_add_object(
                 session, DOI, dict(doi=doi_string)
@@ -225,24 +221,23 @@ class UploadProfileData(BaseUpload):
         else:
             doi = None
 
-        # Add site
+        # Datetime from metadata
+        dt = metadata.date_time
+        # Geometry from metadata
+        geom = WKTElement(
+            f"Point ({metadata.longitude} {metadata.latitude})",
+            srid=4326
+        )
+        # Site record
         site_id = metadata.site_name
-        if row is None:
-            # Datetime from metadata
-            dt = metadata.date_time
-            # Form geom from lat and lon
-            geom = WKTElement(
-                f"Point ({metadata.longitude} {metadata.latitude})",
-                srid=4326
-            )
-        else:
-            geom = row["geometry"]
-            dt = row["datetime"]
 
         site = self._check_or_add_object(
-            session, Site, dict(name=site_id),
+            session,
+            Site,
+            dict(name=site_id),
             object_kwargs=dict(
-                name=site_id, campaign=campaign,
+                name=site_id,
+                campaign=campaign,
                 datetime=dt,
                 geom=geom,
                 doi=doi,
@@ -302,15 +297,16 @@ class UploadProfileData(BaseUpload):
         )
 
         attributes = dict(
+            # Required record information
+            depth=row["depth"],
+            bottom_depth=row.get("bottom_depth"),
+            value=row["value"],
+            comments=row["comments"],
             # Linked tables
             measurement_type=measurement_obj,
             site=site,
-            # Arguments from kwargs
-            depth=row["depth"],
-            bottom_depth=row.get("bottom_depth"),
-            comments=row["comments"],
-            value=row["value"],
         )
+
         # Link instrument when present
         if instrument is not None:
             attributes['instrument'] = instrument
