@@ -1,10 +1,10 @@
 import numpy as np
 import pytest
 from numpy.testing import assert_almost_equal
-from snowexsql.db import db_session_with_credentials
-from snowexsql.tables import MeasurementType
 from sqlalchemy import asc
 
+from snowexsql.db import db_session_with_credentials
+from snowexsql.tables import MeasurementType
 from tests.db_setup import DBSetup
 
 
@@ -65,7 +65,7 @@ class TableTestBase(DBSetup):
             filter_value: Value that attribute should be to filter db search
             query: If were extended a query use it instead of forming a new one
         Return:
-            q: Uncompiled SQLalchemy Query object
+            q: Uncompiled SQLAlchemy Query object
         """
 
         if query is None:
@@ -91,7 +91,7 @@ class TableTestBase(DBSetup):
         """
         Test that the first value in a filtered record search is as expected
         """
-        # Filter  to the data type were querying
+        # Filter to the queried data type
         with db_session_with_credentials() as (engine, session):
             q = self.filter_measurement_type(session, measurement_type)
 
@@ -111,7 +111,8 @@ class TableTestBase(DBSetup):
             # Compare arrays, treating NaNs as equal
             assert np.array_equal(np.array(received), np.array(expected), equal_nan=True)
         else:
-            assert pytest.approx(received) == expected, f"Assertion failed: Expected {expected}, but got {received}"
+            assert pytest.approx(received) == expected, \
+                f"Assertion failed: Expected {expected}, but got {received}"
 
     def check_unique_count(self, data_name, attribute_to_count, expected_count):
         """

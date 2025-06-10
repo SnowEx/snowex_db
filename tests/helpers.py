@@ -55,7 +55,7 @@ class WithUploadedFile(DBSetup):
 class WithUploadBatchFiles(WithUploadedFile):
     UploaderClass = UploadProfileBatch
 
-    def upload_file(self, fnames):
-        u = self.UploaderClass(**self.kwargs)
+    def upload_file(self, filenames):
+        u = self.UploaderClass(filenames=filenames, **self.kwargs)
 
         u.push()

@@ -4,19 +4,17 @@ to describing data.
 """
 import logging
 from dataclasses import dataclass
-from os.path import basename
 from typing import Union
 
-from insitupy.profiles.metadata import ProfileMetaData
 from insitupy.io.metadata import MetaDataParser
+from insitupy.profiles.metadata import ProfileMetaData
 from snowexsql.db import get_table_attributes
 from snowexsql.tables import Site
 
 from .interpretation import *
 from .projection import add_geom, reproject_point_in_dict
 from .string_management import *
-from .utilities import assign_default_kwargs, get_logger, read_n_lines
-
+from .utilities import assign_default_kwargs, get_logger
 
 LOG = logging.getLogger(__name__)
 
@@ -30,7 +28,7 @@ def read_InSar_annotation(ann_file):
 
     `DEM Original Pixel spacing (arcsec) = 1`
 
-    Where this is interpretted as:
+    Where this is interpreted as:
     `key (units) = [value]`
 
     Then stored in the dictionary as:

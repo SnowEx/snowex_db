@@ -15,7 +15,11 @@ class TestStratigraphyProfile(TableTestBase, WithUploadedFile):
     have integrity
     """
 
-    kwargs = {'timezone': 'MST', 'doi': 'Stratigraphy DOI', 'instrument': 'eye ball'}
+    kwargs = {
+        'timezone': 'MST',
+        'doi': 'Stratigraphy DOI',
+        'instrument': 'manual',
+    }
     UploaderClass = UploadProfileData
     TableClass = LayerData
 
@@ -26,14 +30,18 @@ class TestStratigraphyProfile(TableTestBase, WithUploadedFile):
     @pytest.mark.parametrize(
         "table, attribute, expected_value", [
             (Site, "name", "COGM1N20_20200205"),
-            (Site, "datetime", datetime(
-                2020, 2, 5, 20, 30, tzinfo=timezone.utc)
-             ),
-            (Site, "geom", WKTElement(
-                'POINT (-108.1894813320662 39.031261970372725)', srid=4326)
-             ),
+            (
+                Site, "datetime",
+                datetime(2020, 2, 5, 20, 30, tzinfo=timezone.utc),
+            ),
+            (
+                Site, "geom",
+                WKTElement(
+                    'POINT (-108.1894813320662 39.031261970372725)', srid=4326
+                ),
+            ),
             (Campaign, "name", "Grand Mesa"),
-            (Instrument, "name", "eye ball"),
+            (Instrument, "name", "manual"),
         ]
     )
     def test_metadata(self, table, attribute, expected_value, uploaded_file):
@@ -51,8 +59,8 @@ class TestStratigraphyProfile(TableTestBase, WithUploadedFile):
         ]
     )
     def test_value(
-            self, data_name, attribute_to_check,
-            filter_attribute, filter_value, expected, uploaded_file
+        self, data_name, attribute_to_check,
+        filter_attribute, filter_value, expected, uploaded_file
     ):
         self.check_value(
             data_name, attribute_to_check,
@@ -61,7 +69,7 @@ class TestStratigraphyProfile(TableTestBase, WithUploadedFile):
 
     @pytest.mark.parametrize(
         "data_name, expected", [
-            ("hand_hardness", 5)
+            ("hand_hardness", 5),
         ]
     )
     def test_count(self, data_name, expected, uploaded_file):
@@ -77,8 +85,10 @@ class TestStratigraphyProfile(TableTestBase, WithUploadedFile):
             ("grain_size", "value", 2),
         ]
     )
-    def test_unique_count(self, data_name, attribute_to_count, expected,
-                          uploaded_file):
+    def test_unique_count(
+        self, data_name, attribute_to_count, expected,
+        uploaded_file
+    ):
         self.check_unique_count(
             data_name, attribute_to_count, expected
         )
