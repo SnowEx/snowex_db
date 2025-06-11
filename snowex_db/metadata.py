@@ -101,20 +101,22 @@ class SnowExProfileMetadata(ProfileMetaData):
     """
     Extend the profile metadata to add more args
     """
-    aspect: Union[float, None] = None
-    slope: Union[float, None] = None
     air_temp: Union[float, None] = None
-    total_depth: Union[float, None] = None
-    weather_description: Union[str, None] = None
-    precip: Union[str, None] = None
-    sky_cover: Union[str, None] = None
-    wind: Union[str, None] = None
+    aspect: Union[float, None] = None
     ground_condition: Union[str, None] = None
     ground_roughness: Union[str, None] = None
     ground_vegetation: Union[str, None] = None
-    vegetation_height: Union[str, None] = None
-    tree_canopy: Union[str, None] = None
+    instrument: Union[str, None] = None
+    instrument_model: Union[str, None] = None
+    precip: Union[str, None] = None
     site_notes: Union[str, None] = None
+    sky_cover: Union[str, None] = None
+    slope: Union[float, None] = None
+    total_depth: Union[float, None] = None
+    tree_canopy: Union[str, None] = None
+    vegetation_height: Union[str, None] = None
+    weather_description: Union[str, None] = None
+    wind: Union[str, None] = None
 
 
 class ExtendedSnowExMetadataParser(MetaDataParser):
@@ -139,28 +141,30 @@ class ExtendedSnowExMetadataParser(MetaDataParser):
         self._rough_obj = self._preparse_meta(meta_lines)
         # Create a standard metadata object
         metadata = SnowExProfileMetadata(
-            site_name=self.parse_id(),
-            date_time=self.parse_date_time(),
-            latitude=self.parse_latitude(),
-            longitude=self.parse_longitude(),
-            utm_epsg=str(self.parse_utm_epsg()),
-            campaign_name=self.parse_campaign_name(),
-            flags=self.parse_flags(),
-            observers=self.parse_observers(),
-            aspect=self.parse_aspect(),
-            slope=self.parse_slope(),
             air_temp=self.parse_air_temp(),
-            total_depth=self.parse_total_depth(),
-            weather_description=self.parse_weather_description(),
-            precip=self.parse_precip(),
-            sky_cover=self.parse_sky_cover(),
-            wind=self.parse_wind(),
+            aspect=self.parse_aspect(),
+            campaign_name=self.parse_campaign_name(),
+            date_time=self.parse_date_time(),
+            flags=self.parse_flags(),
             ground_condition=self.parse_ground_condition(),
             ground_roughness=self.parse_ground_roughness(),
             ground_vegetation=self.parse_ground_vegetation(),
-            vegetation_height=self.parse_vegetation_height(),
-            tree_canopy=self.parse_tree_canopy(),
+            instrument=self.parse_header('INSTRUMENT'),
+            instrument_model=self.parse_header('INSTRUMENT_MODEL'),
+            latitude=self.parse_latitude(),
+            longitude=self.parse_longitude(),
+            observers=self.parse_observers(),
+            precip=self.parse_precip(),
+            site_name=self.parse_id(),
             site_notes=self.parse_site_notes(),
+            sky_cover=self.parse_sky_cover(),
+            slope=self.parse_slope(),
+            total_depth=self.parse_total_depth(),
+            tree_canopy=self.parse_tree_canopy(),
+            utm_epsg=str(self.parse_utm_epsg()),
+            vegetation_height=self.parse_vegetation_height(),
+            weather_description=self.parse_weather_description(),
+            wind=self.parse_wind(),
         )
 
         return metadata, columns, columns_map, header_position
@@ -204,6 +208,11 @@ class ExtendedSnowExMetadataParser(MetaDataParser):
                 result = manage_degree_values(v)
                 break
         return result
+
+    def parse_header(self, name):
+        return self.rough_obj.get(
+            self.metadata_variables.entries[name].code
+        )
 
     def parse_total_depth(self):
         return self.rough_obj.get(
