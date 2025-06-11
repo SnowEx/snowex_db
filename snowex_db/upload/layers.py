@@ -34,8 +34,8 @@ class DataValidationError(ValueError):
 
 class UploadProfileData(BaseUpload):
     """
-    Class for submitting a single profile. Since layers are uploaded layer by layer this allows for submitting them
-    one file at a time.
+    Class for submitting a single profile. Since layers are uploaded layer by
+    layer this allows for submitting them one file at a time.
     """
     expected_attributes = [c for c in dir(LayerData) if c[0] != '_']
     TABLE_CLASS = LayerData
@@ -68,22 +68,21 @@ class UploadProfileData(BaseUpload):
         adjusting column names
 
         Args:
-            profile_filename: Filename containing the a manually measured
-                             profile
+            profile_filename: Filename containing the profile
         Returns:
             list of ProfileData objects
         """
         try:
-            data = ExtendedSnowExProfileDataCollection.from_csv(
-                profile_filename, timezone=self._timezone,
-                header_sep=self._header_sep, site_id=self._id,
+            return ExtendedSnowExProfileDataCollection.from_csv(
+                profile_filename,
+                timezone=self._timezone,
+                header_sep=self._header_sep,
+                site_id=self._id,
                 campaign_name=self._campaign_name
             )
         except pd.errors.ParserError as e:
             LOG.error(e)
             raise RuntimeError(f"Failed reading {profile_filename}")
-
-        return data
 
     def build_data(self, profile: SnowExProfileData) -> gpd.GeoDataFrame:
         """
@@ -142,12 +141,6 @@ class UploadProfileData(BaseUpload):
             else:
                 df["comments"] = flag_string
 
-        if 'instrument' not in columns:
-            df["instrument"] = [self._instrument] * len(df)
-
-        if 'instrument_model' not in columns:
-            df['instrument_model'] = self._instrument_model
-
         return df
 
     def submit(self, session):
@@ -170,12 +163,16 @@ class UploadProfileData(BaseUpload):
                     session, profile.metadata
                 )
 
+                instrument = None
+                if 'instrument' not in df.columns.values:
+                    instrument = self._add_instrument(session, profile.metadata)
+
                 for row in df.to_dict(orient="records"):
                     if row.get('value') is 'None':
                         continue
 
                     d = self._add_entry(
-                        session, row, campaign, observer_list, site
+                        session, row, campaign, observer_list, site, instrument,
                     )
                     # session.bulk_save_objects(objects) does not resolve
                     # foreign keys, DO NOT USE IT
@@ -188,7 +185,7 @@ class UploadProfileData(BaseUpload):
                     ' expected. Skipping row submissions, and only inserting'
                     ' metadata.'
                 )
-                _ = self._add_metadata(session, profile.metadata)
+                self._add_metadata(session, profile.metadata)
 
     def _add_metadata(self, session, metadata: SnowExProfileMetadata):
         """
@@ -215,10 +212,9 @@ class UploadProfileData(BaseUpload):
             observer_list.append(observer)
 
         # DOI record
-        doi_string = self._doi
-        if doi_string is not None:
+        if self._doi is not None:
             doi = self._check_or_add_object(
-                session, DOI, dict(doi=doi_string)
+                session, DOI, dict(doi=self._doi)
             )
         else:
             doi = None
@@ -261,9 +257,31 @@ class UploadProfileData(BaseUpload):
             ))
         return campaign, observer_list, site
 
+    def _add_instrument(self, session, metadata: SnowExProfileMetadata):
+        """
+        Add or lookup an instrument in the DB.
+
+        Args:
+            session: The database session
+            metadata: SnowExProfileMetadata object
+
+        Returns:
+            Instrument DB record
+        """
+        # Give priority to passed information from kwargs
+        instrumen_name = self._instrument or metadata.instrument
+        instrument_model = self._instrument_model or metadata.instrument_model
+
+        return self._check_or_add_object(
+            session,
+            Instrument,
+            dict(name=instrumen_name, model=instrument_model)
+        )
+
+
     def _add_entry(
         self, session, row: dict, campaign: Campaign,
-        observer_list: List[Observer], site: Site
+        observer_list: List[Observer], site: Site, instrument: Instrument,
     ):
         """
 
@@ -273,12 +291,13 @@ class UploadProfileData(BaseUpload):
             campaign: Campaign object inserted into db
             observer_list: List of Observers inserted into db
             site: the Site inserted into db
+            instrument: Instrument found in metadata
 
         Returns:
 
         """
-        # Add instrument
-        instrument = None
+        # An instrument associated with a row has presedence over the
+        # given via arguments
         if row.get('instrument') is not None:
             instrument = self._check_or_add_object(
                 session, Instrument, dict(
@@ -298,22 +317,18 @@ class UploadProfileData(BaseUpload):
             )
         )
 
-        attributes = dict(
+        # Now that the other objects exist and create the entry.
+        new_entry = self.TABLE_CLASS(
             # Required record information
             depth=row["depth"],
             bottom_depth=row.get("bottom_depth"),
             value=row["value"],
             comments=row["comments"],
             # Linked tables
+            instrument=instrument,
             measurement_type=measurement_obj,
             site=site,
         )
-
-        # Link instrument when present
-        if instrument is not None:
-            attributes['instrument'] = instrument
-        # Now that the other objects exist and create the entry.
-        new_entry = self.TABLE_CLASS(**attributes)
 
         return new_entry
 

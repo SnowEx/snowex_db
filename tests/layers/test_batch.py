@@ -14,7 +14,8 @@ class TestUploadProfileBatch(TableTestBase, WithUploadBatchFiles):
     kwargs = {
         'in_timezone': 'MST',
         'doi': 'DOI-1234321',
-        'campaign_name': 'Campaign 1'
+        'campaign_name': 'Campaign 1',
+        'instrument': 'unknown',
     }
     UploaderClass = UploadProfileBatch
     TableClass = LayerData
