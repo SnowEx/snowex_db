@@ -46,15 +46,17 @@ class UploadProfileData(BaseUpload):
         self.filename = profile_filename
         self._timezone = timezone
         self._doi = kwargs.get("doi")
-        self._instrument = kwargs.get("instrument")
         self._header_sep = kwargs.get("header_sep", ",")
-        self._id = kwargs.get("id")
-        self._campaign_name = kwargs.get("campaign_name")
         # Is this file for derived measurements
         self._derived = kwargs.get("derived", False)
 
-        # SMP passed in
+        # Metadata overwrites
+        # TODO - Rename this to site_id
+        self._id = kwargs.get("id")
+        self._campaign_name = kwargs.get("campaign_name")
+        self._instrument = kwargs.get("instrument")
         self._instrument_model = kwargs.get("instrument_model")
+
         self._comments = kwargs.get("comments")
 
         # Read in data
