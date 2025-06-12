@@ -185,7 +185,7 @@ class UploadProfileData(BaseUpload):
                     instrument = self._add_instrument(profile.metadata)
 
                 for row in df.to_dict(orient="records"):
-                    if row.get('value') is 'None':
+                    if row.get('value') == 'None':
                         continue
 
                     d = self._add_entry(

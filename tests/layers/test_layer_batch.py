@@ -46,9 +46,9 @@ class TestUploadProfileBatch(TableTestBase, WithUploadBatchFiles):
         assert len(records) == 1
 
         site = records[0]
-        # The sratigraphy has 5 layers with 5 data points,
-        # plus 5 LWC measurements
-        assert len(site.layer_data) == 30
+        # The sratigraphy has 5 layers with 4 data points, plus one comment
+        # in a layer, plus 5 LWC measurements
+        assert len(site.layer_data) == 26
 
 
 class TestUploadProfileBatchErrors(TableTestBase):
