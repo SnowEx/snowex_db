@@ -28,8 +28,10 @@ class TestPollDepth(PointBaseTesting):
     TableClass = PointData
 
     @pytest.fixture(scope="class")
-    def uploaded_file(self, db, data_dir):
-        self.upload_file(str(data_dir.joinpath("pole_depths.csv")))
+    def uploaded_file(self, session, data_dir):
+        self.upload_file(
+            filename=str(data_dir.joinpath("pole_depths.csv")), session=session
+        )
 
     @pytest.mark.parametrize(
         "table, attribute, expected_value", [

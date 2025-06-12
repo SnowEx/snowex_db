@@ -3,9 +3,8 @@ import pytest
 from numpy.testing import assert_almost_equal
 from sqlalchemy import asc
 
-from snowexsql.db import db_session_with_credentials
+from snowexsql.db import initialize, db_session_with_credentials
 from snowexsql.tables import MeasurementType
-from tests.db_setup import DBSetup
 
 
 def safe_float(r):
@@ -30,7 +29,7 @@ def pytest_generate_tests(metafunc):
             )
 
 
-class TableTestBase(DBSetup):
+class TableTestBase:
     """
     Test any table by picking
     """
@@ -45,6 +44,16 @@ class TableTestBase(DBSetup):
 
     # Always define this using a table class from data.py and is used for ORM
     TableClass = None
+
+    @pytest.fixture(scope="class")
+    def session(self):
+        """
+        Interact with the DB when running tests.
+        """
+        with db_session_with_credentials() as (engine, session):
+            initialize(engine)
+
+            yield session
 
     def filter_measurement_type(self, session, measurement_type, query=None):
         if query is None:
@@ -61,6 +70,7 @@ class TableTestBase(DBSetup):
         to be
 
         Args:
+            session: DB Session object
             filter_attribute: Name of attribute to search for
             filter_value: Value that attribute should be to filter db search
             query: If were extended a query use it instead of forming a new one

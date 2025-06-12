@@ -25,8 +25,11 @@ class TestDensityProfile(TableTestBase, WithUploadedFile):
     TableClass = LayerData
 
     @pytest.fixture(scope="class")
-    def uploaded_file(self, db, data_dir):
-        self.upload_file(str(data_dir.joinpath("density.csv")))
+    def uploaded_file(self, session, data_dir):
+        self.upload_file(
+            filename=str(data_dir.joinpath("density.csv")),
+            session=session,
+        )
 
     @pytest.mark.parametrize(
         "table, attribute, expected_value", [
@@ -102,13 +105,14 @@ class TestDensityAlaska(TableTestBase, WithUploadedFile):
     TableClass = LayerData
 
     @pytest.fixture(scope="class")
-    def uploaded_file(self, db, data_dir):
+    def uploaded_file(self, session, data_dir):
         self.upload_file(
-            str(
+            filename=str(
                 data_dir.joinpath(
                     "SnowEx23_SnowPits_AKIOP_454SB_20230316_density_v01.csv"
                 )
-            )
+            ),
+            session=session,
         )
 
     @pytest.mark.parametrize(

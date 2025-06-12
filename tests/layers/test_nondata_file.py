@@ -25,8 +25,10 @@ class TestEmptyProfile(TableTestBase, WithUploadedFile):
     TableClass = LayerData
 
     @pytest.fixture(scope="class")
-    def uploaded_file(self, db, data_dir):
-        self.upload_file(str(data_dir.joinpath('empty_data.csv')))
+    def uploaded_file(self, session, data_dir):
+        self.upload_file(
+            filename=str(data_dir.joinpath('empty_data.csv')), session=session
+        )
 
     @pytest.mark.parametrize(
         "data_name, expected", [
@@ -38,7 +40,7 @@ class TestEmptyProfile(TableTestBase, WithUploadedFile):
         assert n == expected
 
 
-class TestMetadata(WithUploadedFile):
+class TestMetadata(TableTestBase, WithUploadedFile):
     """
     Test the large amount of metadata we get from the
     site details file
@@ -50,8 +52,10 @@ class TestMetadata(WithUploadedFile):
     UploaderClass = UploadProfileData
 
     @pytest.fixture
-    def uploaded_site_details_file(self, db, data_dir):
-        self.upload_file(str(data_dir.joinpath("site_details.csv")))
+    def uploaded_site_details_file(self, session, data_dir):
+        self.upload_file(
+            filename=str(data_dir.joinpath("site_details.csv")), session=session
+        )
 
     @pytest.mark.parametrize(
         "table, attribute, expected_value", [
