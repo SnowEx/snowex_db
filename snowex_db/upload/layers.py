@@ -139,14 +139,8 @@ class UploadProfileData(BaseUpload):
         columns = df.columns.values
         # Clean up comments a bit
         if 'comments' in columns:
-            df['comments'] = df['comments'].apply(
+            df['value'] = df['value'].apply(
                 lambda x: x.strip(' ') if isinstance(x, str) else x)
-            # Add pit comments
-            if profile.metadata.comments:
-                df["comments"] += profile.metadata.comments
-        else:
-            # Make comments to pit comments
-            df["comments"] = [profile.metadata.comments] * len(df)
 
         # In case of SMP, pass comments in
         if self._comments is not None:
@@ -250,26 +244,27 @@ class UploadProfileData(BaseUpload):
             Site,
             dict(name=site_id),
             object_kwargs=dict(
-                name=site_id,
-                campaign=campaign,
-                datetime=dt,
-                geom=geom,
-                doi=doi,
-                observers=observer_list,
-                aspect=metadata.aspect,
-                slope_angle=metadata.slope,
                 air_temp=metadata.air_temp,
-                total_depth=metadata.total_depth,
-                weather_description=metadata.weather_description,
-                precip=metadata.precip,
-                sky_cover=metadata.sky_cover,
-                wind=metadata.wind,
+                aspect=metadata.aspect,
+                campaign=campaign,
+                comments=metadata.comments,
+                datetime=dt,
+                doi=doi,
+                geom=geom,
                 ground_condition=metadata.ground_condition,
                 ground_roughness=metadata.ground_roughness,
                 ground_vegetation=metadata.ground_vegetation,
-                vegetation_height=metadata.vegetation_height,
-                tree_canopy=metadata.tree_canopy,
+                name=site_id,
+                observers=observer_list,
+                precip=metadata.precip,
                 site_notes=metadata.site_notes,
+                sky_cover=metadata.sky_cover,
+                slope_angle=metadata.slope,
+                total_depth=metadata.total_depth,
+                tree_canopy=metadata.tree_canopy,
+                vegetation_height=metadata.vegetation_height,
+                weather_description=metadata.weather_description,
+                wind=metadata.wind,
             ))
         return campaign, observer_list, site
 
@@ -294,7 +289,6 @@ class UploadProfileData(BaseUpload):
             dict(name=instrumen_name, model=instrument_model)
         )
 
-
     def _add_entry(
         self, row: dict, campaign: Campaign,
         observer_list: List[Observer], site: Site, instrument: Instrument,
@@ -311,7 +305,7 @@ class UploadProfileData(BaseUpload):
         Returns:
 
         """
-        # An instrument associated with a row has presedence over the
+        # An instrument associated with a row has precedence over the
         # given via arguments
         if row.get('instrument') is not None:
             instrument = self._check_or_add_object(
@@ -340,7 +334,6 @@ class UploadProfileData(BaseUpload):
             depth=row["depth"],
             bottom_depth=row.get("bottom_depth"),
             value=row["value"],
-            comments=row["comments"],
             # Linked tables
             instrument=instrument,
             measurement_type=measurement_obj,
