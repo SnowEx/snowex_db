@@ -13,6 +13,13 @@ from .metadata import ExtendedSnowExMetadataParser
 
 class ExtendedSnowexProfileData(SnowExProfileData):
     META_PARSER = ExtendedSnowExMetadataParser
+    DEFAULT_METADATA_VARIABLE_FILES = (
+        SnowExProfileData.DEFAULT_METADATA_VARIABLE_FILES
+    ) + [
+      Path(__file__).parent.joinpath(
+          "./metadata_variable_overrides.yaml"
+      )
+    ]
     DEFAULT_PRIMARY_VARIABLE_FILES = (
         SnowExProfileData.DEFAULT_PRIMARY_VARIABLE_FILES) + [
         Path(__file__).parent.joinpath(

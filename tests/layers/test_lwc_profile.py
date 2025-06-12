@@ -18,6 +18,7 @@ class TestLWCProfile(TableTestBase, WithUploadedFile):
     kwargs = {
         'timezone': 'MST',
         'doi': "some_lwc_doi",
+        'instrument': 'A2 sensor',
     }
     UploaderClass = UploadProfileData
     TableClass = LayerData

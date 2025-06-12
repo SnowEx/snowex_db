@@ -1,5 +1,5 @@
 import pytest
-from snowexsql.tables import LayerData
+from snowexsql.tables import LayerData, Site
 
 from snowex_db.upload.layers import UploadProfileBatch
 from tests.helpers import WithUploadBatchFiles
@@ -14,7 +14,8 @@ class TestUploadProfileBatch(TableTestBase, WithUploadBatchFiles):
     kwargs = {
         'in_timezone': 'MST',
         'doi': 'DOI-1234321',
-        'campaign_name': 'Campaign 1'
+        'campaign_name': 'Campaign 1',
+        'instrument': 'unknown',
     }
     UploaderClass = UploadProfileBatch
     TableClass = LayerData
@@ -35,6 +36,19 @@ class TestUploadProfileBatch(TableTestBase, WithUploadBatchFiles):
     def test_count(self, data_name, expected):
         n = self.check_count(data_name)
         assert n == expected
+
+    def test_only_one_site(self):
+        """
+        The three CSVs are for the same site. Verify we only create one
+        Site record and properly associate the layer information with it.
+        """
+        records = self.get_records(Site, 'name', 'COGM1N20_20200205')
+        assert len(records) == 1
+
+        site = records[0]
+        # The sratigraphy has 5 layers with 5 data points,
+        # plus 5 LWC measurements
+        assert len(site.layer_data) == 30
 
 
 class TestUploadProfileBatchErrors(TableTestBase):

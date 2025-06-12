@@ -20,7 +20,6 @@ class TestSMPProfile(TableTestBase, WithUploadedFile):
         'timezone': 'UTC',
         'header_sep': ':',
         'instrument': 'snowmicropen',
-        'instrument_model': '06',
         'id': "COGM_Fakepitid123",
         'campaign_name': "Grand Mesa",
         "derived": True,
@@ -51,7 +50,7 @@ class TestSMPProfile(TableTestBase, WithUploadedFile):
             ),
             (Campaign, "name", "Grand Mesa"),
             (Instrument, "name", "snowmicropen"),
-            (Instrument, "model", "06"),
+            (Instrument, "model", "6"),
             (MeasurementType, "name", ["force"]),
             (MeasurementType, "units", ["n"]),
             (MeasurementType, "derived", [True]),
@@ -59,8 +58,6 @@ class TestSMPProfile(TableTestBase, WithUploadedFile):
     )
     def test_metadata(self, table, attribute, expected_value, uploaded_file):
         # need:
-        #  * instrument.name = smp
-        #  * instrument.model = smp instrument id - SMP Serial Number: 19
         #  * comments = "Filename: filename"
         self._check_metadata(table, attribute, expected_value)
 

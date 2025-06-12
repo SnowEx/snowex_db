@@ -96,6 +96,7 @@ class TestDensityAlaska(TableTestBase, WithUploadedFile):
         'timezone': 'US/Alaska',
         'header_sep': ':',
         'doi': 'DOI-1234321',
+        'instrument': 'density cutter'
     }
     UploaderClass = UploadProfileData
     TableClass = LayerData

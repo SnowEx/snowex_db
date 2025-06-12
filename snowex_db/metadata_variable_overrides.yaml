@@ -1,0 +1,17 @@
+INSTRUMENT_MODEL:
+  auto_remap: true
+  code: instrument_model
+  description: Details to an instrument
+  map_from:
+    - smp_serial_number
+    - wise_serial_no
+    - lwc_serial_#
+IGNORE:
+  auto_remap: false
+  code: ignore
+  description: Ignore this
+  map_from:
+    - profile_id
+    - timing
+    - original_total_samples
+    - data_subsampled_to

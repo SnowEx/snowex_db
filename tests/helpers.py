@@ -22,6 +22,11 @@ class WithUploadedFile(DBSetup):
             else:
                 u.submit(session)
 
+    def get_records(self, table, attribute, value):
+        with db_session_with_credentials() as (engine, session):
+            attribute = getattr(table, attribute)
+            return session.query(table).filter(attribute == value).all()
+
     def get_value(self, table, attribute):
         with db_session_with_credentials() as (engine, session):
             obj = getattr(table, attribute)
