@@ -353,43 +353,6 @@ class UploadProfileData(BaseUpload):
 class UploadProfileBatch(BatchBase):
     """
     Class for submitting multiple files of profile type data.
-
-    Attributes:
-        smp_log_f: CSV providing metadata for profile_filenames.
     """
 
     UploaderClass = UploadProfileData
-
-    def push(self):
-        """
-        An overwritten push function to account for managing SMP meta data.
-        """
-        self.start = time.time()
-
-        i = 0
-
-        # Loop over all the ssa files and upload them
-        if self.n_files != -1:
-            self.filenames[0:self.n_files]
-
-        for i, f in enumerate(self.filenames):
-
-            # if smp_file:
-            #     extras = self.smp_log.get_metadata(f)
-            #     meta.update(extras)
-
-            # If were not debugging script allow exceptions and report them
-            # later
-            if not self.debug:
-                try:
-                    self._push_one(f, **self._kwargs)
-
-                except Exception as e:
-                    self.log.error('Error with {}'.format(f))
-                    self.log.error(e)
-                    self.errors.append((f, e))
-
-            else:
-                self._push_one(f, **self._kwargs)
-
-        self.report(i + 1)
