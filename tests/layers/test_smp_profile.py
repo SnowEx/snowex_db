@@ -66,6 +66,7 @@ class TestSMPProfile(TableTestBase, WithUploadedFile):
         #  * comments = "Filename: filename"
         self._check_metadata(table, attribute, expected_value)
 
+    @pytest.mark.usefixtures("uploaded_file")
     @pytest.mark.parametrize(
         "data_name, attribute_to_check, filter_attribute, "
         "filter_value, expected",
@@ -75,30 +76,31 @@ class TestSMPProfile(TableTestBase, WithUploadedFile):
     )
     def test_value(
         self, data_name, attribute_to_check,
-        filter_attribute, filter_value, expected, uploaded_file
+        filter_attribute, filter_value, expected
     ):
         self.check_value(
             data_name, attribute_to_check,
             filter_attribute, filter_value, expected,
         )
 
+    @pytest.mark.usefixtures("uploaded_file")
     @pytest.mark.parametrize(
         "data_name, expected", [
             ("force", 154),
         ]
     )
-    def test_count(self, data_name, expected, uploaded_file):
+    def test_count(self, data_name, expected):
         n = self.check_count(data_name)
         assert n == expected
 
+    @pytest.mark.usefixtures("uploaded_file")
     @pytest.mark.parametrize(
         "data_name, attribute_to_count, expected", [
             ("force", "site_id", 1),
         ]
     )
     def test_unique_count(
-        self, data_name, attribute_to_count, expected,
-        uploaded_file
+        self, data_name, attribute_to_count, expected
     ):
         self.check_unique_count(
             data_name, attribute_to_count, expected
