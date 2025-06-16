@@ -2,25 +2,19 @@
 Module for classes that upload single files to the database.
 """
 
-from pathlib import Path
-import pandas as pd
-import geopandas as gpd
 import logging
-from typing import List
+
+import geopandas as gpd
+import pandas as pd
 from geoalchemy2 import WKTElement
+
 from snowexsql.tables import (
-    PointData, MeasurementType, Instrument, DOI, Campaign, Observer,
+    Campaign, DOI, Instrument, MeasurementType, Observer, PointData,
     PointObservation
 )
-from snowexsql.tables.campaign_observation import CampaignObservation
-
-from ..metadata import SnowExProfileMetadata
-from ..point_metadata import PointSnowExMetadataParser
-from ..string_management import parse_none
-from ..point_data import PointDataCollection, SnowExPointData
-
 from .base import BaseUpload
-
+from ..point_data import PointDataCollection, SnowExPointData
+from ..string_management import parse_none
 
 LOG = logging.getLogger("snowex_db.upload.points")
 
@@ -50,8 +44,9 @@ class PointDataCSV(BaseUpload):
         'density': 'kg/m^3'
     }
 
-    def __init__(self, profile_filename, timezone="US/Mountain", **kwargs):
-        self.filename = profile_filename
+    def __init__(self, session, filename, timezone="US/Mountain", **kwargs):
+        self.filename = filename
+        self._session = session
         self._timezone = timezone
         self._doi = kwargs.get("doi")
         self._instrument = kwargs.get("instrument")
@@ -70,7 +65,7 @@ class PointDataCSV(BaseUpload):
         # assign name to each measurement if given
         self._name = kwargs.get("name")
 
-        # Assign if details are row based (generally for the SWE files)
+        # Assign if details are row-based (generally for the SWE files)
         self._row_based_tz = kwargs.get("row_based_timezone", False)
         # TODO: what do we do here?
         if self._row_based_tz:
@@ -79,24 +74,26 @@ class PointDataCSV(BaseUpload):
             in_timezone = timezone
 
         # Read in data
-        self.data = self._read(profile_filename, in_timezone=in_timezone)
+        self.data = self._read(in_timezone=in_timezone)
 
-    def _read(self, filename, in_timezone=None):
+    def _read(self, in_timezone=None):
         """
         Read in the csv
         """
         try:
             # TODO: row based crs, tz options
             data = PointDataCollection.from_csv(
-                filename, timezone=self._timezone,
-                header_sep=self._header_sep, site_id=self._id,
+                self.filename,
+                timezone=self._timezone,
+                header_sep=self._header_sep,
+                site_id=self._id,
                 campaign_name=self._campaign_name,
                 units_map=self.UNITS_MAP,
                 row_based_timezone=self._row_based_tz
             )
         except pd.errors.ParserError as e:
             LOG.error(e)
-            raise RuntimeError(f"Failed reading {filename}")
+            raise RuntimeError(f"Failed reading {self.filename}")
 
         return data
 
@@ -157,13 +154,10 @@ class PointDataCSV(BaseUpload):
 
         return df
 
-    def submit(self, session):
+    def submit(self):
         """
         Submit values to the db from dictionary. Manage how some profiles have
         multiple values and get submitted individual
-
-        Args:
-            session: SQLAlchemy session
         """
 
         # Construct a dataframe with all metadata
@@ -175,9 +169,7 @@ class PointDataCSV(BaseUpload):
                 # IMPORTANT: Add observations first, so we can use them in the
                 # entries
                 # TODO: how do these link back?
-                self._add_campaign_observation(
-                    session, df
-                )
+                self._add_campaign_observation(df)
 
                 for row in df.to_dict(orient="records"):
                     row["geometry"] = WKTElement(
@@ -186,11 +178,11 @@ class PointDataCSV(BaseUpload):
                     )
 
                     # TODO: instrument name logic here?
-                    d = self._add_entry(session, row)
+                    d = self._add_entry(row)
                     # session.bulk_save_objects(objects) does not resolve
                     # foreign keys, DO NOT USE IT
-                    session.add(d)
-                    session.commit()
+                    self._session.add(d)
+                    self._session.commit()
             else:
                 # procedure to still upload metadata (sites, etc)
                 LOG.warning(
@@ -219,7 +211,7 @@ class PointDataCSV(BaseUpload):
             )
         return unique_values[0]
 
-    def _add_campaign_observation(self, session, df):
+    def _add_campaign_observation(self, df):
         """
         Add the campaign observation and each of the entries it is linked to
         Returns:
@@ -239,7 +231,7 @@ class PointDataCSV(BaseUpload):
                 instrument_name.lower(), instrument_name
             )
             instrument = self._check_or_add_object(
-                session, Instrument, dict(
+                self._session, Instrument, dict(
                     name=instrument_name,
                     model=self._get_first_check_unique(grouped_df, 'instrument_model')
                 )
@@ -251,7 +243,7 @@ class PointDataCSV(BaseUpload):
             )
             measurement_obj = self._check_or_add_object(
                 # Add units and 'derived' flag for the measurement
-                session, MeasurementType, dict(
+                self._session, MeasurementType, dict(
                     name=measurement_type,
                     units=self._get_first_check_unique(grouped_df, "units"),
                     derived=self._derived
@@ -267,7 +259,7 @@ class PointDataCSV(BaseUpload):
             doi_string = self._get_first_check_unique(df, "doi")
             if doi_string is not None:
                 doi = self._check_or_add_object(
-                    session, DOI, dict(doi=doi_string)
+                    self._session, DOI, dict(doi=doi_string)
                 )
             else:
                 doi = None
@@ -278,7 +270,7 @@ class PointDataCSV(BaseUpload):
             if campaign_name is None:
                 raise DataValidationError("Campaign cannot be None")
             campaign = self._check_or_add_object(
-                session, Campaign, dict(name=campaign_name)
+                self._session, Campaign, dict(name=campaign_name)
             )
             # add observer
             observer_name = self._get_first_check_unique(
@@ -286,7 +278,7 @@ class PointDataCSV(BaseUpload):
             ) or self._observer
             observer_name = observer_name or "unknown"
             observer = self._check_or_add_object(
-                session, Observer, dict(name=observer_name)
+                self._session, Observer, dict(name=observer_name)
             )
             description = None
             if ["comments"] in grouped_df.columns.values:
@@ -296,7 +288,7 @@ class PointDataCSV(BaseUpload):
 
             date_obj = self._get_first_check_unique(grouped_df, "date")
             observation = self._check_or_add_object(
-                session, PointObservation, dict(
+                self._session, PointObservation, dict(
                     name=measurement_name,
                     date=date_obj,
                     instrument=instrument,
@@ -317,23 +309,19 @@ class PointDataCSV(BaseUpload):
                 )
             )
 
-    def _add_entry(
-            self, session, row: dict
-    ):
+    def _add_entry(self, row: dict):
         """
-
         Args:
-            session: db session object
             row: dataframe row of data to add
         Returns:
-
+            Added record object
         """
         observation_kwargs = dict(
             name=self._observation_name_from_row(row),
             date=row["datetime"].date()
         )
         # Get the observation object
-        observation = session.query(PointObservation).filter_by(
+        observation = self._session.query(PointObservation).filter_by(
             **observation_kwargs
         ).first()
         if not observation:

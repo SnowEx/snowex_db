@@ -24,8 +24,10 @@ class TestSSAProfile(TableTestBase, WithUploadedFile):
     TableClass = LayerData
 
     @pytest.fixture(scope="class")
-    def uploaded_file(self, db, data_dir):
-        self.upload_file(str(data_dir.joinpath("SSA.csv")))
+    def uploaded_file(self, session, data_dir):
+        self.upload_file(
+            filename=str(data_dir.joinpath("SSA.csv")), session=session
+        )
 
     @pytest.mark.parametrize(
         "table, attribute, expected_value", [

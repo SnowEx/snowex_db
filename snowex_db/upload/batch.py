@@ -6,8 +6,6 @@ import glob
 import time
 from os.path import abspath, basename, expanduser, join
 
-from snowexsql.db import db_session_with_credentials
-
 from snowex_db.interpretation import get_InSar_flight_comment
 from snowex_db.metadata import (DataHeader, read_InSar_annotation)
 from snowex_db.upload.rasters import UploadRaster
@@ -36,11 +34,12 @@ class BatchBase:
     UploaderClass = None
 
     def __init__(
-            self, filenames, n_files=-1, debug=False, **kwargs
+            self, session, filenames, n_files=-1, debug=False, **kwargs
     ):
         """
         Args:
             filenames: List of valid files to be uploaded to the database
+            session: The DB session object
             n_files: Integer number of files to upload (useful for testing),
                      Default=-1 (meaning all of the files)
             debug:  Boolean that allows exceptions when uploading files, when
@@ -49,6 +48,7 @@ class BatchBase:
                     Class. Any kwargs not recognized will be merged into a
                     comment.
         """
+        self._session = session
         self.filenames = filenames
         self._kwargs = kwargs
         # Grab logger
@@ -93,7 +93,7 @@ class BatchBase:
                     self.errors.append((f, e))
 
             else:
-                self._push_one(f, **self.meta)
+                self._push_one(f, **self._kwargs)
 
         # Log the ending errors
         self.report(i + 1)
@@ -106,12 +106,11 @@ class BatchBase:
             f: valid file to upload
         """
 
-        d = self.UploaderClass(f, **kwargs)
+        d = self.UploaderClass(self._session, f, **kwargs)
 
         # Submit the data to the database
         self.log.info('Submitting to database')
-        with db_session_with_credentials() as (_engine, session):
-            d.submit(session)
+        d.submit()
         self.uploaded += 1
 
     def report(self, files_attempted):
@@ -245,8 +244,7 @@ class UploadUAVSARBatch(BatchBase):
 
             # Submit the data to the database
             self.log.info('Submitting to database')
-            with db_session_with_credentials() as (_engine, session):
-                d.submit(session)
+            d.submit(self._session)
 
         # Uploaded set
         self.uploaded += 1

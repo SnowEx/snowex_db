@@ -30,8 +30,11 @@ class TestSMPProfile(TableTestBase, WithUploadedFile):
     TableClass = LayerData
 
     @pytest.fixture(scope="class")
-    def uploaded_file(self, db, data_dir):
-        self.upload_file(str(data_dir.joinpath("S06M0874_2N12_20200131.CSV")))
+    def uploaded_file(self, session, data_dir):
+        self.upload_file(
+            filename=str(data_dir.joinpath("S06M0874_2N12_20200131.CSV")),
+            session=session,
+        )
 
     @pytest.mark.parametrize(
         "table, attribute, expected_value", [

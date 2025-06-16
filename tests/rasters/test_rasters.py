@@ -15,7 +15,7 @@ from snowex_db.upload.rasters import COGHandler, UploadRaster
 from snowexsql.conversions import raster_to_rasterio
 from snowexsql.functions import ST_PixelAsPoint
 from snowexsql.tables import ImageData
-from .sql_test_base import DBSetup, TableTestBase
+from tests.sql_test_base import TableTestBase
 
 
 class TestRaster(TableTestBase):
@@ -143,7 +143,7 @@ class TestCogHandler:
         ]
 
 
-class TestTiledRaster(DBSetup):
+class TestTiledRaster():
     """
     A class to test common operations and features of tiled raster in the DB
     """
