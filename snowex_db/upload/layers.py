@@ -79,7 +79,7 @@ class UploadProfileData(BaseUpload):
         self._instrument = kwargs.get("instrument")
         self._instrument_model = kwargs.get("instrument_model")
 
-        self._comments = kwargs.get("comments")
+        self._comments = kwargs.get("comments", '')
 
         # Read in data
         self.data = self._read()
@@ -141,10 +141,6 @@ class UploadProfileData(BaseUpload):
         if 'comments' in columns:
             df['value'] = df['value'].apply(
                 lambda x: x.strip(' ') if isinstance(x, str) else x)
-
-        # In case of SMP, pass comments in
-        if self._comments is not None:
-            df["comments"] = [self._comments] * len(df)
 
         # Add flags to the comments.
         flag_string = metadata.flags
@@ -236,6 +232,14 @@ class UploadProfileData(BaseUpload):
             f"Point ({metadata.longitude} {metadata.latitude})",
             srid=4326
         )
+        # Combine found comments and passed in comments to this class
+        comments = '; '.join(
+            [
+                comment for comment in [metadata.comments,  self._comments]
+                if comment is not None
+
+            ]
+        )
         # Site record
         site_id = metadata.site_name
 
@@ -247,7 +251,7 @@ class UploadProfileData(BaseUpload):
                 air_temp=metadata.air_temp,
                 aspect=metadata.aspect,
                 campaign=campaign,
-                comments=metadata.comments,
+                comments=comments,
                 datetime=dt,
                 doi=doi,
                 geom=geom,

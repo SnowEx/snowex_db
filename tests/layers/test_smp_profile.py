@@ -36,6 +36,7 @@ class TestSMPProfile(TableTestBase, WithUploadedFile):
             session=session,
         )
 
+    @pytest.mark.usefixtures("uploaded_file")
     @pytest.mark.parametrize(
         "table, attribute, expected_value", [
             (Site, "name", "COGM_Fakepitid123"),
@@ -51,6 +52,7 @@ class TestSMPProfile(TableTestBase, WithUploadedFile):
                     'POINT (-108.16268920898438 39.03013229370117)', srid=4326
                 ),
             ),
+            (Site, "comments", "Filename: S06M0874_2N12_20200131.CSV"),
             (Campaign, "name", "Grand Mesa"),
             (Instrument, "name", "snowmicropen"),
             (Instrument, "model", "6"),
@@ -59,7 +61,7 @@ class TestSMPProfile(TableTestBase, WithUploadedFile):
             (MeasurementType, "derived", [True]),
         ]
     )
-    def test_metadata(self, table, attribute, expected_value, uploaded_file):
+    def test_metadata(self, table, attribute, expected_value):
         # need:
         #  * comments = "Filename: filename"
         self._check_metadata(table, attribute, expected_value)
@@ -69,10 +71,6 @@ class TestSMPProfile(TableTestBase, WithUploadedFile):
         "filter_value, expected",
         [
             ('force', 'value', 'depth', -53.17, [0.331]),
-            (
-                'force', 'comments', 'depth', -53.17,
-                ['Filename: S06M0874_2N12_20200131.CSV'],
-            ),
         ]
     )
     def test_value(
