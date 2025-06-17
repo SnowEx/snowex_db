@@ -27,13 +27,12 @@ def main():
 
     with db_session_with_credentials() as (_engine, session):
         for f in profiles:
-            uploader = PointDataCSV(f, 
+            uploader = PointDataCSV(session,
+                                    filename=f, 
                                     campaign_name=site_name,
                                     doi=doi,
                                     instrument=instrument,
                                     site_name=site_name, 
                                     timezone=timezone)
-            uploader.submit(session)
-
 if __name__ == '__main__':
     main()
