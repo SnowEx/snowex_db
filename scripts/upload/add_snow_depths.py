@@ -16,7 +16,7 @@ from snowexsql.db import db_session_with_credentials
 def main():
     # Site name
     site_name = 'Grand Mesa'
-    timezone = 'MST'
+    timezone = 'US/Mountain'
     doi = 'https://doi.org/10.5067/9IA978JIACAR'
     instrument = 'magnaprobe'
 
