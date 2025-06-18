@@ -18,7 +18,6 @@ def main():
     site_name = 'Grand Mesa'
     timezone = 'US/Mountain'
     doi = 'https://doi.org/10.5067/9IA978JIACAR'
-    instrument = 'magnaprobe'
 
     # Read in the Grand Mesa Snow Depths Data
     base = abspath(join('../download/data/SNOWEX/SNEX20_SD.001/'))
@@ -31,7 +30,6 @@ def main():
                                     filename=f, 
                                     campaign_name=site_name,
                                     doi=doi,
-                                    instrument=instrument,
                                     site_name=site_name, 
                                     timezone=timezone)
 if __name__ == '__main__':
