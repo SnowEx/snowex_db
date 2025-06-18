@@ -22,7 +22,7 @@ class TestUploadProfileBatch(TableTestBase, WithUploadBatchFiles):
 
     @pytest.fixture(scope="class")
     def uploaded_file(self, session, data_dir):
-        fnames = ['site_details.csv', 'stratigraphy.csv', 'temperature.csv']
+        fnames = ['site_details_2020.csv', 'stratigraphy.csv', 'temperature.csv']
         fpaths = [str(data_dir.joinpath(f)) for f in fnames]
         self.upload_file(fpaths, session)
 
@@ -37,6 +37,7 @@ class TestUploadProfileBatch(TableTestBase, WithUploadBatchFiles):
         n = self.check_count(data_name)
         assert n == expected
 
+    @pytest.mark.usefixtures("uploaded_file")
     def test_only_one_site(self):
         """
         The three CSVs are for the same site. Verify we only create one
@@ -46,7 +47,7 @@ class TestUploadProfileBatch(TableTestBase, WithUploadBatchFiles):
         assert len(records) == 1
 
         site = records[0]
-        # The sratigraphy has 5 layers with 4 data points, plus one comment
+        # The stratigraphy has 5 layers with 4 data points, plus one comment
         # in a layer, plus 5 LWC measurements
         assert len(site.layer_data) == 26
 

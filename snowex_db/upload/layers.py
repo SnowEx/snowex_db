@@ -261,7 +261,6 @@ class UploadProfileData(BaseUpload):
                 name=site_id,
                 observers=observer_list,
                 precip=metadata.precip,
-                site_notes=metadata.site_notes,
                 sky_cover=metadata.sky_cover,
                 slope_angle=metadata.slope,
                 total_depth=metadata.total_depth,
