@@ -32,5 +32,6 @@ def main():
                                     doi=doi,
                                     site_name=site_name, 
                                     timezone=timezone)
+            uploader.submit()
 if __name__ == '__main__':
     main()
