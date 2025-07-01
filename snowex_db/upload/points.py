@@ -28,11 +28,6 @@ LOG = logging.getLogger("snowex_db.upload.points")
 class DataValidationError(ValueError):
     pass
 
-# TODO: do we need to make a SnowExPointDataCollection similar to
-#   SnowExProfileDataCollection, since some files will have more than one point
-#   measurement per file? This is true for GPR, summary swe, etc
-# TODO: start with test datasets for simpler examples
-
 
 class PointDataCSV(BaseUpload):
     """
@@ -51,6 +46,24 @@ class PointDataCSV(BaseUpload):
     }
 
     def __init__(self, profile_filename, timezone="US/Mountain", **kwargs):
+        """
+
+        Args:
+            profile_filename:
+            timezone:
+            **kwargs:
+                doi
+                instrument
+                header_sep
+                id
+                campaign_name
+                derived
+                instrument_model
+                comments
+                observer
+                name
+                row_based_timezone
+        """
         self.filename = profile_filename
         self._timezone = timezone
         self._doi = kwargs.get("doi")

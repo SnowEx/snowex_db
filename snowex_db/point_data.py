@@ -80,7 +80,8 @@ class SnowExPointData(MeasurementData):
             profile_filename, header=0,
             skiprows=header_position,
             names=columns,
-            encoding='latin'
+            encoding='latin',
+            dtype=str  # treat all columns as strings to get weird date format
         )
         if "flags" in df.columns:
             # Max length of the flags column
@@ -106,9 +107,7 @@ class SnowExPointData(MeasurementData):
             else:
                 raise RuntimeError("No valid location found in row or metadata.")
 
-        row["latitude"] = lat
-        row["longitude"] = lon
-        return row
+        return lat, lon
 
     def _get_datetime(self, row):
         """
@@ -142,18 +141,7 @@ class SnowExPointData(MeasurementData):
                 result = self.metadata.date_time
             else:
                 raise e
-        row["datetime"] = result
-        return row
-
-    @classmethod
-    def _get_campaign(cls, row):
-        """
-        fill in the campaign info for a row
-        Args:
-            row: pandas row
-        """
-        row["campaign"] = row.get(YamlCodes.SITE_NAME)
-        return row
+        return result
 
     def _format_df(self, input_df):
         """
@@ -166,11 +154,17 @@ class SnowExPointData(MeasurementData):
         # Verify the sample column exists and rename to variable
         df = self._check_sample_columns(input_df)
 
-        df = df.apply(self._get_campaign, axis=1)
+        # Get the campaign name
+        df["campaign"] = df.get(YamlCodes.SITE_NAME)
+        # TODO: How do we speed this up?
+        #   campaign should be very quick with a df level logic
+        #   but the other ones will take morelogic
         # parse the location
-        df = df.apply(self._get_location, axis=1)
+        df[["latitude", "longitude"]] = df.apply(
+            self._get_location, axis=1, result_type="expand"
+        )
         # Parse the datetime
-        df = df.apply(self._get_datetime, axis=1)
+        df["datetime"] = df.apply(self._get_datetime, axis=1, result_type="expand")
 
         location = gpd.points_from_xy(
             df["longitude"], df["latitude"]
