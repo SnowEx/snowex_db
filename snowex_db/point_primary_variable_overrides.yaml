@@ -67,6 +67,7 @@ IGNORE:
   - version_number
   - avgvelocity
   - count
+  - site
   match_on_code: true
 INSTRUMENT:
   auto_remap: true
@@ -224,3 +225,26 @@ WIND_SPEED_10FT:
   map_from:
   - wsms_10ft_avg
   match_on_code: true
+SITE_NAME:
+  auto_remap: true
+  code: site_name
+  description: Name of campaign site
+  map_from:
+  - location
+  match_on_code: true
+NAME:
+    auto_remap: true
+    code: name
+    description: Name of the measurement
+    map_from:
+    - pit_id
+    - pitid
+    match_on_code: true
+COMMENTS:
+    auto_remap: false
+    code: comments
+    description: Comments
+    map_from:
+      - comments
+      - flag
+    match_on_code: true

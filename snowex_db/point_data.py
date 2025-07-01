@@ -1,7 +1,7 @@
 import logging
 from pathlib import Path
 from typing import List
-
+from timezonefinder import TimezoneFinder
 import numpy as np
 import pandas as pd
 import geopandas as gpd
@@ -118,7 +118,13 @@ class SnowExPointData(MeasurementData):
         tz = self._in_timezone
         if self._row_based_timezone:
             # TODO: do we have to look it up?
-            raise NotImplementedError("?")
+            # TODO: Look up the timezone for the location and apply that
+            tz = None
+
+            timezone_str = TimezoneFinder().timezone_at(
+                lat=row["latitude"], lng=row["longitude"]
+            )
+            tz = timezone_str  # e.g., 'America/Denver'
         try:
             datetime = None
             # In case we found a date entry that has date and time
@@ -219,7 +225,6 @@ class PointDataCollection:
 
         """
         result = []
-        # TODO: how does the metadata parser fit into this?
         if columns is None and header_pos is None:
             LOG.warning(f"File {fname} is empty of rows")
             df = pd.DataFrame()
