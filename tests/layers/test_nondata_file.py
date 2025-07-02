@@ -59,7 +59,7 @@ class TestMetadata2020(TableTestBase, WithUploadedFile):
 
     @pytest.fixture
     def site_records(self, uploaded_site_details_file, session):
-        return self.get_records(Site, "name", "COGM1N20_20200205")
+        return self.get_records(session, Site, "name", "COGM1N20_20200205")
 
     @pytest.mark.parametrize(
         "attribute, expected_value", [
