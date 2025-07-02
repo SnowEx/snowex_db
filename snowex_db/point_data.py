@@ -134,8 +134,10 @@ class SnowExPointData(MeasurementData):
         """
         self._set_column_mappings()
 
-        # Verify the sample column exists and rename to variable
-        self._check_sample_columns()
+        # If the variable is real (not -1), check columns
+        if self.variable.code != "-1":
+            # Verify the sample column exists and rename to variable
+            self._check_sample_columns()
 
         # Get the campaign name
         if "campaign" not in self._df.columns:
@@ -239,13 +241,15 @@ class PointDataCollection:
         for column in variable_columns:
             points = cls.DATA_CLASS(
                 variable=all_file.meta_columns_map[column],
-                meta_parser=meta_parser
+                meta_parser=meta_parser,
+                timezone=timezone, row_based_timezone=row_based_timezone
             )
             # IMPORTANT - Metadata needs to be set before assigning the
             # dataframe as information from the metadata is used to format_df
             # the information
             points.metadata = all_file.metadata
-            points.df = all_file.df.loc[:, shared_columns + [column]].copy()
+            points.from_csv(fname)
+            points.df = points.df.loc[:, shared_columns + [column]].copy()
             # --------
             result.append(points)
 
