@@ -109,7 +109,7 @@ class PointDataCSV(BaseUpload):
                 campaign_name=self._campaign_name,
                 units_map=self.UNITS_MAP,
                 row_based_timezone=self._row_based_tz,
-                primary_variable_files=Path(__file__).parent.joinpath(
+                primary_variable_file=Path(__file__).parent.joinpath(
                     "../point_primary_variable_overrides.yaml"
                 )
             )

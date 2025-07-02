@@ -23,6 +23,7 @@ LOG = logging.getLogger(__name__)
 
 class SnowExPointData(MeasurementData):
     OUT_TIMEZONE = "UTC"
+    META_PARSER = PointSnowExMetadataParser
 
     def __init__(
         self, variable: MeasurementDescription = None,
@@ -260,8 +261,8 @@ class PointDataCollection:
         cls, fname, timezone="US/Mountain", header_sep=",", site_id=None,
         campaign_name=None, allow_map_failure=False, units_map=None,
         row_based_timezone=False,
-        metadata_variable_files=None,
-        primary_variable_files=None,
+        metadata_variable_file=None,
+        primary_variable_file=None,
     ):
         """
         Find all variables in a single csv file
@@ -284,7 +285,7 @@ class PointDataCollection:
         """
         # parse multiple files and create an iterable of ProfileData
         meta_parser = PointSnowExMetadataParser(
-            timezone, primary_variable_files, metadata_variable_files,
+            timezone, primary_variable_file, metadata_variable_file,
             header_sep=header_sep, _id=site_id,
             campaign_name=campaign_name, allow_map_failures=allow_map_failure,
             units_map=units_map,
