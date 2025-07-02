@@ -79,9 +79,9 @@ class TestMetadata2020(TableTestBase, WithUploadedFile):
             ("tree_canopy", "No Trees"),
             (
                 "comments",
-                "Start temperature measurements (top): 13:48  End temperature "
-                "measurements (bottom): 13:53  LWC sampler broke, no "
-                "measurements were possible"
+                "Start temperature measurements (top) 13:48 End temperature "
+                "measurements (bottom) 13:53 LWC sampler broke, no "
+                "measurements were possible; "
             ),
         ]
     )
@@ -94,26 +94,21 @@ class TestMetadata2020(TableTestBase, WithUploadedFile):
         else:
             assert getattr(site, attribute) == expected_value
 
-    def test_query_by_site_geom(self, site_records):
+    def test_query_by_site_geom(self, site_records, session):
         """
-        Test that we can find the site by it's coordinates.
+        Test that we can find the site by its coordinates.
         """
         site_coordinate = WKTElement(
                 'POINT (-108.1894813320662 39.031261970372725)', srid=4326
         )
-        site = self.get_records(Site, "geom", site_coordinate)
+        site = self.get_records(session, Site, "geom", site_coordinate)
 
         assert site[0].name == site_records[0].name
         assert site[0].geom == site_records[0].geom
 
-    @pytest.mark.parametrize(
-        "table_name, attribute, expected_value", [
-            (Campaign, "name", "Grand Mesa"),
-            (Observer, "name", ["Chris Hiemstra", "Hans Lievens"]),
-        ]
-    )
-    def test_site_relationships(
-        self, table_name, attribute, expected_value, site_records
-    ):
-        # self._check_metadata(table, attribute, expected_value)
-        pass
+    def test_site_campaign(self, site_records):
+        assert site_records[0].campaign.name == "Grand Mesa"
+
+    def test_site_observer(self, site_records):
+        observers = [observer.name for observer in site_records[0].observers]
+        assert "Chris Hiemstra", "Hans Lievens" in observers
