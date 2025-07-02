@@ -1,21 +1,14 @@
 """
 Module for classes that upload single files to the database.
 """
-
-from pathlib import Path
 import pandas as pd
 import geopandas as gpd
 import logging
-from typing import List
 from geoalchemy2 import WKTElement
 from snowexsql.tables import (
     PointData, MeasurementType, Instrument, DOI, Campaign, Observer,
     PointObservation
 )
-from snowexsql.tables.campaign_observation import CampaignObservation
-
-from ..metadata import SnowExProfileMetadata
-from ..point_metadata import PointSnowExMetadataParser
 from ..string_management import parse_none
 from ..point_data import PointDataCollection, SnowExPointData
 
@@ -63,11 +56,19 @@ class PointDataCSV(BaseUpload):
                 observer
                 name
                 row_based_timezone
+                instrument_map
         """
         self.filename = profile_filename
         self._timezone = timezone
         self._doi = kwargs.get("doi")
         self._instrument = kwargs.get("instrument")
+        # a map of measurement type to instrument name
+        self._instrument_map = kwargs.get("instrument_map", {})
+        if self._instrument_map and self._instrument:
+            raise ValueError(
+                "Cannot provide both 'instrument' and 'instrument_map'. "
+                "Please choose one."
+            )
         self._header_sep = kwargs.get("header_sep", ",")
         self._id = kwargs.get("id")
         self._campaign_name = kwargs.get("campaign_name")
@@ -163,6 +164,13 @@ class PointDataCSV(BaseUpload):
             if column_name not in columns:
                 df[column_name] = [param] * len(df)
 
+        # Anywhere the instrument is None, use the instrument map
+        # based on the measurement name
+        if self._instrument_map and 'instrument' in df.columns:
+            df['instrument'] = df['instrument'].fillna(
+                df['type'].map(self._instrument_map)
+            )
+
         # Map the measurement names or default to original
         df["instrument"] = df['instrument'].map(
             lambda x: self.MEASUREMENT_NAMES.get(x, x)
@@ -187,7 +195,6 @@ class PointDataCSV(BaseUpload):
             if not df.empty:
                 # IMPORTANT: Add observations first, so we can use them in the
                 # entries
-                # TODO: how do these link back?
                 self._add_campaign_observation(
                     session, df
                 )
@@ -198,7 +205,6 @@ class PointDataCSV(BaseUpload):
                         srid=int(df.crs.srs.replace("EPSG:", ""))
                     )
 
-                    # TODO: instrument name logic here?
                     d = self._add_entry(session, row)
                     # session.bulk_save_objects(objects) does not resolve
                     # foreign keys, DO NOT USE IT
@@ -248,9 +254,12 @@ class PointDataCSV(BaseUpload):
             # Add instrument
             instrument_name = self._get_first_check_unique(grouped_df, 'instrument')
             # Map the instrument name if we have a mapping for it
-            instrument_name = self.MEASUREMENT_NAMES.get(
-                instrument_name.lower(), instrument_name
-            )
+            if pd.isna(instrument_name):
+                instrument_name = None
+            if instrument_name:
+                instrument_name = self.MEASUREMENT_NAMES.get(
+                    instrument_name.lower(), instrument_name
+                )
             instrument = self._check_or_add_object(
                 session, Instrument, dict(
                     name=instrument_name,
@@ -271,13 +280,14 @@ class PointDataCSV(BaseUpload):
                 )
             )
             
-            # Check name is unique
-            self._get_first_check_unique(df, "name")
+            # Check name is unique because we are adding ONE
+            # campaign observation here
+            self._get_first_check_unique(grouped_df, "name")
             # Get the measurement name
             measurement_name = self._observation_name_from_row(grouped_df.iloc[0])
     
             # Add doi
-            doi_string = self._get_first_check_unique(df, "doi")
+            doi_string = self._get_first_check_unique(grouped_df, "doi")
             if doi_string is not None:
                 doi = self._check_or_add_object(
                     session, DOI, dict(doi=doi_string)
@@ -286,7 +296,7 @@ class PointDataCSV(BaseUpload):
                 doi = None
             # pass in campaign
             campaign_name = self._get_first_check_unique(
-                df, "campaign"
+                grouped_df, "campaign"
             ) or self._campaign_name
             if campaign_name is None:
                 raise DataValidationError("Campaign cannot be None")
@@ -295,7 +305,7 @@ class PointDataCSV(BaseUpload):
             )
             # add observer
             observer_name = self._get_first_check_unique(
-                df, "observer"
+                grouped_df, "observer"
             ) or self._observer
             observer_name = observer_name or "unknown"
             observer = self._check_or_add_object(
@@ -318,7 +328,6 @@ class PointDataCSV(BaseUpload):
                 ),
                 object_kwargs=dict(
                     name=measurement_name,
-                    # TODO: we lose out on row-based comments here
                     description=description,
                     date=date_obj,
                     instrument=instrument,

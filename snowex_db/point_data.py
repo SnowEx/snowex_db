@@ -117,10 +117,7 @@ class SnowExPointData(MeasurementData):
         """
         tz = self._in_timezone
         if self._row_based_timezone:
-            # TODO: do we have to look it up?
-            # TODO: Look up the timezone for the location and apply that
-            tz = None
-
+            # Look up the timezone for the location and apply that
             timezone_str = TimezoneFinder().timezone_at(
                 lat=row["latitude"], lng=row["longitude"]
             )
@@ -161,7 +158,8 @@ class SnowExPointData(MeasurementData):
         df = self._check_sample_columns(input_df)
 
         # Get the campaign name
-        df["campaign"] = df.get(YamlCodes.SITE_NAME)
+        if "campaign" not in df.columns:
+            df["campaign"] = df.get(YamlCodes.SITE_NAME)
         # TODO: How do we speed this up?
         #   campaign should be very quick with a df level logic
         #   but the other ones will take morelogic
@@ -234,6 +232,7 @@ class PointDataCollection:
             )
 
         shared_column_options = [
+            # TODO: could we make this a 'shared' option in the definition
             meta_parser.primary_variables.entries["INSTRUMENT"],
             meta_parser.primary_variables.entries["DATE"],
             meta_parser.primary_variables.entries["TIME"],
@@ -247,7 +246,9 @@ class PointDataCollection:
             meta_parser.primary_variables.entries["NORTHING"],
             meta_parser.primary_variables.entries["ELEVATION"],
             meta_parser.primary_variables.entries["INSTRUMENT_MODEL"],
-            meta_parser.primary_variables.entries["UTM_ZONE"]
+            meta_parser.primary_variables.entries["UTM_ZONE"],
+            meta_parser.primary_variables.entries["NAME"],
+            meta_parser.primary_variables.entries["CAMPAIGN"],
         ]
 
         shared_columns = [
