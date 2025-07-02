@@ -110,7 +110,7 @@ class PointDataCSV(BaseUpload):
                 units_map=self.UNITS_MAP,
                 row_based_timezone=self._row_based_tz,
                 primary_variable_files=Path(__file__).parent.joinpath(
-                    "point_primary_variable_overrides.yaml"
+                    "../point_primary_variable_overrides.yaml"
                 )
             )
         except pd.errors.ParserError as e:

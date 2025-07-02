@@ -126,41 +126,39 @@ class SnowExPointData(MeasurementData):
                 raise e
         return result
 
-    def _format_df(self, input_df):
+    def _format_df(self):
         """
         Format the incoming df with the column headers and other info we want
         This will filter to a single measurement as well as the expected
         shared columns like depth
         """
-        self._set_column_mappings(input_df)
+        self._set_column_mappings()
 
         # Verify the sample column exists and rename to variable
-        df = self._check_sample_columns(input_df)
+        self._check_sample_columns()
 
         # Get the campaign name
-        if "campaign" not in df.columns:
-            df["campaign"] = df.get(YamlCodes.SITE_NAME)
+        if "campaign" not in self._df.columns:
+            self._df["campaign"] = self._df.get(YamlCodes.SITE_NAME)
         # TODO: How do we speed this up?
         #   campaign should be very quick with a df level logic
         #   but the other ones will take morelogic
         # parse the location
-        df[["latitude", "longitude"]] = df.apply(
+        self._df[["latitude", "longitude"]] = self._df.apply(
             self._get_location, axis=1, result_type="expand"
         )
         # Parse the datetime
-        df["datetime"] = df.apply(self._get_datetime, axis=1, result_type="expand")
+        self._df["datetime"] = self._df.apply(self._get_datetime, axis=1, result_type="expand")
 
         location = gpd.points_from_xy(
-            df["longitude"], df["latitude"]
+            self._df["longitude"], self._df["latitude"]
         )
-        df = df.drop(columns=["longitude", "latitude"])
+        self._df = self._df.drop(columns=["longitude", "latitude"])
 
-        df = gpd.GeoDataFrame(
-            df, geometry=location
+        self._df = gpd.GeoDataFrame(
+            self._df, geometry=location
         ).set_crs("EPSG:4326")
-        df = df.replace(-9999, np.NaN)
-
-        return df
+        self._df = self._df.replace(-9999, np.NaN)
 
 
 class PointDataCollection:

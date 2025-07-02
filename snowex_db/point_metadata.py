@@ -65,7 +65,7 @@ class PointSnowExMetadataParser(MetaDataParser):
 
         return str_data, columns, columns_map, header_pos
 
-    def parse(self):
+    def parse(self, filename=None):
         """
         Parse the file and return a metadata object.
         We can override these methods as needed to parse the different
@@ -78,7 +78,7 @@ class PointSnowExMetadataParser(MetaDataParser):
         """
         (
             meta_lines, columns, columns_map, header_position
-        ) = self.find_header_info(self._fname)
+        ) = self.find_header_info(filename)
         self._rough_obj = self._preparse_meta(meta_lines)
         # We do not have header metadata for point files
         if not self.rough_obj:
