@@ -1,5 +1,7 @@
 import logging
+from pathlib import Path
 
+from insitupy.campaigns.snowex.snowex_metadata import SnowExMetaDataParser
 from insitupy.io.metadata import MetaDataParser
 from insitupy.profiles.metadata import ProfileMetaData
 
@@ -10,6 +12,7 @@ class PointSnowExMetadataParser(MetaDataParser):
     """
     Extend the parser to update the extended varaibles
     """
+    DEFAULT_METADATA_VARIABLE_FILES = SnowExMetaDataParser.DEFAULT_METADATA_VARIABLE_FILES
 
     def find_header_info(self, filename=None):
         """
