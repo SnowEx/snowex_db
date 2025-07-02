@@ -25,6 +25,7 @@ class TestSummaryPits(PointBaseTesting):
             "depth": "manual",
             "swe": "manual",
             "density": "cutter",
+            "comments": "unknown"
         }
     }
     UploaderClass = PointDataCSV
@@ -51,18 +52,18 @@ class TestSummaryPits(PointBaseTesting):
 
     @pytest.mark.parametrize(
         "table, attribute, expected_value", [
-            (Campaign, "name", "Grand Mesa"),
-            (Instrument, "name", "mesa"),
-            (Instrument, "model", "Mesa2_1"),
-            (MeasurementType, "name", ['depth']),
-            (MeasurementType, "units", ['cm']),
-            (MeasurementType, "derived", [True]),
-            (DOI, "doi", "some_point_doi"),
-            (CampaignObservation, "name", "example_point_name_M2Mesa2_1_depth"),
+            (Campaign, "name", "American River Basin"),
+            (Instrument, "name", "cutter"),
+            (Instrument, "model", None),
+            (MeasurementType, "name", ['density', 'swe', 'depth']),
+            (MeasurementType, "units", ['kg/m^3', 'mm', 'cm']),
+            (MeasurementType, "derived", [True, True, True]),
+            (DOI, "doi", "some_point_pit_doi"),
+            (CampaignObservation, "name", "CAAMCL_20191220_1300_cutter_density"),
             (PointData, "geom",
-                WKTElement('POINT (-108.13515 39.03045)', srid=4326)
+                WKTElement('POINT (-120.04186927254749 38.71033054555811)', srid=4326)
              ),
-            (PointObservation, "date", date(2020, 2, 4)),
+            (PointObservation, "date", date(2019, 12, 20)),
         ]
     )
     def test_metadata(self, table, attribute, expected_value, uploaded_file):
@@ -70,9 +71,9 @@ class TestSummaryPits(PointBaseTesting):
 
     @pytest.mark.parametrize(
         "data_name, attribute_to_check, filter_attribute, filter_value, expected", [
-            ('depth', 'value', 'value', 94.0, [94]),
-            ('depth', 'units', 'value', 94.0, ['cm']),
-            ('depth', 'datetime', 'value', 94.0, [datetime(2020, 1, 28, 18, 48, tzinfo=timezone.utc)]),
+            ('depth', 'value', 'value', 117.0, [117.0]),
+            ('depth', 'units', 'value', 117.0, ['cm']),
+            ('depth', 'datetime', 'value', 117.0, [datetime(2020, 2, 21, 20, 00, tzinfo=timezone.utc)]),
         ]
     )
     def test_value(
@@ -86,7 +87,7 @@ class TestSummaryPits(PointBaseTesting):
 
     @pytest.mark.parametrize(
         "data_name, expected", [
-            ("depth", 10)
+            ("depth", 12)
         ]
     )
     def test_count(self, data_name, expected, uploaded_file):
@@ -105,6 +106,11 @@ class TestSummaryPits(PointBaseTesting):
         )
 
     def test_unique_types(self, uploaded_file):
+        """
+        Test number of unique measurement types
+        """
         with db_session_with_credentials() as (engine, session):
-            records = session.query(PointObservation.measurement_type).unique()
+            records = session.query(
+                MeasurementType.name
+            ).distinct().all()
             assert len(records) == 3

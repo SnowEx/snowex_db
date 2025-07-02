@@ -249,6 +249,7 @@ class PointDataCollection:
             meta_parser.primary_variables.entries["UTM_ZONE"],
             meta_parser.primary_variables.entries["NAME"],
             meta_parser.primary_variables.entries["CAMPAIGN"],
+            meta_parser.primary_variables.entries["COMMENTS"],
         ]
 
         shared_columns = [
