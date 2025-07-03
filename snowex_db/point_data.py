@@ -107,15 +107,11 @@ class SnowExPointData(MeasurementData):
             datetime = None
             # In case we found a date entry that has date and time
             if row.get(YamlCodes.DATE_TIME) is not None:
-                try:
-                    str_date = str(
-                        row[YamlCodes.DATE_TIME].replace('T', '-')
-                    )
+                str_date = str(
+                    row[YamlCodes.DATE_TIME].replace('T', '-')
+                )
 
-                    datetime = pd.to_datetime(str_date)
-                except Exception as e:
-                    print(e)
-                    raise e
+                datetime = pd.to_datetime(str_date)
 
             if datetime is None:
                 datetime = DateTimeManager.handle_separate_datetime(row)
@@ -146,46 +142,44 @@ class SnowExPointData(MeasurementData):
             self._check_sample_columns()
 
         columns = self._df.columns.tolist()
-        if "geometry" in columns:
-            pass
-        else:
-            # If we do not have a geometry column, we need to parse
-            # the raw df, otherwise we assume this has been done already,
-            # likely on the first read of the file
 
-            # Get the campaign name
-            if "campaign" not in self._df.columns:
-                self._df["campaign"] = self._df.get(YamlCodes.SITE_NAME)
-            # TODO: How do we speed this up?
-            #   campaign should be very quick with a df level logic
-            #   but the other ones will take morelogic
-            # parse the location
-            self._df[["latitude", "longitude"]] = self._df.apply(
-                self._get_location, axis=1, result_type="expand"
-            )
-            # If the datetime isn't already parsed, parse it
-            if (
-                    "datetime" in self._df.columns.tolist()
-                    and pd.api.types.is_datetime64_any_dtype(
-                        self._df["datetime"]
-                    )
-            ):
-                LOG.debug("not parsing date")
-            else:
-                # Parse the datetime
-                self._df["datetime"] = self._df.apply(
-                    self._get_datetime, axis=1, result_type="expand"
+        # If we do not have a geometry column, we need to parse
+        # the raw df, otherwise we assume this has been done already,
+        # likely on the first read of the file
+
+        # Get the campaign name
+        if "campaign" not in self._df.columns:
+            self._df["campaign"] = self._df.get(YamlCodes.SITE_NAME)
+        # TODO: How do we speed this up?
+        #   campaign should be very quick with a df level logic
+        #   but the other ones will take morelogic
+        # parse the location
+        self._df[["latitude", "longitude"]] = self._df.apply(
+            self._get_location, axis=1, result_type="expand"
+        )
+        # If the datetime isn't already parsed, parse it
+        if (
+                "datetime" in self._df.columns.tolist()
+                and pd.api.types.is_datetime64_any_dtype(
+                    self._df["datetime"]
                 )
-
-            location = gpd.points_from_xy(
-                self._df["longitude"], self._df["latitude"]
+        ):
+            LOG.debug("not parsing date")
+        else:
+            # Parse the datetime
+            self._df["datetime"] = self._df.apply(
+                self._get_datetime, axis=1, result_type="expand"
             )
-            # self._df = self._df.drop(columns=["longitude", "latitude"])
 
-            self._df = gpd.GeoDataFrame(
-                self._df, geometry=location
-            ).set_crs("EPSG:4326")
-            self._df = self._df.replace(-9999, np.NaN)
+        location = gpd.points_from_xy(
+            self._df["longitude"], self._df["latitude"]
+        )
+        # self._df = self._df.drop(columns=["longitude", "latitude"])
+
+        self._df = gpd.GeoDataFrame(
+            self._df, geometry=location
+        ).set_crs("EPSG:4326")
+        self._df = self._df.replace(-9999, np.NaN)
 
 
 class PointDataCollection:
@@ -309,9 +303,9 @@ class PointDataCollection:
             allow_map_failure: allow metadata and column unknowns
             units_map: units map for the metadata
             row_based_timezone: is the timezone row based
-            metadata_variable_files: list of files to override the metadata
+            metadata_variable_file: list of files to override the metadata
                 variables
-            primary_variable_files: list of files to override the
+            primary_variable_file: list of files to override the
                 primary variables
 
         Returns:

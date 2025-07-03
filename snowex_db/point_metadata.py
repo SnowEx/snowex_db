@@ -14,7 +14,7 @@ class PointSnowExMetadataParser(MetaDataParser):
     """
     DEFAULT_METADATA_VARIABLE_FILES = SnowExMetaDataParser.DEFAULT_METADATA_VARIABLE_FILES
 
-    def find_header_info(self, filename=None):
+    def find_header_info(self, filename):
         """
         Read in all site details file for a pit If the filename has the word
         site in it then we read everything in the file. Otherwise, we use this
@@ -31,7 +31,6 @@ class PointSnowExMetadataParser(MetaDataParser):
                    **header_pos** - Index of the columns header for skiprows in
                                     read_csv
        """
-        filename = filename or self._fname
         filename = str(filename)
         with open(filename, encoding='latin') as fp:
             lines = fp.readlines()
@@ -65,7 +64,7 @@ class PointSnowExMetadataParser(MetaDataParser):
 
         return str_data, columns, columns_map, header_pos
 
-    def parse(self, filename=None):
+    def parse(self, filename: str):
         """
         Parse the file and return a metadata object.
         We can override these methods as needed to parse the different
@@ -73,8 +72,14 @@ class PointSnowExMetadataParser(MetaDataParser):
 
         This populates self.rough_obj
 
+        Args:
+            filename: Path to the file from which to parse metadata
+
         Returns:
-            (None, column list, position of header in file)
+            (
+                Metadata or None, column list, column map,
+                position of header in file
+            )
         """
         (
             meta_lines, columns, columns_map, header_position
