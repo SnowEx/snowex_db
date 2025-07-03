@@ -107,10 +107,15 @@ class SnowExPointData(MeasurementData):
             datetime = None
             # In case we found a date entry that has date and time
             if row.get(YamlCodes.DATE_TIME) is not None:
-                str_date = str(
-                    row[YamlCodes.DATE_TIME].replace('T', '-')
-                )
-                datetime = pd.to_datetime(str_date)
+                try:
+                    str_date = str(
+                        row[YamlCodes.DATE_TIME].replace('T', '-')
+                    )
+
+                    datetime = pd.to_datetime(str_date)
+                except Exception as e:
+                    print(e)
+                    raise e
 
             if datetime is None:
                 datetime = DateTimeManager.handle_separate_datetime(row)
@@ -140,28 +145,47 @@ class SnowExPointData(MeasurementData):
             # Verify the sample column exists and rename to variable
             self._check_sample_columns()
 
-        # Get the campaign name
-        if "campaign" not in self._df.columns:
-            self._df["campaign"] = self._df.get(YamlCodes.SITE_NAME)
-        # TODO: How do we speed this up?
-        #   campaign should be very quick with a df level logic
-        #   but the other ones will take morelogic
-        # parse the location
-        self._df[["latitude", "longitude"]] = self._df.apply(
-            self._get_location, axis=1, result_type="expand"
-        )
-        # Parse the datetime
-        self._df["datetime"] = self._df.apply(self._get_datetime, axis=1, result_type="expand")
+        columns = self._df.columns.tolist()
+        if "geometry" in columns:
+            pass
+        else:
+            # If we do not have a geometry column, we need to parse
+            # the raw df, otherwise we assume this has been done already,
+            # likely on the first read of the file
 
-        location = gpd.points_from_xy(
-            self._df["longitude"], self._df["latitude"]
-        )
-        self._df = self._df.drop(columns=["longitude", "latitude"])
+            # Get the campaign name
+            if "campaign" not in self._df.columns:
+                self._df["campaign"] = self._df.get(YamlCodes.SITE_NAME)
+            # TODO: How do we speed this up?
+            #   campaign should be very quick with a df level logic
+            #   but the other ones will take morelogic
+            # parse the location
+            self._df[["latitude", "longitude"]] = self._df.apply(
+                self._get_location, axis=1, result_type="expand"
+            )
+            # If the datetime isn't already parsed, parse it
+            if (
+                    "datetime" in self._df.columns.tolist()
+                    and pd.api.types.is_datetime64_any_dtype(
+                        self._df["datetime"]
+                    )
+            ):
+                LOG.debug("not parsing date")
+            else:
+                # Parse the datetime
+                self._df["datetime"] = self._df.apply(
+                    self._get_datetime, axis=1, result_type="expand"
+                )
 
-        self._df = gpd.GeoDataFrame(
-            self._df, geometry=location
-        ).set_crs("EPSG:4326")
-        self._df = self._df.replace(-9999, np.NaN)
+            location = gpd.points_from_xy(
+                self._df["longitude"], self._df["latitude"]
+            )
+            # self._df = self._df.drop(columns=["longitude", "latitude"])
+
+            self._df = gpd.GeoDataFrame(
+                self._df, geometry=location
+            ).set_crs("EPSG:4326")
+            self._df = self._df.replace(-9999, np.NaN)
 
 
 class PointDataCollection:
@@ -237,6 +261,11 @@ class PointDataCollection:
         variable_columns = [
             c for c in all_file.meta_columns_map.keys() if c not in shared_columns
         ]
+        # Filter out ignore columns
+        variable_columns = [
+            v for v in variable_columns
+            if all_file.meta_columns_map[v].code != "ignore"
+        ]
 
         # Create an object for each measurement
         for column in variable_columns:
@@ -249,12 +278,17 @@ class PointDataCollection:
             # dataframe as information from the metadata is used to format_df
             # the information
             points.metadata = all_file.metadata
-            points.from_csv(fname)
-            points.df = points.df.loc[:, shared_columns + [column]].copy()
+            df_columns = all_file.df.columns.tolist()
+            # The df setter filters some columns, so adjust our shared columns
+            df_shared_columns = [
+                 c for c in shared_columns if c in df_columns
+            ]
+            # run the whole file through the df setter
+            points.df = all_file.df.loc[:, df_shared_columns + [column]].copy()
             # --------
             result.append(points)
 
-        return result
+        return result, all_file.metadata
 
     @classmethod
     def from_csv(
