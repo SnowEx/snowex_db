@@ -81,10 +81,10 @@ class UploadProfileData(BaseUpload):
                 site_id=self._id,
                 campaign_name=self._campaign_name,
                 metadata_variable_file=Path(__file__).parent.joinpath(
-                    "./metadata_variable_overrides.yaml"
+                    "../metadata_variable_overrides.yaml"
                 ),
                 primary_variable_file=Path(__file__).parent.joinpath(
-                    "./profile_primary_variable_overrides.yaml"
+                    "../profile_primary_variable_overrides.yaml"
                 ),
             )
         except pd.errors.ParserError as e:
