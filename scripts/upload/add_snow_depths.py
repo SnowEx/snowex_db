@@ -18,7 +18,6 @@ def main():
     site_name = 'Grand Mesa'
     timezone = 'US/Mountain'
     doi = 'https://doi.org/10.5067/9IA978JIACAR'
-
     # Read in the Grand Mesa Snow Depths Data
     base = abspath(join('../download/data/SNOWEX/SNEX20_SD.001/'))
 
