@@ -57,7 +57,7 @@ class TestDensityProfile(TableTestBase, WithUploadedFile):
     @pytest.mark.parametrize(
         "data_name, attribute_to_check, filter_attribute, filter_value, expected",
         [
-            ('density', 'value', 'depth', 35, [190, 245, 'None']),
+            ('density', 'value', 'depth', 35, [190, 245]),
         ]
     )
     def test_value(
@@ -71,7 +71,7 @@ class TestDensityProfile(TableTestBase, WithUploadedFile):
 
     @pytest.mark.parametrize(
         "data_name, expected", [
-            ("density", 12),
+            ("density", 8),
         ]
     )
     def test_count(self, data_name, expected, uploaded_file):
@@ -136,7 +136,7 @@ class TestDensityAlaska(TableTestBase, WithUploadedFile):
 
     @pytest.mark.parametrize(
         "data_name, expected", [
-            ("density", 15),
+            ("density", 10),
         ]
     )
     def test_count(self, data_name, expected, uploaded_file):

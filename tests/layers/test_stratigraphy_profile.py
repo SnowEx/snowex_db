@@ -58,7 +58,7 @@ class TestStratigraphyProfile(TableTestBase, WithUploadedFile):
             ('grain_size', 'value', 'depth', 35, ["< 1 mm"]),
             ('grain_type', 'value', 'depth', 17, ["FC"]),
             ('manual_wetness', 'value', 'depth', 17, ["D"]),
-            ('hand_hardness', 'comments', 'depth', 17, ["Cups"]),
+            ('comments', 'value', 'depth', 17, ["Cups"]),
         ]
     )
     def test_value(

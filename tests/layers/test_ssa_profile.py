@@ -47,13 +47,15 @@ class TestSSAProfile(TableTestBase, WithUploadedFile):
             (
                     MeasurementType, "name",
                     [
-                        'sample_signal', 'reflectance',
+                        'sample_signal',
+                        'reflectance',
                         'specific_surface_area',
                         'equivalent_diameter',
+                        'comments',
                     ],
             ),
-            (MeasurementType, "units", ['mv', '%', 'm^2/kg', 'mm']),
-            (MeasurementType, "derived", [False] * 4),
+            (MeasurementType, "units", ['mv', '%', 'm^2/kg', 'mm', None]),
+            (MeasurementType, "derived", [False] * 5),
         ]
     )
     def test_metadata(self, table, attribute, expected_value, uploaded_file):
@@ -67,7 +69,7 @@ class TestSSAProfile(TableTestBase, WithUploadedFile):
             ('specific_surface_area', 'value', 'depth', 35, [11.2]),
             ('equivalent_diameter', 'value', 'depth', 80, [0.1054]),
             ('sample_signal', 'value', 'depth', 10, [186.9]),
-            ('sample_signal', 'comments', 'depth', 5, ["brush"]),
+            ('comments', 'value', 'depth', 5, ["brush"]),
         ]
     )
     def test_value(
