@@ -57,6 +57,7 @@ ELEVATION:
   - elev_m
   - elevation
   - elevationwgs84
+  - elevation (m)
   match_on_code: true
 IGNORE:
   auto_remap: false
@@ -64,7 +65,6 @@ IGNORE:
   description: Ignore this
   map_from:
   - id
-  - version_number
   - avgvelocity
   - count
   match_on_code: true
@@ -223,4 +223,18 @@ WIND_SPEED_10FT:
   description: Vector mean wind speed measured at 10 ft tower level
   map_from:
   - wsms_10ft_avg
+  match_on_code: true
+VERSION_NUMBER:
+  auto_remap: true
+  code: version_number
+  description: version 
+  map_from:
+  - version number
+  match_on_code: true
+PIT_ID:
+  auto_remap: true
+  code: pit_id
+  description: ID of snow pit
+  map_from:
+  - pitid
   match_on_code: true

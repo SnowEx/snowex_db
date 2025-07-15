@@ -248,7 +248,9 @@ class PointDataCollection:
             meta_parser.primary_variables.entries["NORTHING"],
             meta_parser.primary_variables.entries["ELEVATION"],
             meta_parser.primary_variables.entries["INSTRUMENT_MODEL"],
-            meta_parser.primary_variables.entries["UTM_ZONE"]
+            meta_parser.primary_variables.entries["UTM_ZONE"],
+            meta_parser.primary_variables.entries["PIT_ID"],
+            meta_parser.primary_variables.entries["VERSION_NUMBER"],
         ]
 
         shared_columns = [

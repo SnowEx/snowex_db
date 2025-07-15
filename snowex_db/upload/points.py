@@ -337,8 +337,10 @@ class PointDataCSV(BaseUpload):
             observation=observation,
             datetime=row["datetime"],
             # Arguments from kwargs
-            geom=row['geometry']
-
+            geom=row['geometry'],
+            version_number=row['version_number'],
+            elevation=row['elevation'],
+            equipment=row['instrument']
         )
 
         return new_entry
