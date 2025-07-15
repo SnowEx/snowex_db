@@ -13,7 +13,7 @@ class WithUploadedFile:
 
     def upload_file(self, session, filename):
         u = self.UploaderClass(
-            session=session, filename=filename, **self.kwargs
+            session, filename, **self.kwargs
         )
         u.submit()
 

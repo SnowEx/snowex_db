@@ -32,12 +32,15 @@ class TestSummaryPits(PointBaseTesting):
     TableClass = PointData
 
     @pytest.fixture(scope="class")
-    def uploaded_file(self, db, data_dir):
+    def uploaded_file(self, session, data_dir):
         """
         NOTE - this is part of the _modified file that we create
         in the upload script, NOT the original file
         """
-        self.upload_file(str(data_dir.joinpath("pit_summary_points.csv")))
+        self.upload_file(
+            session,
+            str(data_dir.joinpath("pit_summary_points.csv"))
+        )
 
     def filter_measurement_type(self, session, measurement_type, query=None):
         if query is None:

@@ -28,7 +28,7 @@ class TestDepth(PointBaseTesting):
     @pytest.fixture(scope="class")
     def uploaded_file(self, session, data_dir):
         self.upload_file(
-            filename=str(data_dir.joinpath("depths.csv")), session=session
+            session, str(data_dir.joinpath("depths.csv")),
         )
 
     def filter_measurement_type(self, session, measurement_type, query=None):
