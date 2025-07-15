@@ -122,11 +122,14 @@ class UploadProfileData(BaseUpload):
         Returns:
             df: Dataframe ready for submission
         """
+        if profile.df is not None:
+            df = profile.df.copy()
+            if df.empty:
+                LOG.debug("df is empty, returning")
+                return df
+        else:
+            return pd.DataFrame()
 
-        df = profile.df.copy()
-        if df.empty:
-            LOG.debug("df is empty, returning")
-            return df
         metadata = profile.metadata
         variable = profile.variable
 

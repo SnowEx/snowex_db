@@ -19,13 +19,7 @@ class ExtendedSnowexProfileData(SnowExProfileData):
         variable: MeasurementDescription,
         meta_parser: MetaDataParser
     ):
-        # Tricky, this needs to happen before super init
-        self._comments_column = meta_parser.primary_variables.entries[
-            "COMMENTS"]
         super().__init__(variable, meta_parser)
-
-    def shared_column_options(self):
-        return self._depth_columns + [self._comments_column]
 
 
 class ExtendedSnowExProfileDataCollection(SnowExProfileDataCollection):
