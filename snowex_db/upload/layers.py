@@ -9,6 +9,7 @@ import geopandas as gpd
 import pandas as pd
 from geoalchemy2 import WKTElement
 
+from insitupy.io.strings import StringManager
 from insitupy.campaigns.snowex import SnowExProfileData
 from snowexsql.tables import (
     Campaign, DOI, Instrument, LayerData, MeasurementType, Observer, Site
@@ -17,7 +18,6 @@ from .base import BaseUpload
 from .batch import BatchBase
 from ..metadata import SnowExProfileMetadata
 from ..profile_data import ExtendedSnowExProfileDataCollection
-from ..string_management import parse_none
 from ..utilities import get_logger
 
 LOG = logging.getLogger("snowex_db.upload.layers")
@@ -135,7 +135,7 @@ class UploadProfileData(BaseUpload):
 
         # Manage nans and nones
         for c in df.columns:
-            df[c] = df[c].apply(lambda x: parse_none(x))
+            df[c] = df[c].apply(lambda x: StringManager.parse_none(x))
         df['value'] = df[variable.code].astype(str)
 
         if 'units' not in df.columns:
