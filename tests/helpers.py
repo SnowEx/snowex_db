@@ -5,27 +5,36 @@ from snowexsql.db import db_session_with_credentials
 from snowexsql.tables import MeasurementType, Observer
 
 from snowex_db.upload.layers import UploadProfileBatch, UploadProfileData
-from tests.db_setup import DBSetup
 
 
-class WithUploadedFile(DBSetup):
+class WithUploadedFile:
     UploaderClass = UploadProfileData
     kwargs = {}
 
-    def upload_file(self, fname):
-        with db_session_with_credentials() as (engine, session):
-            u = self.UploaderClass(fname, **self.kwargs)
+    def upload_file(self, session, filename):
+        u = self.UploaderClass(
+            session=session, filename=filename, **self.kwargs
+        )
+        u.submit()
 
-            # Allow for batches and single upload
-            if 'batch' in self.UploaderClass.__name__.lower():
-                u.push()
-            else:
-                u.submit(session)
+    def get_records(self, session, table, attribute, value):
+        """
+        Fetches records that match criteria.
 
-    def get_records(self, table, attribute, value):
-        with db_session_with_credentials() as (engine, session):
-            attribute = getattr(table, attribute)
-            return session.query(table).filter(attribute == value).all()
+        Using the session object from the test class allows for lazy loading
+        associated records.
+
+        Arguments:
+            session: The database session from the test class
+            table: Table to query
+            attribute: The name of the attribute in the table to use as a filter.
+            value: The attribute value to filter by.
+
+        Returns:
+            A list of records
+        """
+        attribute = getattr(table, attribute)
+        return session.query(table).filter(attribute == value).all()
 
     def get_value(self, table, attribute):
         with db_session_with_credentials() as (engine, session):
@@ -58,9 +67,14 @@ class WithUploadedFile(DBSetup):
 
 
 class WithUploadBatchFiles(WithUploadedFile):
+    """
+    Overwrite `upload_file` function to support passing of multiple files.
+    """
     UploaderClass = UploadProfileBatch
 
-    def upload_file(self, filenames):
-        u = self.UploaderClass(filenames=filenames, **self.kwargs)
+    def upload_file(self, filenames, session):
+        u = self.UploaderClass(
+            filenames=filenames, session=session, debug=True, **self.kwargs
+        )
 
         u.push()

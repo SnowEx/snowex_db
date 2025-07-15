@@ -7,7 +7,7 @@ from sqlalchemy import func
 
 from snowex_db.upload.batch import UploadRasterBatch, UploadUAVSARBatch
 from snowexsql.tables import ImageData
-from .sql_test_base import TableTestBase
+from tests.sql_test_base import TableTestBase
 
 
 class TestUploadRasterBatch(TableTestBase):

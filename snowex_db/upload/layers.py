@@ -1,30 +1,24 @@
 """
 Module for classes that upload single files to the database.
 """
-import time
-from pathlib import Path
-from typing import List
-
-import pandas as pd
-import geopandas as gpd
 import logging
+from pathlib import Path
+from typing import List, Union
 
+import geopandas as gpd
+import pandas as pd
 from geoalchemy2 import WKTElement
-from snowexsql.tables import LayerData
-from snowexsql.tables import (
-    Instrument, Campaign, Observer, DOI, MeasurementType, Site
-)
-from insitupy.campaigns.snowex import SnowExProfileData
 
+from insitupy.campaigns.snowex import SnowExProfileData
+from snowexsql.tables import (
+    Campaign, DOI, Instrument, LayerData, MeasurementType, Observer, Site
+)
+from .base import BaseUpload
 from .batch import BatchBase
+from ..metadata import SnowExProfileMetadata
+from ..profile_data import ExtendedSnowExProfileDataCollection
 from ..string_management import parse_none
 from ..utilities import get_logger
-from .base import BaseUpload
-from ..metadata import SnowExProfileMetadata
-
-
-from ..profile_data import ExtendedSnowExProfileDataCollection
-
 
 LOG = logging.getLogger("snowex_db.upload.layers")
 
@@ -41,11 +35,38 @@ class UploadProfileData(BaseUpload):
     expected_attributes = [c for c in dir(LayerData) if c[0] != '_']
     TABLE_CLASS = LayerData
 
-    def __init__(self, profile_filename, timezone="US/Mountain", **kwargs):
+    def __init__(
+        self,
+        session,
+        filename: Union[str, Path],
+        timezone: str="US/Mountain",
+        **kwargs
+    ):
+        """
+        Arguments:
+            session: The DB session object
+            filename (Union[str, Path]): The path to the profile file.
+            timezone (str): The timezone used, default is "US/Mountain".
+            kwargs: Additional optional keyword arguments related to the profile.
+                doi (str): Digital Object Identifier
+                instrument (str): Name of the instrument used
+                                  collection.
+                header_sep (str): Delimiter for separating values in the header.
+                                  Default is ','.
+                id (str): Identifier for the profile data file.
+                campaign_name (str): The name of the campaign.
+                derived (bool): Indicates if the file contains derived measurements.
+                                Default False.
+                instrument_model (str): Instrument name.
+                comments (str): Additional comments.
+        """
         self.log = get_logger(__name__)
 
-        self.filename = profile_filename
+        self.filename = filename
+        self._session = session
         self._timezone = timezone
+
+        # Optional information
         self._doi = kwargs.get("doi")
         self._header_sep = kwargs.get("header_sep", ",")
         # Is this file for derived measurements
@@ -58,24 +79,22 @@ class UploadProfileData(BaseUpload):
         self._instrument = kwargs.get("instrument")
         self._instrument_model = kwargs.get("instrument_model")
 
-        self._comments = kwargs.get("comments")
+        self._comments = kwargs.get("comments", '')
 
         # Read in data
-        self.data = self._read(profile_filename)
+        self.data = self._read()
 
-    def _read(self, profile_filename) -> ExtendedSnowExProfileDataCollection:
+    def _read(self) -> ExtendedSnowExProfileDataCollection:
         """
         Read in a profile file. Managing the number of lines to skip and
         adjusting column names
 
-        Args:
-            profile_filename: Filename containing the profile
         Returns:
             list of ProfileData objects
         """
         try:
             return ExtendedSnowExProfileDataCollection.from_csv(
-                profile_filename,
+                self.filename,
                 timezone=self._timezone,
                 header_sep=self._header_sep,
                 site_id=self._id,
@@ -89,7 +108,7 @@ class UploadProfileData(BaseUpload):
             )
         except pd.errors.ParserError as e:
             LOG.error(e)
-            raise RuntimeError(f"Failed reading {profile_filename}")
+            raise RuntimeError(f"Failed reading {self.filename}")
 
     def build_data(self, profile: SnowExProfileData) -> gpd.GeoDataFrame:
         """
@@ -126,18 +145,8 @@ class UploadProfileData(BaseUpload):
         columns = df.columns.values
         # Clean up comments a bit
         if 'comments' in columns:
-            df['comments'] = df['comments'].apply(
+            df['value'] = df['value'].apply(
                 lambda x: x.strip(' ') if isinstance(x, str) else x)
-            # Add pit comments
-            if profile.metadata.comments:
-                df["comments"] += profile.metadata.comments
-        else:
-            # Make comments to pit comments
-            df["comments"] = [profile.metadata.comments] * len(df)
-
-        # In case of SMP, pass comments in
-        if self._comments is not None:
-            df["comments"] = [self._comments] * len(df)
 
         # Add flags to the comments.
         flag_string = metadata.flags
@@ -150,13 +159,10 @@ class UploadProfileData(BaseUpload):
 
         return df
 
-    def submit(self, session):
+    def submit(self):
         """
-        Submit values to the db from dictionary. Manage how some profiles have
-        multiple values and get submitted individual
-
-        Args:
-            session: SQLAlchemy session
+        Submit values to the DB. Can handle multiple profiles and uses
+        information supplied in the constructor.
         """
 
         # Construct a dataframe with all metadata
@@ -167,24 +173,24 @@ class UploadProfileData(BaseUpload):
             if not df.empty:
                 # Metadata for all layers
                 campaign, observer_list, site = self._add_metadata(
-                    session, profile.metadata
+                    profile.metadata
                 )
 
                 instrument = None
                 if 'instrument' not in df.columns.values:
-                    instrument = self._add_instrument(session, profile.metadata)
+                    instrument = self._add_instrument(profile.metadata)
 
                 for row in df.to_dict(orient="records"):
-                    if row.get('value') is 'None':
+                    if row.get('value') == 'None':
                         continue
 
                     d = self._add_entry(
-                        session, row, campaign, observer_list, site, instrument,
+                        row, campaign, observer_list, site, instrument,
                     )
                     # session.bulk_save_objects(objects) does not resolve
                     # foreign keys, DO NOT USE IT
-                    session.add(d)
-                    session.commit()
+                    self._session.add(d)
+                    self._session.commit()
             else:
                 # procedure to still upload metadata (sites, etc)
                 self.log.warning(
@@ -192,14 +198,13 @@ class UploadProfileData(BaseUpload):
                     ' expected. Skipping row submissions, and only inserting'
                     ' metadata.'
                 )
-                self._add_metadata(session, profile.metadata)
+                self._add_metadata(profile.metadata)
 
-    def _add_metadata(self, session, metadata: SnowExProfileMetadata):
+    def _add_metadata(self, metadata: SnowExProfileMetadata):
         """
         Add the metadata entry and return objects to associate with each row.
 
         Args:
-            session: db session object
             metadata: ProfileMetadata information
 
         Returns:
@@ -207,21 +212,21 @@ class UploadProfileData(BaseUpload):
         """
         # Campaign record
         campaign = self._check_or_add_object(
-            session, Campaign, dict(name=metadata.campaign_name)
+            self._session, Campaign, dict(name=metadata.campaign_name)
         )
         # List of observers records
         observer_list = []
         observer_names = metadata.observers or []
         for obs_name in observer_names:
             observer = self._check_or_add_object(
-                session, Observer, dict(name=obs_name)
+                self._session, Observer, dict(name=obs_name)
             )
             observer_list.append(observer)
 
         # DOI record
         if self._doi is not None:
             doi = self._check_or_add_object(
-                session, DOI, dict(doi=self._doi)
+                self._session, DOI, dict(doi=self._doi)
             )
         else:
             doi = None
@@ -233,38 +238,46 @@ class UploadProfileData(BaseUpload):
             f"Point ({metadata.longitude} {metadata.latitude})",
             srid=4326
         )
+        # Combine found comments and passed in comments to this class
+        comments = '; '.join(
+            [
+                comment for comment in [metadata.comments,  self._comments]
+                if comment is not None
+
+            ]
+        )
         # Site record
         site_id = metadata.site_name
 
         site = self._check_or_add_object(
-            session,
+            self._session,
             Site,
             dict(name=site_id),
             object_kwargs=dict(
-                name=site_id,
-                campaign=campaign,
-                datetime=dt,
-                geom=geom,
-                doi=doi,
-                observers=observer_list,
-                aspect=metadata.aspect,
-                slope_angle=metadata.slope,
                 air_temp=metadata.air_temp,
-                total_depth=metadata.total_depth,
-                weather_description=metadata.weather_description,
-                precip=metadata.precip,
-                sky_cover=metadata.sky_cover,
-                wind=metadata.wind,
+                aspect=metadata.aspect,
+                campaign=campaign,
+                comments=comments,
+                datetime=dt,
+                doi=doi,
+                geom=geom,
                 ground_condition=metadata.ground_condition,
                 ground_roughness=metadata.ground_roughness,
                 ground_vegetation=metadata.ground_vegetation,
-                vegetation_height=metadata.vegetation_height,
+                name=site_id,
+                observers=observer_list,
+                precip=metadata.precip,
+                sky_cover=metadata.sky_cover,
+                slope_angle=metadata.slope,
+                total_depth=metadata.total_depth,
                 tree_canopy=metadata.tree_canopy,
-                site_notes=metadata.site_notes,
+                vegetation_height=metadata.vegetation_height,
+                weather_description=metadata.weather_description,
+                wind=metadata.wind,
             ))
         return campaign, observer_list, site
 
-    def _add_instrument(self, session, metadata: SnowExProfileMetadata):
+    def _add_instrument(self, metadata: SnowExProfileMetadata):
         """
         Add or lookup an instrument in the DB.
 
@@ -280,20 +293,18 @@ class UploadProfileData(BaseUpload):
         instrument_model = self._instrument_model or metadata.instrument_model
 
         return self._check_or_add_object(
-            session,
+            self._session,
             Instrument,
             dict(name=instrumen_name, model=instrument_model)
         )
 
-
     def _add_entry(
-        self, session, row: dict, campaign: Campaign,
+        self, row: dict, campaign: Campaign,
         observer_list: List[Observer], site: Site, instrument: Instrument,
     ):
         """
 
         Args:
-            session: db session object
             row: dataframe row of data to add
             campaign: Campaign object inserted into db
             observer_list: List of Observers inserted into db
@@ -303,11 +314,12 @@ class UploadProfileData(BaseUpload):
         Returns:
 
         """
-        # An instrument associated with a row has presedence over the
+        # An instrument associated with a row has precedence over the
         # given via arguments
         if row.get('instrument') is not None:
             instrument = self._check_or_add_object(
-                session, Instrument, dict(
+                self._session,
+                Instrument, dict(
                     name=row['instrument'],
                     model=row['instrument_model']
                 )
@@ -316,8 +328,9 @@ class UploadProfileData(BaseUpload):
         # Add measurement type
         measurement_type = row["type"]
         measurement_obj = self._check_or_add_object(
+            self._session,
             # Add units and 'derived' flag for the measurement
-            session, MeasurementType, dict(
+            MeasurementType, dict(
                 name=measurement_type,
                 units=row["units"],
                 derived=self._derived
@@ -330,7 +343,6 @@ class UploadProfileData(BaseUpload):
             depth=row["depth"],
             bottom_depth=row.get("bottom_depth"),
             value=row["value"],
-            comments=row["comments"],
             # Linked tables
             instrument=instrument,
             measurement_type=measurement_obj,
@@ -343,43 +355,6 @@ class UploadProfileData(BaseUpload):
 class UploadProfileBatch(BatchBase):
     """
     Class for submitting multiple files of profile type data.
-
-    Attributes:
-        smp_log_f: CSV providing metadata for profile_filenames.
     """
 
     UploaderClass = UploadProfileData
-
-    def push(self):
-        """
-        An overwritten push function to account for managing SMP meta data.
-        """
-        self.start = time.time()
-
-        i = 0
-
-        # Loop over all the ssa files and upload them
-        if self.n_files != -1:
-            self.filenames[0:self.n_files]
-
-        for i, f in enumerate(self.filenames):
-
-            # if smp_file:
-            #     extras = self.smp_log.get_metadata(f)
-            #     meta.update(extras)
-
-            # If were not debugging script allow exceptions and report them
-            # later
-            if not self.debug:
-                try:
-                    self._push_one(f, **self._kwargs)
-
-                except Exception as e:
-                    self.log.error('Error with {}'.format(f))
-                    self.log.error(e)
-                    self.errors.append((f, e))
-
-            else:
-                self._push_one(f, **self._kwargs)
-
-        self.report(i + 1)

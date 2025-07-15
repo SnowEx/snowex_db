@@ -29,8 +29,10 @@ class TestPerimeterDepth(PointBaseTesting):
     TableClass = PointData
 
     @pytest.fixture(scope="class")
-    def uploaded_file(self, db, data_dir):
-        self.upload_file(str(data_dir.joinpath("perimeters.csv")))
+    def uploaded_file(self, session, data_dir):
+        self.upload_file(
+            filename=str(data_dir.joinpath("perimeters.csv")), session=session
+        )
 
     @pytest.mark.parametrize(
         "table, attribute, expected_value", [

@@ -25,8 +25,10 @@ class TestEmptyProfile(TableTestBase, WithUploadedFile):
     TableClass = LayerData
 
     @pytest.fixture(scope="class")
-    def uploaded_file(self, db, data_dir):
-        self.upload_file(str(data_dir.joinpath('empty_data.csv')))
+    def uploaded_file(self, session, data_dir):
+        self.upload_file(
+            filename=str(data_dir.joinpath('empty_data.csv')), session=session
+        )
 
     @pytest.mark.parametrize(
         "data_name, expected", [
@@ -38,10 +40,9 @@ class TestEmptyProfile(TableTestBase, WithUploadedFile):
         assert n == expected
 
 
-class TestMetadata(WithUploadedFile):
+class TestMetadata2020(TableTestBase, WithUploadedFile):
     """
-    Test the large amount of metadata we get from the
-    site details file
+    Test the site details file from the 2020 campaign
     """
     kwargs = {
         'timezone': 'MST',
@@ -49,43 +50,65 @@ class TestMetadata(WithUploadedFile):
     }
     UploaderClass = UploadProfileData
 
+    @pytest.fixture(scope="class")
+    def uploaded_site_details_file(self, session, data_dir):
+        self.upload_file(
+            filename=str(data_dir.joinpath("site_details_2020.csv")),
+            session=session
+        )
+
     @pytest.fixture
-    def uploaded_site_details_file(self, db, data_dir):
-        self.upload_file(str(data_dir.joinpath("site_details.csv")))
+    def site_records(self, uploaded_site_details_file, session):
+        return self.get_records(session, Site, "name", "COGM1N20_20200205")
 
     @pytest.mark.parametrize(
-        "table, attribute, expected_value", [
-            (Site, "name", "COGM1N20_20200205"),
+        "attribute, expected_value", [
+            ("datetime", datetime(2020, 2, 5, 20, 30, tzinfo=timezone.utc)),
+            ("aspect", 180.0),
+            ("slope_angle", 5.0),
+            ("air_temp", np.nan),
+            ("total_depth", 35.0),
+            ("weather_description", "Sunny, cold, gusts"),
+            ("precip", "None"),
+            ("sky_cover", "Few (< 1/4 of sky)"),
+            ("wind", "Moderate"),
+            ("ground_condition", "Frozen"),
+            ("ground_roughness", "Rough"),
+            ("ground_vegetation", "Grass"),
+            ("vegetation_height", "5"),
+            ("tree_canopy", "No Trees"),
             (
-                Site, "datetime",
-                datetime(2020, 2, 5, 20, 30, tzinfo=timezone.utc),
+                "comments",
+                "Start temperature measurements (top) 13:48 End temperature "
+                "measurements (bottom) 13:53 LWC sampler broke, no "
+                "measurements were possible; "
             ),
-            (
-                Site, "geom",
-                WKTElement(
-                    'POINT (-108.1894813320662 39.031261970372725)', srid=4326
-                ),
-            ),
-            (Campaign, "name", "Grand Mesa"),
-            (Site, "aspect", 180.0),
-            (Site, "slope_angle", 5.0),
-            (Site, "air_temp", np.nan),
-            (Site, "total_depth", 35.0),
-            (Site, "weather_description", "Sunny, cold, gusts"),
-            (Site, "precip", "None"),
-            (Site, "sky_cover", "Few (< 1/4 of sky)"),
-            (Site, "wind", "Moderate"),
-            (Site, "ground_condition", "Frozen"),
-            (Site, "ground_roughness", "rough, rocks in places"),
-            (Site, "ground_vegetation", "[Grass]"),
-            (Site, "vegetation_height", "5, nan"),
-            (Site, "tree_canopy", "No Trees"),
-            (Site, "site_notes", None),
-            (Observer, "name", ["Chris Hiemstra", "Hans Lievens"]),
         ]
     )
-    def test_metadata(
-        self, uploaded_site_details_file, table, attribute,
-        expected_value
-    ):
-        self._check_metadata(table, attribute, expected_value)
+    def test_site_attributes(self, attribute, expected_value, site_records):
+        assert len(site_records) == 1
+
+        site = site_records[0]
+        if attribute == "air_temp":
+            assert np.isnan(getattr(site, attribute))
+        else:
+            assert getattr(site, attribute) == expected_value
+
+    def test_query_by_site_geom(self, site_records, session):
+        """
+        Test that we can find the site by its coordinates.
+        """
+        site_coordinate = WKTElement(
+                'POINT (-108.1894813320662 39.031261970372725)', srid=4326
+        )
+        site = self.get_records(session, Site, "geom", site_coordinate)
+
+        assert site[0].name == site_records[0].name
+        assert site[0].geom == site_records[0].geom
+
+    def test_site_campaign(self, site_records):
+        assert site_records[0].campaign.name == "Grand Mesa"
+
+    def test_site_observer(self, site_records):
+        observers = [observer.name for observer in site_records[0].observers]
+        assert "Chris Hiemstra", "Hans Lievens" in observers

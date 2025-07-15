@@ -24,8 +24,11 @@ class TestStratigraphyProfile(TableTestBase, WithUploadedFile):
     TableClass = LayerData
 
     @pytest.fixture(scope="class")
-    def uploaded_file(self, db, data_dir):
-        self.upload_file(str(data_dir.joinpath("stratigraphy.csv")))
+    def uploaded_file(self, session, data_dir):
+        self.upload_file(
+            filename=str(data_dir.joinpath("stratigraphy.csv")),
+            session=session,
+        )
 
     @pytest.mark.parametrize(
         "table, attribute, expected_value", [
@@ -55,7 +58,7 @@ class TestStratigraphyProfile(TableTestBase, WithUploadedFile):
             ('grain_size', 'value', 'depth', 35, ["< 1 mm"]),
             ('grain_type', 'value', 'depth', 17, ["FC"]),
             ('manual_wetness', 'value', 'depth', 17, ["D"]),
-            ('hand_hardness', 'comments', 'depth', 17, ["Cups"]),
+            ('comments', 'value', 'depth', 17, ["Cups"]),
         ]
     )
     def test_value(

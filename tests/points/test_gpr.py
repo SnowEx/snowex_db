@@ -28,8 +28,10 @@ class TestGPR(PointBaseTesting):
     TableClass = PointData
 
     @pytest.fixture(scope="class")
-    def uploaded_file(self, db, data_dir):
-        self.upload_file(str(data_dir.joinpath("gpr.csv")))
+    def uploaded_file(self, session, data_dir):
+        self.upload_file(
+            filename=str(data_dir.joinpath("gpr.csv")), session=session
+        )
 
     def filter_measurement_type(self, session, measurement_type, query=None):
         if query is None:

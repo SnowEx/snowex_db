@@ -25,8 +25,11 @@ class TestDensityProfile(TableTestBase, WithUploadedFile):
     TableClass = LayerData
 
     @pytest.fixture(scope="class")
-    def uploaded_file(self, db, data_dir):
-        self.upload_file(str(data_dir.joinpath("density.csv")))
+    def uploaded_file(self, session, data_dir):
+        self.upload_file(
+            filename=str(data_dir.joinpath("density.csv")),
+            session=session,
+        )
 
     @pytest.mark.parametrize(
         "table, attribute, expected_value", [
@@ -54,7 +57,7 @@ class TestDensityProfile(TableTestBase, WithUploadedFile):
     @pytest.mark.parametrize(
         "data_name, attribute_to_check, filter_attribute, filter_value, expected",
         [
-            ('density', 'value', 'depth', 35, [190, 245, 'None']),
+            ('density', 'value', 'depth', 35, [190, 245]),
         ]
     )
     def test_value(
@@ -68,7 +71,7 @@ class TestDensityProfile(TableTestBase, WithUploadedFile):
 
     @pytest.mark.parametrize(
         "data_name, expected", [
-            ("density", 12),
+            ("density", 8),
         ]
     )
     def test_count(self, data_name, expected, uploaded_file):
@@ -102,13 +105,14 @@ class TestDensityAlaska(TableTestBase, WithUploadedFile):
     TableClass = LayerData
 
     @pytest.fixture(scope="class")
-    def uploaded_file(self, db, data_dir):
+    def uploaded_file(self, session, data_dir):
         self.upload_file(
-            str(
+            filename=str(
                 data_dir.joinpath(
                     "SnowEx23_SnowPits_AKIOP_454SB_20230316_density_v01.csv"
                 )
-            )
+            ),
+            session=session,
         )
 
     @pytest.mark.parametrize(
@@ -132,7 +136,7 @@ class TestDensityAlaska(TableTestBase, WithUploadedFile):
 
     @pytest.mark.parametrize(
         "data_name, expected", [
-            ("density", 15),
+            ("density", 10),
         ]
     )
     def test_count(self, data_name, expected, uploaded_file):

@@ -21,10 +21,10 @@ class TestUploadProfileBatch(TableTestBase, WithUploadBatchFiles):
     TableClass = LayerData
 
     @pytest.fixture(scope="class")
-    def uploaded_file(self, db, data_dir):
-        fnames = ['site_details.csv', 'stratigraphy.csv', 'temperature.csv']
+    def uploaded_file(self, session, data_dir):
+        fnames = ['site_details_2020.csv', 'stratigraphy.csv', 'temperature.csv']
         fpaths = [str(data_dir.joinpath(f)) for f in fnames]
-        self.upload_file(fpaths)
+        self.upload_file(fpaths, session)
 
     @pytest.mark.usefixtures("uploaded_file")
     @pytest.mark.parametrize(
@@ -37,18 +37,19 @@ class TestUploadProfileBatch(TableTestBase, WithUploadBatchFiles):
         n = self.check_count(data_name)
         assert n == expected
 
-    def test_only_one_site(self):
+    @pytest.mark.usefixtures("uploaded_file")
+    def test_only_one_site(self, session):
         """
         The three CSVs are for the same site. Verify we only create one
         Site record and properly associate the layer information with it.
         """
-        records = self.get_records(Site, 'name', 'COGM1N20_20200205')
+        records = self.get_records(session, Site, 'name', 'COGM1N20_20200205')
         assert len(records) == 1
 
         site = records[0]
-        # The sratigraphy has 5 layers with 5 data points,
-        # plus 5 LWC measurements
-        assert len(site.layer_data) == 30
+        # The stratigraphy has 5 layers with 4 data points, plus one comment
+        # in a layer, plus 5 LWC measurements
+        assert len(site.layer_data) == 26
 
 
 class TestUploadProfileBatchErrors(TableTestBase):
@@ -58,25 +59,25 @@ class TestUploadProfileBatchErrors(TableTestBase):
     files = ['doesnt_exist.csv']
     UploaderClass = UploadProfileBatch
 
-    def test_without_debug(self, db, data_dir):
+    def test_without_debug(self, session, data_dir):
         fpaths = [str(data_dir.joinpath(f)) for f in self.files]
-        u = self.UploaderClass(fpaths, debug=False)
+        u = self.UploaderClass(filenames=fpaths, session=session, debug=False)
         u.push()
         assert len(u.errors) == 1
 
-    def test_with_debug(self, db, data_dir):
+    def test_with_debug(self, session, data_dir):
         """
         Test batch uploading with debug and errors
         """
         fpaths = [str(data_dir.joinpath(f)) for f in self.files]
         with pytest.raises(Exception):
-            u = self.UploaderClass(fpaths, debug=True)
+            u = self.UploaderClass(filenames=fpaths, session=session, debug=True)
             u.push()
 
-    def test_without_files(self, db, data_dir):
+    def test_without_files(self, session, data_dir):
         """
         Test that batch correctly runs with no files
         """
-        u = self.UploaderClass([], debug=True)
+        u = self.UploaderClass(filenames=[], session=session, debug=True)
         u.push()
         assert u.uploaded == 0

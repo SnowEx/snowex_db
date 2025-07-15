@@ -104,13 +104,13 @@ class SnowExProfileMetadata(ProfileMetaData):
     """
     air_temp: Union[float, None] = None
     aspect: Union[float, None] = None
+    comments: Union[str, None] = None
     ground_condition: Union[str, None] = None
     ground_roughness: Union[str, None] = None
     ground_vegetation: Union[str, None] = None
     instrument: Union[str, None] = None
     instrument_model: Union[str, None] = None
     precip: Union[str, None] = None
-    site_notes: Union[str, None] = None
     sky_cover: Union[str, None] = None
     slope: Union[float, None] = None
     total_depth: Union[float, None] = None
@@ -148,6 +148,7 @@ class ExtendedSnowExMetadataParser(SnowExMetaDataParser):
             air_temp=self.parse_air_temp(),
             aspect=self.parse_aspect(),
             campaign_name=self.parse_campaign_name(),
+            comments=self.parse_header('COMMENTS'),
             date_time=self.parse_date_time(),
             flags=self.parse_flags(),
             ground_condition=self.parse_header('GROUND_CONDITION'),
@@ -160,7 +161,6 @@ class ExtendedSnowExMetadataParser(SnowExMetaDataParser):
             observers=self.parse_observers(),
             precip=self.parse_header('PRECIP'),
             site_name=self.parse_id(),
-            site_notes=self.parse_site_notes(),
             sky_cover=self.parse_header('SKY_COVER'),
             slope=self.parse_slope(),
             total_depth=self.parse_header('TOTAL_DEPTH'),
@@ -217,9 +217,6 @@ class ExtendedSnowExMetadataParser(SnowExMetaDataParser):
         return self.rough_obj.get(
             self.metadata_variables.entries[name].code
         )
-
-    def parse_site_notes(self):
-        return None
 
 
 # TODO: delete this?

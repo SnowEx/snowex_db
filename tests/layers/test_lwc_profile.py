@@ -24,8 +24,11 @@ class TestLWCProfile(TableTestBase, WithUploadedFile):
     TableClass = LayerData
 
     @pytest.fixture(scope="class")
-    def uploaded_file(self, db, data_dir):
-        self.upload_file(str(data_dir.joinpath("LWC.csv")))
+    def uploaded_file(self, session, data_dir):
+        self.upload_file(
+            filename=str(data_dir.joinpath("LWC.csv")),
+            session=session
+        )
 
     @pytest.mark.parametrize(
         "table, attribute, expected_value", [
@@ -100,8 +103,10 @@ class TestLWCProfileB(TableTestBase, WithUploadedFile):
     TableClass = LayerData
 
     @pytest.fixture(scope="class")
-    def uploaded_file(self, db, data_dir):
-        self.upload_file(str(data_dir.joinpath("LWC2.csv")))
+    def uploaded_file(self, session, data_dir):
+        self.upload_file(
+            filename=str(data_dir.joinpath("LWC2.csv")), session=session
+        )
 
     @pytest.mark.parametrize(
         "table, attribute, expected_value", [
