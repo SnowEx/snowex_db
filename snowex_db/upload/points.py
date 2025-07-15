@@ -1,6 +1,8 @@
 """
 Module for classes that upload single files to the database.
 """
+from pathlib import Path
+
 import pandas as pd
 import geopandas as gpd
 import logging
@@ -106,7 +108,10 @@ class PointDataCSV(BaseUpload):
                 header_sep=self._header_sep, site_id=self._id,
                 campaign_name=self._campaign_name,
                 units_map=self.UNITS_MAP,
-                row_based_timezone=self._row_based_tz
+                row_based_timezone=self._row_based_tz,
+                primary_variable_file=Path(__file__).parent.joinpath(
+                    "../point_primary_variable_overrides.yaml"
+                )
             )
         except pd.errors.ParserError as e:
             LOG.error(e)

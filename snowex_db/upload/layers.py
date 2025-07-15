@@ -2,6 +2,7 @@
 Module for classes that upload single files to the database.
 """
 import time
+from pathlib import Path
 from typing import List
 
 import pandas as pd
@@ -78,7 +79,13 @@ class UploadProfileData(BaseUpload):
                 timezone=self._timezone,
                 header_sep=self._header_sep,
                 site_id=self._id,
-                campaign_name=self._campaign_name
+                campaign_name=self._campaign_name,
+                metadata_variable_file=Path(__file__).parent.joinpath(
+                    "../metadata_variable_overrides.yaml"
+                ),
+                primary_variable_file=Path(__file__).parent.joinpath(
+                    "../profile_primary_variable_overrides.yaml"
+                ),
             )
         except pd.errors.ParserError as e:
             LOG.error(e)

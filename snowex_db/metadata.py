@@ -8,6 +8,7 @@ from typing import Union
 
 from insitupy.io.metadata import MetaDataParser
 from insitupy.profiles.metadata import ProfileMetaData
+from insitupy.campaigns.snowex.snowex_metadata import SnowExMetaDataParser
 from snowexsql.db import get_table_attributes
 from snowexsql.tables import Site
 
@@ -119,12 +120,12 @@ class SnowExProfileMetadata(ProfileMetaData):
     wind: Union[str, None] = None
 
 
-class ExtendedSnowExMetadataParser(MetaDataParser):
+class ExtendedSnowExMetadataParser(SnowExMetaDataParser):
     """
     Extend the parser to update the parsing function
     """
 
-    def parse(self):
+    def parse(self, filename: str):
         """
         Parse the file and return a metadata object.
         We can override these methods as needed to parse the different
@@ -132,12 +133,15 @@ class ExtendedSnowExMetadataParser(MetaDataParser):
 
         This populates self.rough_obj
 
+        Args:
+            filename: Path to the file from which to parse metadata
+
         Returns:
             (metadata object, column list, position of header in file)
         """
         (
             meta_lines, columns, columns_map, header_position
-        ) = self.find_header_info(self._fname)
+        ) = self.find_header_info(filename)
         self._rough_obj = self._preparse_meta(meta_lines)
         # Create a standard metadata object
         metadata = SnowExProfileMetadata(

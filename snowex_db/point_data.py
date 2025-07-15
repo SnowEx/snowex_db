@@ -1,12 +1,14 @@
 import logging
 from pathlib import Path
 from typing import List
+
+from insitupy.io.metadata import MetaDataParser
 from timezonefinder import TimezoneFinder
 import numpy as np
 import pandas as pd
 import geopandas as gpd
 from insitupy.campaigns.snowex import SnowExProfileData
-from insitupy.io.dates import DateManager
+from insitupy.io.dates import DateTimeManager
 from insitupy.io.locations import LocationManager
 from insitupy.io.yaml_codes import YamlCodes
 
@@ -21,45 +23,24 @@ LOG = logging.getLogger(__name__)
 
 class SnowExPointData(MeasurementData):
     OUT_TIMEZONE = "UTC"
-    DEFAULT_METADATA_VARIABLE_FILES = SnowExProfileData.DEFAULT_METADATA_VARIABLE_FILES
-    DEFAULT_PRIMARY_VARIABLE_FILES = MeasurementData.DEFAULT_PRIMARY_VARIABLE_FILES + [
-        Path(__file__).parent.joinpath(
-            "./point_primary_variable_overrides.yaml"
-        )
-    ]
+    META_PARSER = PointSnowExMetadataParser
 
     def __init__(
-        self, input_df: pd.DataFrame, metadata: ProfileMetaData,
-        variable: MeasurementDescription,
-        original_file=None, meta_parser=None, allow_map_failure=False,
+        self, variable: MeasurementDescription = None,
+        meta_parser: MetaDataParser = None,
         row_based_timezone=False,
         timezone=None
     ):
         """
-        Take df of layered data (SMP, pit, etc)
         Args:
-            input_df: dataframe of data
-                Should include depth and optional bottom depth
-                Should include sample or sample_a, sample_b, etc
-            metadata: ProfileMetaData object
-            variable: description of variable
-            original_file: optional track original file
-            meta_parser: MetaDataParser object. This will hold our variables
-                map and units map
-            allow_map_failures: if a mapping fails, warn us and use the
-                original string (default False)
+            See MeasurementData.__init__
             row_based_timezone: does each row have a unique timezone implied
             timezone: input timezone for the whole file
 
         """
         self._row_based_timezone = row_based_timezone
         self._in_timezone = timezone
-        super().__init__(
-            input_df, metadata, variable,
-            original_file=original_file,
-            meta_parser=meta_parser,
-            allow_map_failure=allow_map_failure
-        )
+        super().__init__(variable, meta_parser)
 
     @staticmethod
     def read_csv_dataframe(profile_filename, columns, header_position):
@@ -129,12 +110,13 @@ class SnowExPointData(MeasurementData):
                 str_date = str(
                     row[YamlCodes.DATE_TIME].replace('T', '-')
                 )
+
                 datetime = pd.to_datetime(str_date)
 
             if datetime is None:
-                datetime = DateManager.handle_separate_datetime(row)
+                datetime = DateTimeManager.handle_separate_datetime(row)
 
-            result = DateManager.adjust_timezone(
+            result = DateTimeManager.adjust_timezone(
                 datetime,
                 in_timezone=tz,
                 out_timezone=self.OUT_TIMEZONE
@@ -146,41 +128,58 @@ class SnowExPointData(MeasurementData):
                 raise e
         return result
 
-    def _format_df(self, input_df):
+    def _format_df(self):
         """
         Format the incoming df with the column headers and other info we want
         This will filter to a single measurement as well as the expected
         shared columns like depth
         """
-        self._set_column_mappings(input_df)
+        self._set_column_mappings()
 
-        # Verify the sample column exists and rename to variable
-        df = self._check_sample_columns(input_df)
+        # If the variable is real (not -1), check columns
+        if self.variable.code != "-1":
+            # Verify the sample column exists and rename to variable
+            self._check_sample_columns()
+
+        columns = self._df.columns.tolist()
+
+        # If we do not have a geometry column, we need to parse
+        # the raw df, otherwise we assume this has been done already,
+        # likely on the first read of the file
 
         # Get the campaign name
-        if "campaign" not in df.columns:
-            df["campaign"] = df.get(YamlCodes.SITE_NAME)
+        if "campaign" not in self._df.columns:
+            self._df["campaign"] = self._df.get(YamlCodes.SITE_NAME)
         # TODO: How do we speed this up?
         #   campaign should be very quick with a df level logic
         #   but the other ones will take morelogic
         # parse the location
-        df[["latitude", "longitude"]] = df.apply(
+        self._df[["latitude", "longitude"]] = self._df.apply(
             self._get_location, axis=1, result_type="expand"
         )
-        # Parse the datetime
-        df["datetime"] = df.apply(self._get_datetime, axis=1, result_type="expand")
+        # If the datetime isn't already parsed, parse it
+        if (
+                "datetime" in self._df.columns.tolist()
+                and pd.api.types.is_datetime64_any_dtype(
+                    self._df["datetime"]
+                )
+        ):
+            LOG.debug("not parsing date")
+        else:
+            # Parse the datetime
+            self._df["datetime"] = self._df.apply(
+                self._get_datetime, axis=1, result_type="expand"
+            )
 
         location = gpd.points_from_xy(
-            df["longitude"], df["latitude"]
+            self._df["longitude"], self._df["latitude"]
         )
-        df = df.drop(columns=["longitude", "latitude"])
+        # self._df = self._df.drop(columns=["longitude", "latitude"])
 
-        df = gpd.GeoDataFrame(
-            df, geometry=location
+        self._df = gpd.GeoDataFrame(
+            self._df, geometry=location
         ).set_crs("EPSG:4326")
-        df = df.replace(-9999, np.NaN)
-
-        return df
+        self._df = self._df.replace(-9999, np.NaN)
 
 
 class PointDataCollection:
@@ -203,17 +202,12 @@ class PointDataCollection:
 
     @classmethod
     def _read_csv(
-        cls, fname, columns, column_mapping, header_pos,
-        metadata: ProfileMetaData, meta_parser: PointSnowExMetadataParser,
+        cls, fname, meta_parser: PointSnowExMetadataParser,
         timezone=None, row_based_timezone=False
     ) -> List[SnowExPointData]:
         """
         Args:
             fname: path to csv
-            columns: columns for dataframe
-            column_mapping: mapping of column name to variable description
-            header_pos: skiprows for pd.read_csv
-            metadata: metadata for each object
             meta_parser: parser for the metadata
             timezone: input timezone
             row_based_timezone: is the timezone row based?
@@ -222,14 +216,16 @@ class PointDataCollection:
             a list of ProfileData objects
 
         """
+        # parse the file for metadata before parsing the individual
+        # variables
+        all_file = cls.DATA_CLASS(
+            variable=None,  # we do not have a variable yet
+            meta_parser=meta_parser,
+            timezone=timezone, row_based_timezone=row_based_timezone
+        )
+        all_file.from_csv(fname)
+
         result = []
-        if columns is None and header_pos is None:
-            LOG.warning(f"File {fname} is empty of rows")
-            df = pd.DataFrame()
-        else:
-            df = cls.DATA_CLASS.read_csv_dataframe(
-                fname, columns, header_pos,
-            )
 
         shared_column_options = [
             # TODO: could we make this a 'shared' option in the definition
@@ -253,33 +249,48 @@ class PointDataCollection:
         ]
 
         shared_columns = [
-            c for c, v in column_mapping.items()
+            c for c, v in all_file.meta_columns_map.items()
             if v in shared_column_options
         ]
         variable_columns = [
-            c for c in column_mapping.keys() if c not in shared_columns
+            c for c in all_file.meta_columns_map.keys() if c not in shared_columns
+        ]
+        # Filter out ignore columns
+        variable_columns = [
+            v for v in variable_columns
+            if all_file.meta_columns_map[v].code != "ignore"
         ]
 
         # Create an object for each measurement
         for column in variable_columns:
-            target_df = df.loc[:, shared_columns + [column]]
-            result.append(cls.DATA_CLASS(
-                target_df, metadata,
-                column_mapping[column],  # variable is a MeasurementDescription
-                original_file=fname,
+            points = cls.DATA_CLASS(
+                variable=all_file.meta_columns_map[column],
                 meta_parser=meta_parser,
                 timezone=timezone, row_based_timezone=row_based_timezone
-            ))
+            )
+            # IMPORTANT - Metadata needs to be set before assigning the
+            # dataframe as information from the metadata is used to format_df
+            # the information
+            points.metadata = all_file.metadata
+            df_columns = all_file.df.columns.tolist()
+            # The df setter filters some columns, so adjust our shared columns
+            df_shared_columns = [
+                 c for c in shared_columns if c in df_columns
+            ]
+            # run the whole file through the df setter
+            points.df = all_file.df.loc[:, df_shared_columns + [column]].copy()
+            # --------
+            result.append(points)
 
-        return result
+        return result, all_file.metadata
 
     @classmethod
     def from_csv(
         cls, fname, timezone="US/Mountain", header_sep=",", site_id=None,
         campaign_name=None, allow_map_failure=False, units_map=None,
         row_based_timezone=False,
-        metadata_variable_files=None,
-        primary_variable_files=None,
+        metadata_variable_file=None,
+        primary_variable_file=None,
     ):
         """
         Find all variables in a single csv file
@@ -292,36 +303,27 @@ class PointDataCollection:
             allow_map_failure: allow metadata and column unknowns
             units_map: units map for the metadata
             row_based_timezone: is the timezone row based
-            metadata_variable_files: list of files to override the metadata
+            metadata_variable_file: list of files to override the metadata
                 variables
-            primary_variable_files: list of files to override the
+            primary_variable_file: list of files to override the
                 primary variables
 
         Returns:
             This class with a collection of profiles and metadata
         """
-        primary_variables = ExtendableVariables(
-            primary_variable_files or cls.DATA_CLASS.DEFAULT_PRIMARY_VARIABLE_FILES
-        )
-        metadata_variables = ExtendableVariables(
-            metadata_variable_files or cls.DATA_CLASS.DEFAULT_METADATA_VARIABLE_FILES,
-        )
         # parse multiple files and create an iterable of ProfileData
         meta_parser = PointSnowExMetadataParser(
-            fname, timezone, primary_variables, metadata_variables,
+            timezone, primary_variable_file, metadata_variable_file,
             header_sep=header_sep, _id=site_id,
             campaign_name=campaign_name, allow_map_failures=allow_map_failure,
-            units_map=units_map
-        )
-        # Parse the metadata and column info
-        metadata, columns, columns_map, header_pos = meta_parser.parse()
-        # read in the actual data
-        profiles = cls._read_csv(
-            fname, columns, columns_map, header_pos, metadata,
-            meta_parser,
-            timezone=timezone, row_based_timezone=row_based_timezone
+            units_map=units_map,
         )
 
+        # read in the actual data
+        profiles, metadata = cls._read_csv(
+            fname, meta_parser,
+            timezone=timezone, row_based_timezone=row_based_timezone
+        )
         # ignore profiles with the name 'ignore'
         profiles = [
             p for p in profiles if
