@@ -318,9 +318,13 @@ class PointDataCSV(BaseUpload):
             )
             description = None
             if ["comments"] in grouped_df.columns.values:
-                description = self._get_first_check_unique(
+                description = (description or "") + self._get_first_check_unique(
                     grouped_df, "comments"
-                ),
+                )
+            if ["flags"] in grouped_df.columns.values:
+                description = (description or "") + self._get_first_check_unique(
+                    grouped_df, "flags"
+                )
 
             date_obj = self._get_first_check_unique(grouped_df, "date")
             observation = self._check_or_add_object(

@@ -246,6 +246,7 @@ class PointDataCollection:
             meta_parser.primary_variables.entries["NAME"],
             meta_parser.primary_variables.entries["CAMPAIGN"],
             meta_parser.primary_variables.entries["COMMENTS"],
+            meta_parser.primary_variables.entries["FLAGS"],
         ]
 
         shared_columns = [

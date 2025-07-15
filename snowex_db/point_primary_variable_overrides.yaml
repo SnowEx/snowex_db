@@ -241,10 +241,12 @@ NAME:
     - pitid
     match_on_code: true
 COMMENTS:
-    auto_remap: false
     code: comments
     description: Comments
-    map_from:
-      - comments
-      - flag
     match_on_code: true
+FLAGS:
+  code: flags
+  description: measurement flag
+  map_from:
+    - flag
+  match_on_code: true
