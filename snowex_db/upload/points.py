@@ -152,7 +152,7 @@ class PointDataCSV(BaseUpload):
         # Manage nans and nones
         for c in df.columns:
             df[c] = df[c].apply(lambda x: StringManager.parse_none(x))
-        df['value'] = df[variable.code].astype(str)
+        df['value'] = df[variable.code].astype(float)
 
         if 'units' not in df.columns:
             unit_str = series.units_map.get(variable.code)
