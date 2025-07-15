@@ -133,6 +133,9 @@ class ExtendedSnowExMetadataParser(SnowExMetaDataParser):
 
         This populates self.rough_obj
 
+        Args:
+            filename: Path to the file from which to parse metadata
+
         Returns:
             (metadata object, column list, position of header in file)
         """
