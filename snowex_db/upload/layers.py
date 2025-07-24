@@ -122,16 +122,15 @@ class UploadProfileData(BaseUpload):
         Returns:
             df: Dataframe ready for submission
         """
-        if profile.df is not None:
-            df = profile.df.copy()
-            if df.empty:
-                LOG.debug("df is empty, returning")
-                return df
-        else:
-            return pd.DataFrame()
+
+        if profile.df is None:
+            LOG.debug("df is empty, returning")
+            return gpd.GeoDataFrame()
 
         metadata = profile.metadata
         variable = profile.variable
+
+        df = profile.df.copy()
 
         # The type of measurement
         df['type'] = [variable.code] * len(df)
