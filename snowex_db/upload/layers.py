@@ -49,8 +49,7 @@ class UploadProfileData(BaseUpload):
             timezone (str): The timezone used, default is "US/Mountain".
             kwargs: Additional optional keyword arguments related to the profile.
                 doi (str): Digital Object Identifier
-                instrument (str): Name of the instrument used
-                                  collection.
+                instrument (str): Name of the instrument used in the collection.
                 header_sep (str): Delimiter for separating values in the header.
                                   Default is ','.
                 id (str): Identifier for the profile data file.
@@ -94,7 +93,7 @@ class UploadProfileData(BaseUpload):
         """
         try:
             return ExtendedSnowExProfileDataCollection.from_csv(
-                self.filename,
+                filename=self.filename,
                 timezone=self._timezone,
                 header_sep=self._header_sep,
                 site_id=self._id,

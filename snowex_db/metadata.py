@@ -125,7 +125,8 @@ class ExtendedSnowExMetadataParser(SnowExMetaDataParser):
     Extend the parser to update the parsing function
     """
 
-    def parse(self, filename: str):
+    def parse(self, filename: str) \
+            -> Tuple[SnowExProfileMetadata, list, dict, int]:
         """
         Parse the file and return a metadata object.
         We can override these methods as needed to parse the different

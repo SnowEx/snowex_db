@@ -10,7 +10,7 @@ LOG = logging.getLogger()
 
 class PointSnowExMetadataParser(MetaDataParser):
     """
-    Extend the parser to update the extended varaibles
+    Extend the parser to update the extended variables
     """
     DEFAULT_METADATA_VARIABLE_FILES = SnowExMetaDataParser.DEFAULT_METADATA_VARIABLE_FILES
 
@@ -64,7 +64,8 @@ class PointSnowExMetadataParser(MetaDataParser):
 
         return str_data, columns, columns_map, header_pos
 
-    def parse(self, filename: str):
+    def parse(self, filename: str) -> (
+            Tuple)[Union[ProfileMetaData | None], list, dict, int]:
         """
         Parse the file and return a metadata object.
         We can override these methods as needed to parse the different
@@ -73,13 +74,11 @@ class PointSnowExMetadataParser(MetaDataParser):
         This populates self.rough_obj
 
         Args:
-            filename: Path to the file from which to parse metadata
+            filename: (str) Full path to the file with the header info to parse
 
         Returns:
-            (
-                Metadata or None, column list, column map,
-                position of header in file
-            )
+            Tuple:
+                metadata object or None, column list, position of header in file
         """
         (
             meta_lines, columns, columns_map, header_position
