@@ -3,16 +3,20 @@ Module for header classes and metadata interpreters. This includes interpreting 
 to describing data.
 """
 import logging
-from dataclasses import dataclass
-from typing import Union
+import pandas as pd
+import pytz
 
-from insitupy.io.metadata import MetaDataParser
+from dataclasses import dataclass
+from typing import Tuple, Union
+
 from insitupy.profiles.metadata import ProfileMetaData
 from insitupy.campaigns.snowex.snowex_metadata import SnowExMetaDataParser
 from snowexsql.db import get_table_attributes
 from snowexsql.tables import Site
 
-from .interpretation import *
+from .interpretation import (
+    manage_degree_values, convert_cardinal_to_degree, add_date_time_keys
+)
 from .projection import add_geom, reproject_point_in_dict
 from .string_management import *
 from .utilities import assign_default_kwargs, get_logger

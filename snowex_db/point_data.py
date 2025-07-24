@@ -1,20 +1,17 @@
 import logging
-from pathlib import Path
 from typing import List
 
-from insitupy.io.metadata import MetaDataParser
-from timezonefinder import TimezoneFinder
+import geopandas as gpd
 import numpy as np
 import pandas as pd
-import geopandas as gpd
-from insitupy.campaigns.snowex import SnowExProfileData
 from insitupy.io.dates import DateTimeManager
 from insitupy.io.locations import LocationManager
+from insitupy.io.metadata import MetaDataParser
 from insitupy.io.yaml_codes import YamlCodes
-
 from insitupy.profiles.base import MeasurementData
 from insitupy.profiles.metadata import ProfileMetaData
-from insitupy.variables import MeasurementDescription, ExtendableVariables
+from insitupy.variables import MeasurementDescription
+from timezonefinder import TimezoneFinder
 
 from .point_metadata import PointSnowExMetadataParser
 
@@ -78,7 +75,7 @@ class SnowExPointData(MeasurementData):
         """
         try:
             lat, lon, *_ = LocationManager.parse(row)
-        except ValueError as e:
+        except ValueError:
             if self.metadata is not None:
                 LOG.warning(
                     f"Row {row.name} does not have a valid location. "

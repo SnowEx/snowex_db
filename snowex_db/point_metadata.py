@@ -1,5 +1,5 @@
 import logging
-from pathlib import Path
+from typing import Tuple, Union
 
 from insitupy.campaigns.snowex.snowex_metadata import SnowExMetaDataParser
 from insitupy.io.metadata import MetaDataParser
