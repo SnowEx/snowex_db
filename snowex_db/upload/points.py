@@ -229,13 +229,17 @@ class PointDataCSV(BaseUpload):
                 )
 
     def _observation_name_from_row(self, row):
-        value = f"{row['name']}_{row['instrument']}"
+        name = row.get('name') or row.get('pit_id')
+        value = f"{name}_{row['instrument']}"
+
         if row.get('instrument_model'):
-            value += row['instrument_model']
+            value += '_' + row['instrument_model']
+
         # Add the type of measurement
         # This is necessary because the GPR returns multiple variables
         if row.get('type'):
             value += "_" + row['type']
+
         return value
     
     def _get_first_check_unique(self, df, key):
@@ -244,10 +248,12 @@ class PointDataCSV(BaseUpload):
         it is unique. If not, raise a DataValidationError
         """
         unique_values = df[key].unique()
+
         if len(unique_values) > 1:
             raise DataValidationError(
                 f"Multiple values for {key} found: {unique_values}"
             )
+
         return unique_values[0]
 
     def _add_campaign_observation(self, df):
@@ -257,12 +263,14 @@ class PointDataCSV(BaseUpload):
 
         """
         df["date"] = pd.to_datetime(df["datetime"]).dt.date
-        # Group by our observation keys to add into the database
-        for keys, grouped_df in df.groupby(
-                ['instrument', 'instrument_model', 'name', 'type', 'date'],
-                dropna=False
-        ):
-            # Process each unique combination of keys (key) and its corresponding group (grouped_df)
+
+        # Group by our observation keys to add records uniquely into the database
+        base_groups = ['instrument', 'instrument_model', 'name', 'type', 'date']
+        if 'pit_id' in df.columns:
+            base_groups.append('pit_id')
+
+        # Process each unique combination of keys (key) and its corresponding group (grouped_df)
+        for keys, grouped_df in df.groupby(base_groups, dropna=False):
             # Add instrument
             instrument = self._check_or_add_object(
                 self._session, Instrument, dict(
@@ -284,6 +292,8 @@ class PointDataCSV(BaseUpload):
             # Check name is unique because we are adding ONE
             # campaign observation here
             self._get_first_check_unique(grouped_df, "name")
+            if 'pit_id' in grouped_df.columns:
+                self._get_first_check_unique(grouped_df, "pit_id")
             # Get the measurement name
             measurement_name = self._observation_name_from_row(grouped_df.iloc[0])
     
