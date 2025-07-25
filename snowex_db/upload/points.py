@@ -305,16 +305,15 @@ class PointDataCSV(BaseUpload):
                 )
             else:
                 doi = None
-            # pass in campaign
-            campaign_name = self._get_first_check_unique(
-                grouped_df, "campaign"
-            ) or self._campaign_name
+            # Add campaign
+            campaign_name = self._get_first_check_unique(grouped_df, "campaign") \
+                            or self._campaign_name
             if campaign_name is None:
                 raise DataValidationError("Campaign cannot be None")
             campaign = self._check_or_add_object(
                 self._session, Campaign, dict(name=campaign_name)
             )
-            # add observer
+            # Add observer
             observer_name = self._get_first_check_unique(
                 grouped_df, "observer"
             ) or self._observer
@@ -322,6 +321,7 @@ class PointDataCSV(BaseUpload):
             observer = self._check_or_add_object(
                 self._session, Observer, dict(name=observer_name)
             )
+            # Construct description string
             description = None
             if ["comments"] in grouped_df.columns.values:
                 description = (description or "") + self._get_first_check_unique(
