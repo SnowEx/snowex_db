@@ -186,7 +186,7 @@ class PointDataCSV(BaseUpload):
 
         # Map the measurement names or default to original
         df["instrument"] = df['instrument'].map(
-            lambda x: self.MEASUREMENT_NAMES.get(x, x)
+            lambda x: self.MEASUREMENT_NAMES.get(x.lower(), x)
         )
 
         return df
@@ -264,29 +264,18 @@ class PointDataCSV(BaseUpload):
         ):
             # Process each unique combination of keys (key) and its corresponding group (grouped_df)
             # Add instrument
-            instrument_name = self._get_first_check_unique(grouped_df, 'instrument')
-            # Map the instrument name if we have a mapping for it
-            if pd.isna(instrument_name):
-                instrument_name = None
-            if instrument_name:
-                instrument_name = self.MEASUREMENT_NAMES.get(
-                    instrument_name.lower(), instrument_name
-                )
             instrument = self._check_or_add_object(
                 self._session, Instrument, dict(
-                    name=instrument_name,
+                    name=self._get_first_check_unique(grouped_df, 'instrument'),
                     model=self._get_first_check_unique(grouped_df, 'instrument_model')
                 )
             )
     
             # Add measurement type
-            measurement_type = self._get_first_check_unique(
-                grouped_df, "type"
-            )
             measurement_obj = self._check_or_add_object(
                 # Add units and 'derived' flag for the measurement
                 self._session, MeasurementType, dict(
-                    name=measurement_type,
+                    name=self._get_first_check_unique(grouped_df, "type"),
                     units=self._get_first_check_unique(grouped_df, "units"),
                     derived=self._derived
                 )
