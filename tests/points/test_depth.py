@@ -42,25 +42,69 @@ class TestDepth(PointBaseTesting):
         ).filter(MeasurementType.name == measurement_type)
         return query
 
+    @pytest.mark.usefixtures("uploaded_file")
+    def test_measurement_type(self, session):
+        record = self.get_records(session, MeasurementType, "name", "depth")
+        assert len(record) == 1
+        record = record[0]
+        assert record.units == 'cm'
+        assert record.derived is False
+
+    @pytest.mark.usefixtures("uploaded_file")
+    @pytest.mark.parametrize(
+        "name, model", [
+            ("mesa", "Mesa2_1"),
+            ("magnaprobe", "CRREL_B"),
+            ("pit ruler", None),
+        ]
+    )
+    def test_instrument(self, name, model, session):
+        record = self.get_records(session, Instrument, "name", name)
+        assert len(record) == 1
+        record = record[0]
+        assert record.model == model
+
+    @pytest.mark.usefixtures("uploaded_file")
+    @pytest.mark.parametrize(
+        "name, count",
+        [
+            ("example_point_name_magnaprobe_CRREL_B_depth", 1),
+            ("example_point_name_mesa_Mesa2_1_depth", 1),
+            # We have three different dates
+            ("example_point_name_pit ruler_depth", 3)
+        ],
+    )
+    def test_campaign_observation(self, name, count, session):
+        names = self.get_records(session, CampaignObservation, "name", name)
+        assert len(names) == count
+
+    @pytest.mark.usefixtures("uploaded_file")
+    @pytest.mark.parametrize(
+        "date, count",
+        [
+            (date(2020, 1, 28), 1),
+            (date(2020, 2, 4), 1),
+            (date(2020, 2, 11), 1),
+            (date(2020, 1, 30), 1),
+            (date(2020, 2, 5), 1),
+        ],
+    )
+    def test_point_observation(self, date, count, session):
+        record = self.get_records(session, PointObservation, "date", date)
+        assert len(record) == count
+
     @pytest.mark.parametrize(
         "table, attribute, expected_value", [
             (Campaign, "name", "Grand Mesa"),
-            (Instrument, "name", "mesa"),
-            (Instrument, "model", "Mesa2_1"),
-            (MeasurementType, "name", ['depth']),
-            (MeasurementType, "units", ['cm']),
-            (MeasurementType, "derived", [False]),
             (DOI, "doi", "some_point_doi"),
-            (CampaignObservation, "name", "example_point_name_M2Mesa2_1_depth"),
             (PointData, "geom",
                 WKTElement('POINT (-108.13515 39.03045)', srid=4326)
-             ),
-            (PointObservation, "date", date(2020, 2, 4)),
+            ),
         ]
     )
     def test_metadata(self, table, attribute, expected_value, uploaded_file):
         self._check_metadata(table, attribute, expected_value)
-
+    
     @pytest.mark.parametrize(
         "data_name, attribute_to_check, filter_attribute, filter_value, expected", [
             ('depth', 'value', 'value', 94.0, [94]),
