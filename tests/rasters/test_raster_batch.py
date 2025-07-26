@@ -1,6 +1,7 @@
 import datetime
 import os
 from os.path import dirname
+from pathlib import Path
 
 import pytest
 from sqlalchemy import func
@@ -43,7 +44,7 @@ class TestUploadUAVSARBatch(TableTestBase):
     """
     observers = 'UAVSAR team, JPL'
     # Upload all uav
-    d = os.path.join(dirname(__file__), 'data', 'uavsar')
+    d = Path(__file__).parent.parent.joinpath('data', 'uavsar')
     args = [['uavsar.ann']]
     kwargs = {
         'observers': observers,
