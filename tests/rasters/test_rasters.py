@@ -1,6 +1,7 @@
 import shutil
 from os import makedirs
-from os.path import dirname, exists, join
+from os.path import exists, join
+from pathlib import Path
 
 import boto3
 import numpy as np
@@ -57,7 +58,7 @@ class TestCogHandler:
 
     @pytest.fixture(scope="class")
     def data_dir(self):
-        return join(dirname(__file__), "data")
+        return Path(__file__).parent.parent.joinpath("data")
 
     @pytest.fixture(scope="class")
     def tmp_outputs(self, data_dir):
