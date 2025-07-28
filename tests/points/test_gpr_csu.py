@@ -11,27 +11,27 @@ from snowex_db.upload.points import PointDataCSV
 from _base import PointBaseTesting
 
 
-class TestUNMGPR(PointBaseTesting):
+class TestCSUGPR(PointBaseTesting):
     """
     Test that a density file is uploaded correctly including sample
     averaging for the main value.
     """
     kwargs = {
         # Constant Metadata for the GPR data
-        'observer': 'Ryan Webb',
-        'doi': 'https://doi.org/10.5067/WE9GI1GVMQF6',
         'campaign_name': 'Grand Mesa',
+        'observer': 'Randall Bonnell',
         'instrument': 'gpr',
-        'instrument_model': f'Mala 800 MHz GPR',
+        'instrument_model': 'pulse EKKO Pro multi-polarization 1 GHz GPR',
         'timezone': 'UTC',
-        'name': 'UNM GPR Data',
+        'doi': 'https://doi.org/10.5067/S5EGFLCIAB18',
+        'name': 'CSU GPR Data',
     }
     UploaderClass = PointDataCSV
     TableClass = PointData
 
     @pytest.fixture(scope="class")
     def uploaded_file(self, session, data_dir):
-        self.upload_file(session, str(data_dir.joinpath("unm_gpr.csv")))
+        self.upload_file(session, str(data_dir.joinpath("csu_gpr.csv")))
 
     def filter_measurement_type(self, session, measurement_type, query=None):
         if query is None:
@@ -48,16 +48,16 @@ class TestUNMGPR(PointBaseTesting):
         "table, attribute, expected_value", [
             (Campaign, "name", "Grand Mesa"),
             (Instrument, "name", "gpr"),
-            (Instrument, "model", "Mala 800 MHz GPR"),
+            (Instrument, "model", "pulse EKKO Pro multi-polarization 1 GHz GPR"),
             (MeasurementType, "name", ['two_way_travel', 'depth', "swe"]),
             (MeasurementType, "units", ['ns', 'cm', 'mm']),
             (MeasurementType, "derived", [False, False, False]),
-            (DOI, "doi", "https://doi.org/10.5067/WE9GI1GVMQF6"),
-            (CampaignObservation, "name", "UNM GPR Data_gpr_Mala 800 MHz GPR_two_way_travel"),
+            (DOI, "doi", "https://doi.org/10.5067/S5EGFLCIAB18"),
+            (CampaignObservation, "name", "CSU GPR Data_gpr_pulse EKKO Pro multi-polarization 1 GHz GPR_two_way_travel"),
             (PointData, "geom",
-                WKTElement('POINT (-108.1340183 39.0296597)', srid=4326)
+                WKTElement('POINT (-108.176474337253 39.0192013494439)', srid=4326)
              ),
-            (PointObservation, "date", date(2020, 1, 28)),
+            (PointObservation, "date", date(2020, 2, 6)),
         ]
     )
     def test_metadata(self, table, attribute, expected_value, uploaded_file):
@@ -65,9 +65,17 @@ class TestUNMGPR(PointBaseTesting):
 
     @pytest.mark.parametrize(
         "data_name, attribute_to_check, filter_attribute, filter_value, expected", [
-            ('two_way_travel', 'value', 'date', date(2020, 1, 28), [8.97]),
-            ('depth', 'value', 'date', date(2020, 1, 29), [0.9],),
-            ('swe', 'value', 'date', date(2020, 1, 31), [291]),
+            ('two_way_travel', 'value', 'date', date(2020, 2, 6), [
+                7.348628, 7.225466, 7.102305, 6.979144, 6.814929
+            ]),
+            ('depth', 'value', 'date', date(2020, 2, 6), [
+                89.5675335280758, 88.0663939188338, 86.5652664979259,
+                85.0641390770181, 83.0626317863629
+            ],),
+            ('swe', 'value', 'date', date(2020, 2, 6), [
+                244.519366531647, 240.421255398416, 236.323177539338,
+                232.225099680259, 226.760984776771
+            ]),
         ]
     )
     def test_value(
@@ -81,9 +89,9 @@ class TestUNMGPR(PointBaseTesting):
 
     @pytest.mark.parametrize(
         "data_name, expected", [
-            ("depth", 4),
-            ("swe", 4),
-            ("two_way_travel", 4),
+            ("depth", 5),
+            ("swe", 5),
+            ("two_way_travel", 5),
             ("density", 0),  # no measurements
         ]
     )
@@ -93,8 +101,8 @@ class TestUNMGPR(PointBaseTesting):
 
     @pytest.mark.parametrize(
         "data_name, attribute_to_count, expected", [
-            ("depth", "value", 4),
-            ("swe", "value", 4),
+            ("depth", "value", 5),
+            ("swe", "value", 5),
             ("swe", "units", 1)
         ]
     )
