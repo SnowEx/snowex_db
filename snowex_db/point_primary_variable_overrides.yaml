@@ -13,7 +13,7 @@ BP:
   - bp_kpa_avg
   match_on_code: true
 DATE:
-  auto_remap: false
+  auto_remap: true
   code: date
   description: Measurement Date (only date column)
   map_from:
@@ -167,7 +167,7 @@ SW_OUT:
   - sdn_avg
   match_on_code: true
 TIME:
-  auto_remap: false
+  auto_remap: true
   code: time
   description: Measurement time
   map_from:
@@ -255,3 +255,9 @@ PIT_ID:
     - pit_id
     - pitid
   match_on_code: true
+FREQUENCY:
+    auto_remap: true
+    code: frequency
+    description: Frequency of measurement
+    map_from:
+        - freq_mhz
