@@ -17,18 +17,21 @@ class TestGPR(PointBaseTesting):
     averaging for the main value.
     """
     kwargs = {
-        'timezone': "UTC",
-        'doi': "some_gpr_point_doi",
-        "campaign_name": "Grand Mesa",
-        "name": "BSU GPR DATA",
-        "instrument": "gpr"
+        # Constant Metadata for the GPR data
+        'observer': 'Ryan Webb',
+        'doi': 'https://doi.org/10.5067/WE9GI1GVMQF6',
+        'campaign_name': 'Grand Mesa',
+        'instrument': 'gpr',
+        'instrument_model': f'Mala 800 MHz GPR',
+        'timezone': 'UTC',
+        'name': 'UNM GPR Data',
     }
     UploaderClass = PointDataCSV
     TableClass = PointData
 
     @pytest.fixture(scope="class")
     def uploaded_file(self, session, data_dir):
-        self.upload_file(session, str(data_dir.joinpath("bsu_gpr.csv")))
+        self.upload_file(session, str(data_dir.joinpath("unm_gpr.csv")))
 
     def filter_measurement_type(self, session, measurement_type, query=None):
         if query is None:
@@ -45,14 +48,14 @@ class TestGPR(PointBaseTesting):
         "table, attribute, expected_value", [
             (Campaign, "name", "Grand Mesa"),
             (Instrument, "name", "gpr"),
-            (Instrument, "model", None),
+            (Instrument, "model", "Mala 800 MHz GPR"),
             (MeasurementType, "name", ['two_way_travel', 'depth', "swe"]),
             (MeasurementType, "units", ['ns', 'cm', 'mm']),
             (MeasurementType, "derived", [False, False, False]),
-            (DOI, "doi", "some_gpr_point_doi"),
-            (CampaignObservation, "name", "BSU GPR DATA_gpr_two_way_travel"),
+            (DOI, "doi", "https://doi.org/10.5067/WE9GI1GVMQF6"),
+            (CampaignObservation, "name", "UNM GPR Data_gpr_Mala 800 MHz GPR_two_way_travel"),
             (PointData, "geom",
-                WKTElement('POINT (-108.190889311605 39.0343743775669)', srid=4326)
+                WKTElement('POINT (-108.1340183 39.0296597)', srid=4326)
              ),
             (PointObservation, "date", date(2020, 1, 28)),
         ]
@@ -62,11 +65,9 @@ class TestGPR(PointBaseTesting):
 
     @pytest.mark.parametrize(
         "data_name, attribute_to_check, filter_attribute, filter_value, expected", [
-            ('two_way_travel', 'value', 'date', date(2020, 1, 28), [8.3] * 8),
-            ('depth', 'value', 'date', date(2020, 1, 28),
-             [101.096735522092, 101.096735522092, 101.096735522092, 101.096735522092, 101.096735522092, 101.096735522092, 101.096735522092, 101.096735522092]),
-            ('swe', 'value', 'date', date(2020, 1, 28),
-             [275.994087975311, 275.994087975311, 275.994087975311, 275.994087975311, 275.994087975311, 275.994087975311, 275.994087975311, 275.994087975311]),
+            ('two_way_travel', 'value', 'date', date(2020, 1, 28), [8.97]),
+            ('depth', 'value', 'date', date(2020, 1, 29), [0.9],),
+            ('swe', 'value', 'date', date(2020, 1, 31), [291]),
         ]
     )
     def test_value(
@@ -80,9 +81,9 @@ class TestGPR(PointBaseTesting):
 
     @pytest.mark.parametrize(
         "data_name, expected", [
-            ("depth", 12),
-            ("swe", 12),
-            ("two_way_travel", 12),
+            ("depth", 4),
+            ("swe", 4),
+            ("two_way_travel", 4),
             ("density", 0),  # no measurements
         ]
     )
@@ -92,8 +93,8 @@ class TestGPR(PointBaseTesting):
 
     @pytest.mark.parametrize(
         "data_name, attribute_to_count, expected", [
-            ("depth", "value", 2),
-            ("swe", "value", 2),
+            ("depth", "value", 4),
+            ("swe", "value", 4),
             ("swe", "units", 1)
         ]
     )
