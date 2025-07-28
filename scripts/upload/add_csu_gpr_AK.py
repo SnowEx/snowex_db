@@ -19,20 +19,6 @@ import pandas as pd
 def main():
     file = Path('../download/data/SnowEx223_FLCF_1GHz_GPR_CSU.csv')
 
-    # Fix quirks
-    df = pd.read_csv(file, dtype=str)
-
-    # Upload is not able to handle the Notes col. So just remove it for now
-    modified = file.parent.joinpath(file.stem + f'_mod{file.suffix}')
-    print(f"Removing Notes Column prior to upload. Writing to {modified}")
-
-
-    # No time is a problem. Use 12 AKST == 9pm (21:00) UTC
-    # df['Time[HHMM]'] = '21:00'
-
-    # Write out the modified version
-    # df[coi].to_csv(modified, index=False)
-
     kwargs = {
         # Constant Metadata for the GPR data
         'campaign_name': 'farmers-creamers',  # TODO: should this be AK-something?
