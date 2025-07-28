@@ -235,6 +235,8 @@ CAMPAIGN:
 COMMENTS:
     code: comments
     description: Comments
+    map_from:
+        - notes
     match_on_code: true
 FLAGS:
   code: flags

@@ -7,11 +7,14 @@ Read in the SnowEx 2023 CSU GPR data collected at Farmers Loop and Creamers Fiel
 
 """
 
+from os.path import abspath, expanduser
 from pathlib import Path
-from snowexsql.db import get_db
-from snowex_db.upload import PointDataCSV
+from snowexsql.db import db_session_with_credentials
+from snowex_db.upload.points import PointDataCSV
 import pandas as pd
 
+
+# Issue #71
 
 def main():
     file = Path('../download/data/SnowEx223_FLCF_1GHz_GPR_CSU.csv')
@@ -23,43 +26,36 @@ def main():
     modified = file.parent.joinpath(file.stem + f'_mod{file.suffix}')
     print(f"Removing Notes Column prior to upload. Writing to {modified}")
 
-    coi = [c for c in df.columns if c != 'Notes']
 
     # No time is a problem. Use 12 AKST == 9pm (21:00) UTC
-    df['Time[HHMM]'] = '21:00'
+    # df['Time[HHMM]'] = '21:00'
 
     # Write out the modified version
-    df[coi].to_csv(modified, index=False)
-
+    # df[coi].to_csv(modified, index=False)
 
     kwargs = {
-        # Keyword argument to upload depth measurements
-        'depth_is_metadata': False,
-
         # Constant Metadata for the GPR data
-        'site_name': 'farmers-creamers',
-        'observers': 'Randall Bonnell',
-        'instrument': 'pulseEkko pro 1 GHz GPR',
-        'in_timezone': 'UTC',
-        'out_timezone': 'UTC',
-        'doi': None, # Data is preliminary
-        'epsg': 26906
+        'campaign_name': 'farmers-creamers',  # TODO: should this be AK-something?
+        'observer': 'Randall Bonnell',
+        'instrument': 'gpr',
+        'instrument_model': 'pulseEkko pro 1 GHz GPR',
+        'timezone': 'UTC',
+        'doi': None,  # TODO: presumably this exists now?
+        'name': 'CSU GPR Data',
     }
 
-    # Grab a db connection to a local db named snowex
-    db_name = 'localhost/snowex'
-    engine, session = get_db(db_name, credentials='./credentials.json')
+    # Break out the path and make it an absolute path
+    file = abspath(expanduser(file))
 
-    # Instantiate the point uploader
-    csv = PointDataCSV(modified, **kwargs)
-    # Push it to the database
-    csv.submit(session)
-
-    # Close out the session with the DB
-    session.close()
+    # Grab a db connection
+    with db_session_with_credentials() as (_engine, session):
+        # Instantiate the point uploader
+        csv = PointDataCSV(session, file, **kwargs)
+        # Push it to the database
+        csv.submit()
 
     # return the number of errors for run.py can report it
-    return len(csv.errors)
+    # return len(csv.errors)
 
 
 if __name__ == '__main__':
