@@ -1,9 +1,8 @@
 """
 Module for classes that upload single files to the database.
 """
-
+from pathlib import Path
 import logging
-
 import geopandas as gpd
 import pandas as pd
 from geoalchemy2 import WKTElement
@@ -12,20 +11,18 @@ from snowexsql.tables import (
     Campaign, DOI, Instrument, MeasurementType, Observer, PointData,
     PointObservation
 )
+
+from insitupy.io.strings import StringManager
+
 from .base import BaseUpload
 from ..point_data import PointDataCollection, SnowExPointData
-from ..string_management import parse_none
+
 
 LOG = logging.getLogger("snowex_db.upload.points")
 
 
 class DataValidationError(ValueError):
     pass
-
-# TODO: do we need to make a SnowExPointDataCollection similar to
-#   SnowExProfileDataCollection, since some files will have more than one point
-#   measurement per file? This is true for GPR, summary swe, etc
-# TODO: start with test datasets for simpler examples
 
 
 class PointDataCSV(BaseUpload):
@@ -44,12 +41,42 @@ class PointDataCSV(BaseUpload):
         'density': 'kg/m^3'
     }
 
-    def __init__(self, session, filename, timezone="US/Mountain", **kwargs):
-        self.filename = filename
+    def __init__(
+            self, session, profile_filename, timezone="US/Mountain", **kwargs
+    ):
+        """
+
+        Args:
+            session: SQLAlchemy session to use for the upload
+            profile_filename: Path to the csv file to upload
+            timezone: Timezone to assume for the data, defaults to "US/Mountain"
+            **kwargs:
+                doi
+                instrument
+                header_sep
+                id
+                campaign_name
+                derived
+                instrument_model
+                comments
+                observer
+                name
+                row_based_timezone
+                instrument_map
+        """
+        self.filename = profile_filename
         self._session = session
+
         self._timezone = timezone
         self._doi = kwargs.get("doi")
         self._instrument = kwargs.get("instrument")
+        # a map of measurement type to instrument name
+        self._instrument_map = kwargs.get("instrument_map", {})
+        if self._instrument_map and self._instrument:
+            raise ValueError(
+                "Cannot provide both 'instrument' and 'instrument_map'. "
+                "Please choose one."
+            )
         self._header_sep = kwargs.get("header_sep", ",")
         self._id = kwargs.get("id")
         self._campaign_name = kwargs.get("campaign_name")
@@ -89,7 +116,10 @@ class PointDataCSV(BaseUpload):
                 site_id=self._id,
                 campaign_name=self._campaign_name,
                 units_map=self.UNITS_MAP,
-                row_based_timezone=self._row_based_tz
+                row_based_timezone=self._row_based_tz,
+                primary_variable_file=Path(__file__).parent.joinpath(
+                    "../point_primary_variable_overrides.yaml"
+                )
             )
         except pd.errors.ParserError as e:
             LOG.error(e)
@@ -121,8 +151,8 @@ class PointDataCSV(BaseUpload):
 
         # Manage nans and nones
         for c in df.columns:
-            df[c] = df[c].apply(lambda x: parse_none(x))
-        df['value'] = df[variable.code].astype(str)
+            df[c] = df[c].apply(lambda x: StringManager.parse_none(x))
+        df['value'] = df[variable.code].astype(float)
 
         if 'units' not in df.columns:
             unit_str = series.units_map.get(variable.code)
@@ -147,9 +177,16 @@ class PointDataCSV(BaseUpload):
             if column_name not in columns:
                 df[column_name] = [param] * len(df)
 
+        # Anywhere the instrument is None, use the instrument map
+        # based on the measurement name
+        if self._instrument_map and 'instrument' in df.columns:
+            df['instrument'] = df['instrument'].fillna(
+                df['type'].map(self._instrument_map)
+            )
+
         # Map the measurement names or default to original
         df["instrument"] = df['instrument'].map(
-            lambda x: self.MEASUREMENT_NAMES.get(x, x)
+            lambda x: self.MEASUREMENT_NAMES.get(x.lower(), x)
         )
 
         return df
@@ -168,6 +205,7 @@ class PointDataCSV(BaseUpload):
             if not df.empty:
                 # IMPORTANT: Add observations first, so we can use them in the
                 # entries
+
                 # TODO: how do these link back?
                 self._add_campaign_observation(df)
 
@@ -179,6 +217,7 @@ class PointDataCSV(BaseUpload):
 
                     # TODO: instrument name logic here?
                     d = self._add_entry(row)
+
                     # session.bulk_save_objects(objects) does not resolve
                     # foreign keys, DO NOT USE IT
                     self._session.add(d)
@@ -190,13 +229,17 @@ class PointDataCSV(BaseUpload):
                 )
 
     def _observation_name_from_row(self, row):
-        value = f"{row['name']}_{row['instrument']}"
+        name = row.get('name') or row.get('pit_id')
+        value = f"{name}_{row['instrument']}"
+
         if row.get('instrument_model'):
-            value += row['instrument_model']
+            value += '_' + row['instrument_model']
+
         # Add the type of measurement
         # This is necessary because the GPR returns multiple variables
         if row.get('type'):
             value += "_" + row['type']
+
         return value
     
     def _get_first_check_unique(self, df, key):
@@ -205,10 +248,12 @@ class PointDataCSV(BaseUpload):
         it is unique. If not, raise a DataValidationError
         """
         unique_values = df[key].unique()
+
         if len(unique_values) > 1:
             raise DataValidationError(
                 f"Multiple values for {key} found: {unique_values}"
             )
+
         return unique_values[0]
 
     def _add_campaign_observation(self, df):
@@ -218,73 +263,74 @@ class PointDataCSV(BaseUpload):
 
         """
         df["date"] = pd.to_datetime(df["datetime"]).dt.date
-        # Group by our observation keys to add into the database
-        for keys, grouped_df in df.groupby(
-                ['instrument', 'instrument_model', 'name', 'type', 'date'],
-                dropna=False
-        ):
-            # Process each unique combination of keys (key) and its corresponding group (grouped_df)
+
+        # Group by our observation keys to add records uniquely into the database
+        base_groups = ['instrument', 'instrument_model', 'name', 'type', 'date']
+        if 'pit_id' in df.columns:
+            base_groups.append('pit_id')
+
+        # Process each unique combination of keys (key) and its corresponding group (grouped_df)
+        for keys, grouped_df in df.groupby(base_groups, dropna=False):
             # Add instrument
-            instrument_name = self._get_first_check_unique(grouped_df, 'instrument')
-            # Map the instrument name if we have a mapping for it
-            instrument_name = self.MEASUREMENT_NAMES.get(
-                instrument_name.lower(), instrument_name
-            )
             instrument = self._check_or_add_object(
                 self._session, Instrument, dict(
-                    name=instrument_name,
+                    name=self._get_first_check_unique(grouped_df, 'instrument'),
                     model=self._get_first_check_unique(grouped_df, 'instrument_model')
                 )
             )
     
             # Add measurement type
-            measurement_type = self._get_first_check_unique(
-                grouped_df, "type"
-            )
             measurement_obj = self._check_or_add_object(
                 # Add units and 'derived' flag for the measurement
                 self._session, MeasurementType, dict(
-                    name=measurement_type,
+                    name=self._get_first_check_unique(grouped_df, "type"),
                     units=self._get_first_check_unique(grouped_df, "units"),
                     derived=self._derived
                 )
             )
             
-            # Check name is unique
-            self._get_first_check_unique(df, "name")
+            # Check name is unique because we are adding ONE
+            # campaign observation here
+            self._get_first_check_unique(grouped_df, "name")
+            if 'pit_id' in grouped_df.columns:
+                self._get_first_check_unique(grouped_df, "pit_id")
             # Get the measurement name
             measurement_name = self._observation_name_from_row(grouped_df.iloc[0])
     
             # Add doi
-            doi_string = self._get_first_check_unique(df, "doi")
+            doi_string = self._get_first_check_unique(grouped_df, "doi")
             if doi_string is not None:
                 doi = self._check_or_add_object(
                     self._session, DOI, dict(doi=doi_string)
                 )
             else:
                 doi = None
-            # pass in campaign
-            campaign_name = self._get_first_check_unique(
-                df, "campaign"
-            ) or self._campaign_name
+            # Add campaign
+            campaign_name = self._get_first_check_unique(grouped_df, "campaign") \
+                            or self._campaign_name
             if campaign_name is None:
                 raise DataValidationError("Campaign cannot be None")
             campaign = self._check_or_add_object(
                 self._session, Campaign, dict(name=campaign_name)
             )
-            # add observer
+            # Add observer
             observer_name = self._get_first_check_unique(
-                df, "observer"
+                grouped_df, "observer"
             ) or self._observer
             observer_name = observer_name or "unknown"
             observer = self._check_or_add_object(
                 self._session, Observer, dict(name=observer_name)
             )
+            # Construct description string
             description = None
             if ["comments"] in grouped_df.columns.values:
-                description = self._get_first_check_unique(
+                description = (description or "") + self._get_first_check_unique(
                     grouped_df, "comments"
-                ),
+                )
+            if ["flags"] in grouped_df.columns.values:
+                description = (description or "") + self._get_first_check_unique(
+                    grouped_df, "flags"
+                )
 
             date_obj = self._get_first_check_unique(grouped_df, "date")
             observation = self._check_or_add_object(
@@ -297,7 +343,6 @@ class PointDataCSV(BaseUpload):
                 ),
                 object_kwargs=dict(
                     name=measurement_name,
-                    # TODO: we lose out on row-based comments here
                     description=description,
                     date=date_obj,
                     instrument=instrument,
@@ -338,8 +383,8 @@ class PointDataCSV(BaseUpload):
             datetime=row["datetime"],
             # Arguments from kwargs
             geom=row['geometry'],
-            version_number=row['version_number'],
-            elevation=row['elevation'],
+            version_number=row.get('version_number', None),
+            elevation=row.get('elevation', None),
             equipment=row['instrument']
         )
 

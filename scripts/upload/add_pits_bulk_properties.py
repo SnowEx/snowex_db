@@ -9,16 +9,14 @@ from pathlib import Path
 
 import pandas as pd
 
-from snowex_db.upload import PointDataCSV
-from snowex_db import db_session
+from snowexsql.db import db_session_with_credentials
+from snowex_db.upload.points import PointDataCSV
 
 
 def main():
     """
     Add bulk SWE, Depth, Density for 2020 and 2021 timeseires pits
     """
-    db_name = 'localhost/snowex'
-    debug = True
 
     # Point to the downloaded data from
     data_dir = abspath('../download/data/SNOWEX/')
@@ -35,14 +33,18 @@ def main():
         },
         # Preliminary data from 2023 Alask pits
         {
+            # TODO: update this
             "DOI": "preliminary_alaska_pits",
             "path": "../SNEX23_preliminary/Data/SnowEx23_SnowPits_AKIOP_Summary_SWE_v01.csv"
         }
     ]
+    # start a db session
+    # look through the pit summary files
     for info in path_details:
         doi = info["DOI"]
         file_path = join(data_dir, info["path"])
         # Read csv and dump new one without the extra header lines
+        # that make parsing not possible
         df = pd.read_csv(
             file_path,
             skiprows=list(range(32)) + [33]
@@ -61,16 +63,15 @@ def main():
         df.to_csv(new_name, index=False)
 
         # Submit SWE file data as point data
-        with db_session(
-            db_name, credentials='credentials.json'
-        ) as (session, engine):
-            pcsv = PointDataCSV(
-                new_name, doi=doi, debug=debug,
-                depth_is_metadata=False,
-                row_based_crs=True,
-                row_based_timezone=True
+        with db_session_with_credentials() as (_engine, session):
+            u = PointDataCSV(
+                new_name,
+                doi=doi,
+                row_based_timezone=True,
+                derived=True
             )
-            pcsv.submit(session)
+
+            u.submit(session)
 
 
 if __name__ == '__main__':

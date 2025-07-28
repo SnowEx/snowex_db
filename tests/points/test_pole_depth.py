@@ -33,20 +33,67 @@ class TestPollDepth(PointBaseTesting):
             filename=str(data_dir.joinpath("pole_depths.csv")), session=session
         )
 
+    @pytest.mark.usefixtures("uploaded_file")
+    def test_measurement_type(self, session):
+        record = self.get_records(session, MeasurementType, "name", "depth")
+        assert len(record) == 1
+        record = record[0]
+        assert record.units == 'cm'
+        assert record.derived is False
+
+    @pytest.mark.usefixtures("uploaded_file")
+    @pytest.mark.parametrize("model", ["W1B", "E9B", "E8A", "E6A"])
+    def test_instrument(self, model, session):
+        record = self.get_records(session, Instrument, "model", model)
+        assert len(record) == 1
+        record = record[0]
+        assert record.name == "camera"
+
+    @pytest.mark.usefixtures("uploaded_file")
+    @pytest.mark.parametrize(
+        "date",
+        [
+            date(2019, 11, 27),
+            date(2019, 12, 7),
+            date(2019, 12, 31),
+            date(2020, 2, 1),
+            date(2019, 10, 28),
+            date(2019, 11, 28),
+            date(2019, 12, 14),
+            date(2019, 11, 29),
+            date(2020, 2, 27),
+            date(2020, 4, 7),
+            date(2020, 5, 22),
+            date(2020, 1, 27),
+            date(2020, 3, 14),
+            date(2020, 5, 3),
+        ],
+    )
+    def test_point_observation(self, date, session):
+        record = self.get_records(session, PointObservation, "date", date)
+        assert len(record) == 1
+
+    @pytest.mark.usefixtures("uploaded_file")
+    @pytest.mark.parametrize(
+        "name, count",
+        [
+            ("example_pole_point_name_camera_E6A_depth", 4),
+            ("example_pole_point_name_camera_E8A_depth", 3),
+            ("example_pole_point_name_camera_E9B_depth", 4),
+            ("example_pole_point_name_camera_W1B_depth", 3),
+        ],
+    )
+    def test_campaign_observation(self, name, count, session):
+        names = self.get_records(session, CampaignObservation, "name", name)
+        assert len(names) == count
+
     @pytest.mark.parametrize(
         "table, attribute, expected_value", [
             (Campaign, "name", "Grand Mesa"),
-            (Instrument, "name", "camera"),
-            (Instrument, "model", "E6A"),
-            (MeasurementType, "name", ['depth']),
-            (MeasurementType, "units", ['cm']),
-            (MeasurementType, "derived", [False]),
             (DOI, "doi", "some_point_doi_poles"),
-            (CampaignObservation, "name", "example_pole_point_name_cameraE6A_depth"),
             (PointData, "geom",
                 WKTElement('POINT (-108.184794 39.008078)', srid=4326)
              ),
-            (PointObservation, "date", date(2019, 11, 27)),
         ]
     )
     def test_metadata(self, table, attribute, expected_value, uploaded_file):

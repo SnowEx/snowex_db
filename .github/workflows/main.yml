@@ -7,7 +7,9 @@ on:
   push:
     branches: [ main ]
   pull_request:
-    branches: [ main ]
+    branches:
+      - main
+      - api_upload_update
   workflow_dispatch:
 
 jobs:
@@ -15,7 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.8, 3.9, "3.10"]
+        python-version: [3.9, '3.10', 3.11, 3.12]
 
     services:
 
@@ -53,7 +55,7 @@ jobs:
           pytest -s tests/
 
       # Run coverage only once
-      - if: ${{ matrix.python-version == '3.9'}}
+      - if: ${{ matrix.python-version == '3.10'}}
         name: Get Coverage for badge
         run: |
           # Run coverage save the results

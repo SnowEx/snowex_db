@@ -9,6 +9,7 @@ import geopandas as gpd
 import pandas as pd
 from geoalchemy2 import WKTElement
 
+from insitupy.io.strings import StringManager
 from insitupy.campaigns.snowex import SnowExProfileData
 from snowexsql.tables import (
     Campaign, DOI, Instrument, LayerData, MeasurementType, Observer, Site
@@ -17,7 +18,6 @@ from .base import BaseUpload
 from .batch import BatchBase
 from ..metadata import SnowExProfileMetadata
 from ..profile_data import ExtendedSnowExProfileDataCollection
-from ..string_management import parse_none
 from ..utilities import get_logger
 
 LOG = logging.getLogger("snowex_db.upload.layers")
@@ -49,8 +49,7 @@ class UploadProfileData(BaseUpload):
             timezone (str): The timezone used, default is "US/Mountain".
             kwargs: Additional optional keyword arguments related to the profile.
                 doi (str): Digital Object Identifier
-                instrument (str): Name of the instrument used
-                                  collection.
+                instrument (str): Name of the instrument used in the collection.
                 header_sep (str): Delimiter for separating values in the header.
                                   Default is ','.
                 id (str): Identifier for the profile data file.
@@ -94,11 +93,17 @@ class UploadProfileData(BaseUpload):
         """
         try:
             return ExtendedSnowExProfileDataCollection.from_csv(
-                self.filename,
+                filename=self.filename,
                 timezone=self._timezone,
                 header_sep=self._header_sep,
                 site_id=self._id,
-                campaign_name=self._campaign_name
+                campaign_name=self._campaign_name,
+                metadata_variable_file=Path(__file__).parent.joinpath(
+                    "../metadata_variable_overrides.yaml"
+                ),
+                primary_variable_file=Path(__file__).parent.joinpath(
+                    "../profile_primary_variable_overrides.yaml"
+                ),
             )
         except pd.errors.ParserError as e:
             LOG.error(e)
@@ -117,19 +122,21 @@ class UploadProfileData(BaseUpload):
             df: Dataframe ready for submission
         """
 
-        df = profile.df.copy()
-        if df.empty:
+        if profile.df is None:
             LOG.debug("df is empty, returning")
-            return df
+            return gpd.GeoDataFrame()
+
         metadata = profile.metadata
         variable = profile.variable
+
+        df = profile.df.copy()
 
         # The type of measurement
         df['type'] = [variable.code] * len(df)
 
         # Manage nans and nones
         for c in df.columns:
-            df[c] = df[c].apply(lambda x: parse_none(x))
+            df[c] = df[c].apply(lambda x: StringManager.parse_none(x))
         df['value'] = df[variable.code].astype(str)
 
         if 'units' not in df.columns:

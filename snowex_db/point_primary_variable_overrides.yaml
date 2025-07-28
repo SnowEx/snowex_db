@@ -67,6 +67,7 @@ IGNORE:
   - id
   - avgvelocity
   - count
+  - site
   match_on_code: true
 INSTRUMENT:
   auto_remap: true
@@ -224,17 +225,33 @@ WIND_SPEED_10FT:
   map_from:
   - wsms_10ft_avg
   match_on_code: true
+CAMPAIGN:
+  auto_remap: true
+  code: campaign
+  description: Name of campaign site
+  map_from:
+  - location
+  match_on_code: true
+COMMENTS:
+    code: comments
+    description: Comments
+    match_on_code: true
+FLAGS:
+  code: flags
+  description: measurement flag
+  map_from:
+    - flag
+  match_on_code: true
 VERSION_NUMBER:
   auto_remap: true
   code: version_number
-  description: version 
-  map_from:
-  - version number
+  description: version
   match_on_code: true
 PIT_ID:
   auto_remap: true
   code: pit_id
   description: ID of snow pit
   map_from:
-  - pitid
+    - pit_id
+    - pitid
   match_on_code: true

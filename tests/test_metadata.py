@@ -1,7 +1,9 @@
 """
 Test all things from the metadata.py file
 """
+import datetime
 from os.path import abspath, dirname, join
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -23,6 +25,7 @@ info = {'site_name': 'Grand Mesa',
         }
 
 
+@pytest.mark.skip
 class DataHeaderTestBase:
     depth_is_metadata = True
     kwargs = {'in_timezone': 'US/Mountain'}

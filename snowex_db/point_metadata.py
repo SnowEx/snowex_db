@@ -1,17 +1,18 @@
 import logging
+from typing import Tuple, Union
 
-from insitupy.io.metadata import MetaDataParser
+from insitupy.campaigns.snowex.snowex_metadata import SnowExMetaDataParser
 from insitupy.profiles.metadata import ProfileMetaData
 
 LOG = logging.getLogger()
 
 
-class PointSnowExMetadataParser(MetaDataParser):
+class PointSnowExMetadataParser(SnowExMetaDataParser):
     """
-    Extend the parser to update the extended varaibles
+    Extend the parser to update the extended variables
     """
 
-    def find_header_info(self, filename=None):
+    def find_header_info(self, filename):
         """
         Read in all site details file for a pit If the filename has the word
         site in it then we read everything in the file. Otherwise, we use this
@@ -28,7 +29,6 @@ class PointSnowExMetadataParser(MetaDataParser):
                    **header_pos** - Index of the columns header for skiprows in
                                     read_csv
        """
-        filename = filename or self._fname
         filename = str(filename)
         with open(filename, encoding='latin') as fp:
             lines = fp.readlines()
@@ -62,7 +62,8 @@ class PointSnowExMetadataParser(MetaDataParser):
 
         return str_data, columns, columns_map, header_pos
 
-    def parse(self):
+    def parse(self, filename: str) -> (
+            Tuple)[Union[ProfileMetaData | None], list, dict, int]:
         """
         Parse the file and return a metadata object.
         We can override these methods as needed to parse the different
@@ -70,12 +71,16 @@ class PointSnowExMetadataParser(MetaDataParser):
 
         This populates self.rough_obj
 
+        Args:
+            filename: (str) Full path to the file with the header info to parse
+
         Returns:
-            (None, column list, position of header in file)
+            Tuple:
+                metadata object or None, column list, position of header in file
         """
         (
             meta_lines, columns, columns_map, header_position
-        ) = self.find_header_info(self._fname)
+        ) = self.find_header_info(filename)
         self._rough_obj = self._preparse_meta(meta_lines)
         # We do not have header metadata for point files
         if not self.rough_obj:

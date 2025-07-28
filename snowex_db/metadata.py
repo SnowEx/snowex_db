@@ -3,15 +3,20 @@ Module for header classes and metadata interpreters. This includes interpreting 
 to describing data.
 """
 import logging
-from dataclasses import dataclass
-from typing import Union
+import pandas as pd
+import pytz
 
-from insitupy.io.metadata import MetaDataParser
+from dataclasses import dataclass
+from typing import Tuple, Union
+
 from insitupy.profiles.metadata import ProfileMetaData
+from insitupy.campaigns.snowex.snowex_metadata import SnowExMetaDataParser
 from snowexsql.db import get_table_attributes
 from snowexsql.tables import Site
 
-from .interpretation import *
+from .interpretation import (
+    manage_degree_values, convert_cardinal_to_degree, add_date_time_keys
+)
 from .projection import add_geom, reproject_point_in_dict
 from .string_management import *
 from .utilities import assign_default_kwargs, get_logger
@@ -119,12 +124,13 @@ class SnowExProfileMetadata(ProfileMetaData):
     wind: Union[str, None] = None
 
 
-class ExtendedSnowExMetadataParser(MetaDataParser):
+class ExtendedSnowExMetadataParser(SnowExMetaDataParser):
     """
     Extend the parser to update the parsing function
     """
 
-    def parse(self):
+    def parse(self, filename: str) \
+            -> Tuple[SnowExProfileMetadata, list, dict, int]:
         """
         Parse the file and return a metadata object.
         We can override these methods as needed to parse the different
@@ -132,12 +138,15 @@ class ExtendedSnowExMetadataParser(MetaDataParser):
 
         This populates self.rough_obj
 
+        Args:
+            filename: Path to the file from which to parse metadata
+
         Returns:
             (metadata object, column list, position of header in file)
         """
         (
             meta_lines, columns, columns_map, header_position
-        ) = self.find_header_info(self._fname)
+        ) = self.find_header_info(filename)
         self._rough_obj = self._preparse_meta(meta_lines)
         # Create a standard metadata object
         metadata = SnowExProfileMetadata(
