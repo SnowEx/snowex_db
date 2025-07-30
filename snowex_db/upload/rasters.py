@@ -1,15 +1,15 @@
 from geoalchemy2.elements import RasterElement
-import os
 from subprocess import STDOUT, check_output
-from pathlib import Path
-from os.path import exists, join
-from os import makedirs, remove
-import boto3
 import logging
-from snowexsql.tables import ImageData
-
+from snowexsql.tables import (
+    Campaign, DOI, Instrument, MeasurementType, Observer, ImageObservation,
+    ImageData,
+)
 
 from snowexsql.db import get_table_attributes
+
+from .base import BaseUpload
+from .cog_handler import COGHandler
 from ..utilities import (assign_default_kwargs, get_file_creation_date,
                         get_logger)
 
@@ -17,194 +17,163 @@ from ..utilities import (assign_default_kwargs, get_file_creation_date,
 LOG = logging.getLogger(__name__)
 
 
-class COGHandler:
-    """
-    Class to convert TIFs to COGs, persist them, and generate the command to
-    insert them into the db
-    """
-    AWS_REGION = os.getenv("AWS_DEFAULT_REGION", "us-west-2")
-
-    def __init__(self, tif_file, s3_bucket="m3w-snowex", s3_prefix="cogs",
-                 cog_dir="./snowex_cog_storage", use_s3=True):
-        """
-        Args:
-            tif_file: local or abs bath to file that will be persisted
-            s3_bucket: optional s3 bucket name
-            s3_prefix: optional s3 bucket prefix
-            cog_dir: option local directory for storing cog files
-            use_s3: boolean whether or not we persist files in S3
-        """
-        self.tif_file = Path(tif_file)
-        self.s3_bucket = s3_bucket
-        self.s3_prefix = s3_prefix
-        self.tmp_dir = Path(cog_dir).expanduser().absolute()
-        self.use_s3 = use_s3
-        if not self.tmp_dir.exists():
-            LOG.info(f"Making directory {self.tmp_dir}")
-            makedirs(self.tmp_dir)
-
-        # state variables
-        self._cog_path = None
-        self._cog_uri = None
-        self._key_name = None
-        self._sql_path = None
-
-    def create_cog(self, nodata=None):
-        """
-        Create a cloud optimized geotif from tif
-        Args:
-            nodata: no data value
-        Returns:
-            path to COG
-        """
-        cmd = [
-            "gdal_translate",
-            "-co", "COMPRESS=DEFLATE",
-            "-co", "ZLEVEL=9",  # Use highest compression
-            "-co", "PREDICTOR=2",  # Compression predictor
-            "-co", "TILED=YES",  # Apply default (256x256) tiling
-        ]
-        if nodata is not None:
-            cmd += ["-a_nodata", f"{nodata}"]
-
-        output_file = Path(self.tmp_dir)\
-            .joinpath(self.tif_file.name)\
-            .with_suffix(".tif")
-        cmd += [
-            str(self.tif_file),  # Input file
-            str(output_file)  # Output file
-        ]
-        LOG.info('Executing: {}'.format(' '.join(cmd)))
-        check_output(cmd, stderr=STDOUT).decode('utf-8')
-        self._cog_path = output_file
-        return output_file
-
-    def _remove_cog(self):
-        """
-        Delete COG file. This should be used of the files are persisted in S3
-        """
-        if self._cog_path.exists():
-            remove(str(self._cog_path))
-        else:
-            raise RuntimeError(
-                f"Cannot remove the COG {self._cog_path}"
-                f" because it does not exist"
-            )
-
-    def persist_cog(self):
-        """
-        persist COG either locally or in S3
-        Returns:
-            S3 or local path
-        """
-        if exists(self._cog_path):
-            if self.use_s3:
-                self._key_name = join(self.s3_prefix, self._cog_path.name)
-                LOG.info(f'Uploading {self._cog_path} to {self.s3_bucket}/{self._key_name}')
-                s3 = boto3.resource('s3', region_name=self.AWS_REGION)
-                s3.meta.client.upload_file(
-                    str(self._cog_path),  # local file
-                    self.s3_bucket,  # bucket name
-                    self._key_name  # key name
-                )
-                result = Path(self.s3_bucket).joinpath(self._key_name)
-                # delete cog since it is stored in S3
-                self._remove_cog()
-            else:
-                # COG is already stored locally
-                result = self._cog_path
-        else:
-            raise RuntimeError(
-                f"Cannot upload COG {self._cog_path}"
-                f" because it does not exist"
-            )
-        self._sql_path = result
-        return result
-
-    def to_sql_command(self, epsg, no_data=None):
-        """
-        Generate command to insert into database
-        Args:
-            epsg: string EPSG
-            no_data: optional nodata value
-        Returns:
-            list of raster2pgsql command
-        """
-        # This produces a PSQL command with auto tiling
-        if self.use_s3:
-            cog_path = Path("/vsis3").joinpath(self._sql_path)
-        else:
-            cog_path = self._sql_path
-        cmd = [
-            'raster2pgsql', '-s', str(epsg),
-            # '-I',
-            '-t', '256x256',
-            '-R', str(cog_path),
-        ]
-
-        # If nodata applied:
-        if no_data is not None:
-            cmd.append('-N')
-            cmd.append(str(no_data))
-
-        return cmd
-
-
-class UploadRaster(object):
+class UploadRaster(BaseUpload):
     """
     Class for uploading a single tifs to the database. Utilizes the raster2pgsql
     command and then parses it for delivery via python.
     """
+    TABLE_CLASS = ImageData
 
-    defaults = {
-        'epsg': None,
-        'no_data': None,
-        'use_s3': True  # boolean whether or not we're storing files in S3
-    }
+    def __init__(
+            self, session, filename, epsg, measurement_type, units,
+            use_s3=True, no_data=None, cog_dir="./snowex_cog_storage",
+            doi=None, description=None, **kwargs
+    ):
+        """
+        Initialize the UploadRaster object.
+        Args:
+            session: sqlalchemy session object
+            filename: path to the file
+            epsg: integer epsg code
+            measurement_type: type of measurement, e.g. 'depth'
+            use_s3: whether to use S3 for storing COGs
+            no_data: optional no data value for the raster
+            cog_dir: directory to store COGs if not using S3
+            doi: optional DOI for the measurement
+            description: optional description for the measurement
+            **kwargs:
+        """
 
-    def __init__(self, filename, **kwargs):
+        self._session = session
         self.log = get_logger(__name__)
         self.filename = filename
-        self.data = assign_default_kwargs(self, kwargs, self.defaults)
-        self.date_accessed = get_file_creation_date(self.filename)
+        self._measurement_type = measurement_type
+        self._epsg = epsg
+        self._no_data = no_data
+        self._units = units
+        self.use_s3 = use_s3
+        self._cog_dir = cog_dir
+        self._doi = doi
+        self._description = description
 
-    def submit(self, session):
+        self._campaign_name = kwargs.get("campaign_name")
+        # Is this file for derived measurements
+        self._derived = kwargs.get("derived", False)
+
+        self._instrument = kwargs.get("instrument")
+        self._instrument_model = kwargs.get("instrument_model")
+        self._comments = kwargs.get("comments")
+
+        # Observer name for the whole file
+        self._observer = kwargs.get("observer")
+        # assign name to each measurement if given
+        self._name = kwargs.get("name")
+
+    def _store_cog(self):
         """
-        Submit the data to the db using ORM. This uses out_db rasters either
-        locally or in AWS S3. Good articles below
+        Store the COG in S3 or locally and generate the SQL command to insert.
+        Execute the command to insert the COG into the database.
+        Good articles below
             - https://www.crunchydata.com/blog/postgis-raster-and-crunchy-bridge
             - https://www.crunchydata.com/blog/waiting-for-postgis-3.2-secure-cloud-raster-access
             - https://postgis.net/docs/using_raster_dataman.html#RT_Cloud_Rasters
-        """
-        # Remove any invalid columns
-        valid = get_table_attributes(ImageData)
-        data = {k: v for k, v in self.data.items() if k in valid}
-        data['date_accessed'] = self.date_accessed
 
+        Returns:
+            The tiles text we will store in the database
+        """
         # create cog and upload to s3
-        cog_handler = COGHandler(self.filename, use_s3=self.use_s3)
+        cog_handler = COGHandler(
+            self.filename, use_s3=self.use_s3, cog_dir=self._cog_dir,
+        )
         cog_handler.create_cog()
+        # Store the cog either in s3 or locally
         cog_handler.persist_cog()
         cmd = cog_handler.to_sql_command(
-            self.epsg, no_data=self.no_data
+            self._epsg, no_data=self._no_data
         )
         self.log.debug('Executing: {}'.format(' '.join(cmd)))
         s = check_output(cmd, stderr=STDOUT).decode('utf-8')
 
         # Split the SQL command at values (' which is the start of every one
+        # Allow for tiling, the first split is always psql statement we don't
+        # need
         tiles = s.split("VALUES ('")[1:]
         if len(tiles) > 1:
             # -1 because the first element is not a
             self.log.info(
                 'Raster is split into {:,} tiles for uploading...'.format(
                     len(tiles)))
+        return tiles
 
-        # Allow for tiling, the first split is always psql statement we don't
-        # need
+    def submit(self):
+        """
+        Submit the data to the db using ORM. This uses out_db rasters either
+        locally or in AWS S3.
+        """
+
+        # Store the cogs
+        tiles = self._store_cog()
+
+        # Store the instrument object
+        instrument = self._check_or_add_object(
+            self._session, Instrument, dict(
+                name=self._instrument,
+                model=self._instrument_model
+            )
+        )
+        # Add measurement type
+        measurement_obj = self._check_or_add_object(
+            # Add units and 'derived' flag for the measurement
+            self._session, MeasurementType, dict(
+                name=self._measurement_type,
+                units=self._units,
+                derived=self._derived
+            )
+        )
+        # Construct a measurement name
+        measurement_name = (self._name or "") + f"_{self._instrument}"
+        if self._instrument_model:
+            measurement_name += f"_{self._instrument_model}"
+        measurement_name += f"_{self._measurement_type}"
+
+        doi = self._check_or_add_object(
+            self._session, DOI, dict(doi=self._doi)
+        )
+        campaign = self._check_or_add_object(
+            self._session, Campaign, dict(name=self._campaign_name)
+        )
+        observer = self._check_or_add_object(
+            self._session, Observer, dict(name=self._observer)
+        )
+        observation = self._check_or_add_object(
+            self._session, ImageObservation, dict(
+                name=measurement_name,
+                date=date_obj,
+                instrument=instrument,
+                doi=doi,
+                measurement_type=measurement_obj,
+            ),
+            object_kwargs=dict(
+                name=measurement_name,
+                description=self._description,
+                date=date_obj,
+                instrument=instrument,
+                doi=doi,
+                # type=row["type"],  # THIS TYPE IS RESERVED FOR POLYMORPHIC STUFF
+                measurement_type=measurement_obj,
+                observer=observer,
+                campaign=campaign,
+            )
+        )
+
+        # TODO: can probably do this in parallel because everything else
+        #   should be created
         for t in tiles:
             v = t.split("'::")[0]
             raster = RasterElement(v)
-            data['raster'] = raster
-            r = ImageData(**data)
-            session.add(r)
-            session.commit()
+            new_entry = self.TABLE_CLASS(
+                raster=raster,
+                observation=observation,
+            )
+            self._session.add(new_entry)
+        self._session.commit()

@@ -23,7 +23,9 @@ import sys
 import glob
 from os.path import abspath, expanduser, join
 
-from snowex_db.batch import UploadUAVSARBatch
+from snowexsql.db import db_session_with_credentials
+
+from snowex_db.upload.rasters import UploadRaster
 
 
 def main():
@@ -43,88 +45,72 @@ def main():
         # Tile the data going in for faster retrieval
         'tiled': True,
 
-        # Spatial Reference
-        'epsg': 26912,
-
         # Metadata
-        'observers': 'UAVSAR team, JPL',
+        'observer': 'UAVSAR team, JPL',
         'instrument': 'UAVSAR, L-band InSAR',
-        'site_name': 'Grand Mesa',
-        'units': None,  # Add from the Annotation file
-        'description': '',  # Added from the annotation file
+        'campaign_name': 'Grand Mesa',
+        'name': 'UAVSAR Data',
         'doi': "https://asf.alaska.edu/doi/uavsar/#R0ARICRBAKYE",
-        'in_timezone': 'MST'
+        'timezone': 'MST',
     }
+    UNITS = "UNITLESS",
+    TYPE = 'insar'  # TODO: is this right?
 
     # Expand the paths
     downloads = abspath(expanduser(downloads))
     geotif_loc = join(downloads, geotif_loc)
 
-    # error counting
-    errors_count = 0
+    with db_session_with_credentials() as (_engine, session):
 
-    if region in ['all', 'grand_mesa']:
-        print('Uploading Grand Mesa')
-        ########################## Grand Mesa #####################################
-        # Grab all the grand mesa annotation files in the original data folder
-        ann_files = glob.glob(join(downloads, 'grmesa_*.ann'))
+        if region in ['all', 'grand_mesa']:
+            epsg = 26912  # EPSG code for the Grand Mesa area
+            print('Uploading Grand Mesa')
+            ########################## Grand Mesa #####################################
+            # Grab all the grand mesa annotation files in the original data folder
+            ann_files = glob.glob(join(downloads, 'grmesa_*.ann'))
+            # session, filename, epsg, measurement_type, units,
+            # Instantiate the uploader
+            for f in ann_files:
+                rs = UploadRaster(
+                    session, f, epsg, TYPE, UNITS,
+                    cog_dir=geotif_loc, **data
+                )
+                rs.submit()
 
-        # Instantiate the uploader
-        rs = UploadUAVSARBatch(ann_files, geotiff_dir=geotif_loc, **data)
+        if region in ['all', 'lowman']:
+            print('Uploading Lowman')
+            ############################### Idaho - Lowman ####################################
+            # Make adjustments to metadata for lowman files
+            data['campaign_name'] = 'idaho'
+            epsg = 26911
 
-        # Submit to the db
-        rs.push()
+            # Grab all the lowman and reynolds annotation files
+            ann_files = glob.glob(join(downloads, 'lowman_*.ann'))
 
-        # Keep track of number of errors for run.py
-        errors_count += len(rs.errors)
+            for f in ann_files:
+                rs = UploadRaster(
+                    session, f, epsg, TYPE, UNITS,
+                    cog_dir=geotif_loc, **data
+                )
+                rs.submit()
 
-        # Memory clean up
-        del rs
+        if region in ['all', 'reynolds']:
+            print("Uploading Reynolds Creek")
 
-    if region in ['all', 'lowman']:
-        print('Uploading Lowman')
-        ############################### Idaho - Lowman ####################################
-        # Make adjustments to metadata for lowman files
-        data['site_name'] = 'idaho'
-        data['epsg'] = 26911
+            ############################## Idaho - Reynolds ####################################
+            # Make adjustments to metadata for lowman files
+            data['campaign_name'] = 'idaho'
+            epsg = 26911
 
-        # Grab all the lowman and reynolds annotation files
-        ann_files = glob.glob(join(downloads, 'lowman_*.ann'))
+            # Grab all the lowman and reynolds annotation files
+            ann_files = glob.glob(join(downloads, 'silver_*.ann'))
 
-        # Instantiate the uploader
-        rs = UploadUAVSARBatch(ann_files, geotiff_dir=geotif_loc, **data)
-
-        # Submit to the db
-        rs.push()
-
-        # Keep track of the number of errors
-        errors_count += len(rs.errors)
-
-        # Memory clean up
-        del rs
-
-    if region in ['all', 'reynolds']:
-        print("Uploading Reynolds Creek")
-
-        ############################## Idaho - Reynolds ####################################
-        # Make adjustments to metadata for lowman files
-        data['site_name'] = 'idaho'
-        data['epsg'] = 26911
-
-        # Grab all the lowman and reynolds annotation files
-        ann_files = glob.glob(join(downloads, 'silver_*.ann'))
-
-        # Instantiate the uploader
-        rs = UploadUAVSARBatch(ann_files, geotiff_dir=geotif_loc, **data)
-
-        # Submit to the db
-        rs.push()
-
-        # Keep track of the number of errors
-        errors_count += len(rs.errors)
-
-    # Return the error count so run.py can keep track
-    return errors_count
+            for f in ann_files:
+                rs = UploadRaster(
+                    session, f, epsg, TYPE, UNITS,
+                    cog_dir=geotif_loc, **data
+                )
+                rs.submit()
 
 
 if __name__ == '__main__':
