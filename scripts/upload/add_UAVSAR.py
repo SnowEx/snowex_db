@@ -54,7 +54,7 @@ def main():
         'timezone': 'MST',
     }
     UNITS = "UNITLESS",
-    TYPE = 'insar'  # TODO: is this right?
+    TYPE = 'insar'  # TODO: is this right? - NO IT IS NOT NEED MORE HERE
 
     # Expand the paths
     downloads = abspath(expanduser(downloads))
