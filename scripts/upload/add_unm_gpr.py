@@ -47,7 +47,9 @@ def main():
             # Filter the data by frequency
             df_filtered = df_raw[df_raw['FREQ_MHz'] == freq]
             # convert depth to cm
-            df_filtered['depth'] = df_filtered['depth'].mul(100)
+            df_filtered.loc[:, ['DEPTH']] = df_filtered['DEPTH_m'].mul(100)
+            # Drop the original depth column
+            df_filtered = df_filtered.drop(columns=['DEPTH_m'])
             # Save the filtered data to a new file
             df_filtered.to_csv(new_file_name, index=False)
             specific_kwargs = dict(
