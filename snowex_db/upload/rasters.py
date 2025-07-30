@@ -43,6 +43,19 @@ class UploadRaster(BaseUpload):
             description: optional description for the measurement
             **kwargs:
         """
+        # TODO: See all the logic from the UAVSAR batch upload and assume
+        #   there is other logic for other files somewhere ex:
+        # Class extending the functionality of Upload Raster Batch to better
+        #     fit the UAVSAR data which has the following rasters associated to a single
+        #     metadata file (annotation file):
+        #         * Correlation
+        #         * Amplitude of pass 1
+        #         * Amplitude of pass 2
+        #         * Interferogram real
+        #         * Interferogram imaginary
+        #
+        #     This batch uploader takes annotation files and then assumes the associated
+        #     files are in the same naming convention and uploads them
 
         self._session = session
         self.log = get_logger(__name__)
