@@ -8,14 +8,11 @@ the database.
 
 """
 
-import time
-from os.path import abspath, expanduser, join
 from pathlib import Path
 
 import pandas as pd
 
-from snowexsql.db import get_db, db_session_with_credentials
-from snowex_db.upload import *
+from snowexsql.db import db_session_with_credentials
 from snowex_db.upload.points import PointDataCSV
 
 
@@ -36,9 +33,8 @@ def main():
         'name': 'UNM GPR Data',
     }
 
-
     # Break out the path and make it an absolute path
-    file = Path(filename).expanduser().resolve()
+    file = Path(filename).absolute().resolve()
 
     # Make two files, filter by frequency
     # Read in for management of instruments
