@@ -259,8 +259,21 @@ class PointDataCSV(BaseUpload):
 
         return unique_values[0]
 
-    # Add the campaign observation and each of the entries it is linked to
     def _add_campaign_observation(self, df) -> dict:
+        """
+        Processes a DataFrame and adds unique entries of instruments, measurement types,
+        campaigns, and observer.
+
+        Parameters:
+        df : pandas.DataFrame
+            DataFrame containing relevant point data metadata information.
+
+        Returns:
+        dict
+            A nested dictionary with primary keys of measurement names, and the secondary
+            keys are dates of observations. Each value corresponds to an observation
+            object or entry created in the session.
+        """
         c_observations = {}
         df["date"] = pd.to_datetime(df["datetime"]).dt.date
 
