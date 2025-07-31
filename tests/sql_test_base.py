@@ -128,6 +128,8 @@ class TableTestBase:
             assert pytest.approx(received) == expected, \
                 f"Assertion failed: Expected {expected}, but got {received}"
 
+        return records
+
     def check_unique_count(self, data_name, attribute_to_count, expected_count):
         """
         Test that the number of unique values in a given attribute is as expected
