@@ -56,11 +56,11 @@ def main():
                 instrument_model=f'Mala {freq} MHz GPR'
             )
             # Instantiate the point uploader
-            csv = PointDataCSV(
+            uploader = PointDataCSV(
                 session, str(new_file_name), **{**kwargs, **specific_kwargs}
             )
             # Push it to the database
-            csv.submit()
+            uploader.submit()
 
 
 if __name__ == '__main__':

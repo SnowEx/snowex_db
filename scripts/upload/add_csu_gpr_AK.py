@@ -36,9 +36,9 @@ def main():
     # Grab a db connection
     with db_session_with_credentials() as (_engine, session):
         # Instantiate the point uploader
-        csv = PointDataCSV(session, file, **kwargs)
+        uploader = PointDataCSV(session, file, **kwargs)
         # Push it to the database
-        csv.submit()
+        uploader.submit()
 
     # return the number of errors for run.py can report it
     # return len(csv.errors)
