@@ -39,17 +39,6 @@ class TestSummaryPits(PointBaseTesting):
             str(data_dir.joinpath("pit_summary_points.csv"))
         )
 
-    def filter_measurement_type(self, session, measurement_type, query=None):
-        if query is None:
-            query = session.query(self.TableClass)
-
-        query = query.join(
-            self.TableClass.observation
-        ).join(
-            PointObservation.measurement_type
-        ).filter(MeasurementType.name == measurement_type)
-        return query
-
     @pytest.mark.usefixtures('uploaded_file')
     @pytest.mark.parametrize(
         "name, count", [

@@ -30,17 +30,6 @@ class TestGPR(PointBaseTesting):
     def uploaded_file(self, session, data_dir):
         self.upload_file(session, str(data_dir.joinpath("bsu_gpr.csv")))
 
-    def filter_measurement_type(self, session, measurement_type, query=None):
-        if query is None:
-            query = session.query(self.TableClass)
-
-        query = query.join(
-            self.TableClass.observation
-        ).join(
-            PointObservation.measurement_type
-        ).filter(MeasurementType.name == measurement_type)
-        return query
-
     @pytest.mark.parametrize(
         "table, attribute, expected_value", [
             (Campaign, "name", "Grand Mesa"),
