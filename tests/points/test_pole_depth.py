@@ -87,6 +87,14 @@ class TestPollDepth(PointBaseTesting):
         names = self.get_records(session, CampaignObservation, "name", name)
         assert len(names) == count
 
+        # Check relationships
+        for record in names:
+            assert record.campaign.name == "Grand Mesa"
+            assert record.measurement_type.name == "depth"
+            assert record.doi.doi == "some_point_doi_poles"
+            assert record.observer.name == 'unknown'
+            assert record.instrument.name == "camera"
+
     @pytest.mark.parametrize(
         "table, attribute, expected_value", [
             (Campaign, "name", "Grand Mesa"),
@@ -102,7 +110,6 @@ class TestPollDepth(PointBaseTesting):
     @pytest.mark.parametrize(
         "data_name, attribute_to_check, filter_attribute, filter_value, expected", [
             ('depth', 'value', 'date', date(2020, 2, 1), [101.2728]),
-            ('depth', 'units', 'date', date(2020, 2, 1), ['cm']),
             ('depth', 'datetime', 'date', date(2020, 2, 1), [datetime(2020, 2, 1, 20, 0, tzinfo=timezone.utc)]),
         ]
     )
@@ -120,17 +127,8 @@ class TestPollDepth(PointBaseTesting):
             ("depth", 14)
         ]
     )
-    def test_count(self, data_name, expected, uploaded_file):
-        n = self.check_count(data_name)
-        assert n == expected
-
-    @pytest.mark.parametrize(
-        "data_name, attribute_to_count, expected", [
-            ("depth", "value", 14),
-            ("depth", "units", 1)
-        ]
-    )
-    def test_unique_count(self, data_name, attribute_to_count, expected, uploaded_file):
-        self.check_unique_count(
-            data_name, attribute_to_count, expected
-        )
+    def test_record_count(self, data_name, expected, uploaded_file):
+        """
+        Check that all entries in the CSV made it into the database
+        """
+        assert self.check_count(data_name) == expected
