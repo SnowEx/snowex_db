@@ -233,6 +233,7 @@ class PointDataCollection:
             meta_parser.primary_variables.entries["EASTING"],
             meta_parser.primary_variables.entries["ELEVATION"],
             meta_parser.primary_variables.entries["FLAGS"],
+            meta_parser.primary_variables.entries["FREQUENCY"],
             meta_parser.primary_variables.entries["INSTRUMENT"],
             meta_parser.primary_variables.entries["INSTRUMENT_MODEL"],
             meta_parser.primary_variables.entries["LATITUDE"],
@@ -244,8 +245,6 @@ class PointDataCollection:
             meta_parser.primary_variables.entries["UTCTOD"],
             meta_parser.primary_variables.entries["UTCYEAR"],
             meta_parser.primary_variables.entries["UTM_ZONE"],
-            meta_parser.primary_variables.entries["VERSION_NUMBER"],
-            meta_parser.primary_variables.entries["FREQUENCY"],
         ]
 
         shared_columns = [

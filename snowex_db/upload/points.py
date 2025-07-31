@@ -276,9 +276,6 @@ class PointDataCSV(BaseUpload):
                 self._session, Instrument, dict(
                     name=self._get_first_check_unique(grouped_df, 'instrument'),
                     model=self._get_first_check_unique(grouped_df, 'instrument_model'),
-                    specifications=self._get_first_check_unique(
-                        grouped_df, 'version_number'
-                    ),
                 )
             )
     
