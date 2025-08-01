@@ -8,67 +8,59 @@ the database.
 
 """
 
-import time
-from os.path import abspath, expanduser, join
+from pathlib import Path
 
 import pandas as pd
 
-from snowexsql.db import get_db
-from snowex_db.upload import *
+from snowexsql.db import db_session_with_credentials
+from snowex_db.upload.points import PointDataCSV
 
+
+# Issue #72
 
 def main():
-    filename = '../download/data/SNOWEX/SNEX20_UNM_GPR.001/2020.01.28/SNEX20_UNM_GPR.csv'
+    filename = ('../download/data/nsidc-cumulus-prod-protected/SNOWEX/'
+                'SNEX20_UNM_GPR/1/2020/01/28/SNEX20_UNM_GPR.csv')
 
     kwargs = {
-        # Keyword argument to upload depth measurements
-        'depth_is_metadata': False,
-
         # Constant Metadata for the GPR data
-        'site_name': 'Grand Mesa',
-        'observers': 'Ryan Webb',
-        'instrument': None, # See loop below
-        'in_timezone': 'UTC',
-        'out_timezone': 'UTC',
+        'observer': 'Ryan Webb',
         'doi': 'https://doi.org/10.5067/WE9GI1GVMQF6',
-        'epsg': 26912
+        'campaign_name': 'Grand Mesa',
+        'instrument': 'gpr',
+        # 'instrument_model': 'pulse EKKO Pro multi-polarization 1 GHz GPR',
+        'timezone': 'UTC',
+        'name': 'UNM GPR Data',
     }
 
     # Break out the path and make it an absolute path
-    filename = abspath(expanduser(filename))
+    file = Path(filename).absolute().resolve()
 
-    # Grab a db connection to a local db named snowex
-    db_name = 'localhost/snowex'
-    engine, session = get_db(db_name, credentials='./credentials.json')
-
+    # Make two files, filter by frequency
     # Read in for management of instruments
     df_raw = pd.read_csv(filename)
-    low_freq = df_raw['FREQ_MHz'] == 800
-    hi_freq = df_raw['FREQ_MHz'] == 1600
 
-    # Instantiate the point uploader
-    csv = PointDataCSV(filename, **kwargs)
-
-    # Convert depth to centimeters
-    csv.log.info('Converting depth to centimeters...')
-    csv.df['depth'] = csv.df['depth'].mul(100)
-    df_original = csv.df.copy()
-
-    # Loop over the two insturments in the file and separate them for two submissions
-    for hz, ind in [(800, low_freq), (1600, hi_freq)]:
-        instrument = f'Mala {hz} MHz GPR'
-        csv.log.info(f'Isolating {instrument} data for upload.')
-        csv.df = df_original[ind].copy()
-        # Change the instrument.
-        csv.df['instrument'] = instrument
-        # Push it to the database
-        csv.submit(session)
-
-    # Close out the session with the DB
-    session.close()
-
-    # return the number of errors for run.py can report it
-    return len(csv.errors)
+    # Grab a db connection
+    with db_session_with_credentials() as (_engine, session):
+        for freq in [800, 1600]:
+            new_file_name = file.parent.joinpath(f'{file.stem}_{freq}{file.suffix}')
+            # Filter the data by frequency
+            df_filtered = df_raw[df_raw['FREQ_MHz'] == freq]
+            # convert depth to cm
+            df_filtered.loc[:, ['DEPTH']] = df_filtered['DEPTH_m'].mul(100)
+            # Drop the original depth column
+            df_filtered = df_filtered.drop(columns=['DEPTH_m'])
+            # Save the filtered data to a new file
+            df_filtered.to_csv(new_file_name, index=False)
+            specific_kwargs = dict(
+                instrument_model=f'Mala {freq} MHz GPR'
+            )
+            # Instantiate the point uploader
+            uploader = PointDataCSV(
+                session, str(new_file_name), **{**kwargs, **specific_kwargs}
+            )
+            # Push it to the database
+            uploader.submit()
 
 
 if __name__ == '__main__':

@@ -8,49 +8,43 @@ the database.
 
 """
 
-import time
-from os.path import abspath, expanduser, join
+# Issue #70
 
-import pandas as pd
+from os.path import abspath, expanduser
 
-from snowexsql.db import get_db
-from snowex_db.upload import *
+from snowexsql.db import db_session_with_credentials
+from snowex_db.upload.points import PointDataCSV
 
 
 def main():
-    file = '../download/data/SNOWEX/SNEX20_GM_CSU_GPR.001/2020.02.06/SNEX20_GM_CSU_GPR_1GHz_v01.csv'
+    file = (
+        '../download/data/nsidc-cumulus-prod-protected/SNOWEX/'
+        'SNEX20_GM_CSU_GPR/1/2020/02/06/SNEX20_GM_CSU_GPR_1GHz_v01.csv'
+    )
 
     kwargs = {
-        # Keyword argument to upload depth measurements
-        'depth_is_metadata': False,
-
         # Constant Metadata for the GPR data
-        'site_name': 'Grand Mesa',
-        'observers': 'Randall Bonnell',
-        'instrument': 'pulse EKKO Pro multi-polarization 1 GHz GPR',
-        'in_timezone': 'UTC',
-        'out_timezone': 'UTC',
+        'campaign_name': 'Grand Mesa',
+        'observer': 'Randall Bonnell',
+        'instrument': 'gpr',
+        'instrument_model': 'pulse EKKO Pro multi-polarization 1 GHz GPR',
+        'timezone': 'UTC',
         'doi': 'https://doi.org/10.5067/S5EGFLCIAB18',
-        'epsg': 26912
+        'name': 'CSU GPR Data',
     }
 
     # Break out the path and make it an absolute path
     file = abspath(expanduser(file))
 
-    # Grab a db connection to a local db named snowex
-    db_name = 'localhost/snowex'
-    engine, session = get_db(db_name, credentials='./credentials.json')
-
-    # Instantiate the point uploader
-    csv = PointDataCSV(file, **kwargs)
-    # Push it to the database
-    csv.submit(session)
-
-    # Close out the session with the DB
-    session.close()
+    # Grab a db connection
+    with db_session_with_credentials() as (_engine, session):
+        # Instantiate the point uploader
+        uploader = PointDataCSV(session, file, **kwargs)
+        # Push it to the database
+        uploader.submit()
 
     # return the number of errors for run.py can report it
-    return len(csv.errors)
+    # return len(csv.errors)
 
 
 if __name__ == '__main__':
