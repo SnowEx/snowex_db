@@ -8,12 +8,13 @@ dynamic = ["version"]
 description = "SQL Database software for SnowEx data"
 keywords = ["snowexdb", "snowexsql", "sql", "database", "snow"]
 readme = "README.rst"
-requires-python = ">=3.8"
+
+
+requires-python = ">=3.10"
 classifiers = [
     'Development Status :: 2 - Pre-Alpha',
     'Intended Audience :: Developers',
     'Natural Language :: English',
-    'Programming Language :: Python :: 3.9',
     'Programming Language :: Python :: 3.10',
     'Programming Language :: Python :: 3.11',
     'Programming Language :: Python :: 3.12',
@@ -25,7 +26,7 @@ dependencies = [
     "insitupy~=0.4",
     "metloom==0.6.1",
     "rasterio<1.4",
-    "snowexsql==0.6.0rc1",
+    "snowexsql @ git+https://github.com/SnowEx/snowexsql.git@release-0.6.x",
     "snowmicropyn",
     "timezonefinder<7",
 ]
@@ -61,6 +62,9 @@ version-file = "snowex_db/_version.py"
 
 [tool.hatch.version.raw-options]
 local_scheme = "no-local-version"
+
+[tool.hatch.metadata]
+allow-direct-references = true
 
 [tool.hatch.build.targets.sdist]
 exclude = ["/tests"]
