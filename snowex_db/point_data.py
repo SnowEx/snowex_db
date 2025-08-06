@@ -245,6 +245,7 @@ class PointDataCollection:
             meta_parser.primary_variables.entries["UTCYEAR"],
             meta_parser.primary_variables.entries["UTM_ZONE"],
             meta_parser.primary_variables.entries["VERSION_NUMBER"],
+            meta_parser.primary_variables.entries["FREQUENCY"],
         ]
 
         shared_columns = [
