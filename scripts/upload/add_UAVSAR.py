@@ -22,9 +22,11 @@ Usage:
 import sys
 import glob
 from os.path import abspath, expanduser, join
+from pathlib import Path
 
 from snowexsql.db import db_session_with_credentials
 
+from snowex_db.upload.raster_mapping import rasters_from_annotation
 from snowex_db.upload.rasters import UploadRaster
 
 
@@ -53,8 +55,6 @@ def main():
         'doi': "https://asf.alaska.edu/doi/uavsar/#R0ARICRBAKYE",
         'timezone': 'MST',
     }
-    UNITS = "UNITLESS",
-    TYPE = 'insar'  # TODO: is this right? - NO IT IS NOT NEED MORE HERE
 
     # Expand the paths
     downloads = abspath(expanduser(downloads))
@@ -68,14 +68,21 @@ def main():
             ########################## Grand Mesa #####################################
             # Grab all the grand mesa annotation files in the original data folder
             ann_files = glob.glob(join(downloads, 'grmesa_*.ann'))
-            # session, filename, epsg, measurement_type, units,
             # Instantiate the uploader
             for f in ann_files:
-                rs = UploadRaster(
-                    session, f, epsg, TYPE, UNITS,
-                    cog_dir=geotif_loc, **data
-                )
-                rs.submit()
+                # Map the annotation files to the related ones and parse
+                # the metadata
+                for raster_metadata, raster_path in rasters_from_annotation(
+                    Path(f), Path(geotif_loc), **data
+                ):
+                    # TODO: we are going to rely heavily on parameter pass ins
+                    #   to the UploadRaster class to set the metadata, since the files
+                    #   are not self-describing
+                    rs = UploadRaster(
+                        session, raster_path, epsg,
+                        cog_dir=geotif_loc, **raster_metadata
+                    )
+                    rs.submit()
 
         if region in ['all', 'lowman']:
             print('Uploading Lowman')
@@ -88,11 +95,14 @@ def main():
             ann_files = glob.glob(join(downloads, 'lowman_*.ann'))
 
             for f in ann_files:
-                rs = UploadRaster(
-                    session, f, epsg, TYPE, UNITS,
-                    cog_dir=geotif_loc, **data
-                )
-                rs.submit()
+                for raster_metadata, raster_path in rasters_from_annotation(
+                        Path(f), Path(geotif_loc), **data
+                ):
+                    rs = UploadRaster(
+                        session, raster_path, epsg,
+                        cog_dir=geotif_loc, **raster_metadata
+                    )
+                    rs.submit()
 
         if region in ['all', 'reynolds']:
             print("Uploading Reynolds Creek")
@@ -106,11 +116,14 @@ def main():
             ann_files = glob.glob(join(downloads, 'silver_*.ann'))
 
             for f in ann_files:
-                rs = UploadRaster(
-                    session, f, epsg, TYPE, UNITS,
-                    cog_dir=geotif_loc, **data
-                )
-                rs.submit()
+                for raster_metadata, raster_path in rasters_from_annotation(
+                        Path(f), Path(geotif_loc), **data
+                ):
+                    rs = UploadRaster(
+                        session, raster_path, epsg,
+                        cog_dir=geotif_loc, **raster_metadata
+                    )
+                    rs.submit()
 
 
 if __name__ == '__main__':

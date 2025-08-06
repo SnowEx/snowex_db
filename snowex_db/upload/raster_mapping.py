@@ -107,7 +107,7 @@ def meta_from_annotation_file(
         component: The component of the raster file (e.g., real, imaginary)
         **kwargs: Additional keyword arguments for metadata
     Returns:
-
+        A dictionary containing metadata for the raster file.
     """
     meta = deepcopy(kwargs)
     desc = read_InSar_annotation(annotation_file)
@@ -144,4 +144,35 @@ def meta_from_annotation_file(
     comment += ', Polarization = {}'.format(
         desc['polarization']['value'])
     meta['comments'] = comment
+    return meta
+
+
+def metadata_from_single_file(
+    raster_file: Path, raster_type: RasterType, **kwargs
+):
+    """
+    Create the metadata dictionary from a single raster file and its type.
+    Examples would be depth, dem, etc.
+
+    Args:
+        raster_file: Path to the raster file
+        raster_type: RasterType enum indicating the type of raster
+        **kwargs: Additional keyword arguments for metadata
+
+    Returns:
+
+    """
+    meta = deepcopy(kwargs)
+    # Assign the type
+    meta['type'] = raster_type.value
+    # TODO: figure the rest of this out
+    # Assign the date from the filename
+    # Assign units based on raster type
+    # if raster_type == RasterType.DEPTH:
+    #     meta['units'] = 'meters'
+    # elif raster_type == RasterType.DEM:
+    #     meta['units'] = 'meters'
+    # else:
+    #     meta['units'] = 'unknown'
+
     return meta
