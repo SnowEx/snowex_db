@@ -1,15 +1,15 @@
-from datetime import datetime, timezone, date
+from datetime import date
 
 import numpy as np
 import pytest
 from geoalchemy2 import WKTElement
 from snowexsql.tables import PointData, DOI, Campaign, Instrument, \
-    MeasurementType, PointObservation
-from snowexsql.tables.campaign_observation import CampaignObservation
+    MeasurementType
 
 from snowex_db.upload.points import PointDataCSV
 
 from _base import PointBaseTesting
+from tables import PointObservation
 
 
 class TestPerimeterDepth(PointBaseTesting):
@@ -34,57 +34,57 @@ class TestPerimeterDepth(PointBaseTesting):
             session, str(data_dir.joinpath("perimeters.csv"))
         )
 
+    @pytest.mark.usefixtures("uploaded_file")
+    def test_instrument(self, session):
+        record = self.get_records(session, Instrument, "name", "probe")
+        assert len(record) == 1
+        record = record[0]
+        assert record.model is None
+
+    @pytest.mark.usefixtures("uploaded_file")
+    def test_measurement_type(self, session):
+        record = self.get_records(session, MeasurementType, "name", "depth")
+        assert len(record) == 1
+        assert record[0].units == 'cm'
+        assert record[0].derived is False
+
+    @pytest.mark.usefixtures("uploaded_file")
+    def test_point_observation(self, session):
+        record = self.get_records(
+            session, PointObservation, "name", "example_pole_point_name_probe_depth"
+        )
+        assert len(record) == 1
+        record = record[0]
+        # Attributes
+        assert record.date == date(2019, 12, 20)
+        # Relationships
+        assert record.campaign.name == "Grand Mesa"
+        assert record.instrument.name == "probe"
+        assert record.measurement_type.name == "depth"
+
+    @pytest.mark.usefixtures("uploaded_file")
     @pytest.mark.parametrize(
         "table, attribute, expected_value", [
             (Campaign, "name", "Grand Mesa"),
-            (Instrument, "name", "probe"),
-            (Instrument, "model", None),
-            (MeasurementType, "name", ['depth']),
-            (MeasurementType, "units", ['cm']),
-            (MeasurementType, "derived", [False]),
             (DOI, "doi", "some_point_doi_perimeter"),
-            (CampaignObservation, "name", "example_pole_point_name_probe_depth"),
             (PointData, "geom",
                 WKTElement('POINT (-120.04187 38.71033)', srid=4326)
              ),
-            (PointObservation, "date", date(2019, 12, 20)),
         ]
     )
-    def test_metadata(self, table, attribute, expected_value, uploaded_file):
+    def test_metadata(self, table, attribute, expected_value):
         self._check_metadata(table, attribute, expected_value)
 
-    @pytest.mark.parametrize(
-        "data_name, attribute_to_check, filter_attribute, filter_value, expected", [
-            ('depth', 'value', 'date', date(2019, 12, 20), [121.0, 120.0, 120.0, 120.0, 119.0, 119.0, 120.0, 120.0, np.nan]),
-            # ('depth', 'units', 'date', date(2019, 12, 20), ['cm'] * 9),
-            # ('depth', 'datetime', 'date', date(2019, 12, 20), [datetime(2019, 12, 20, 20, 0, tzinfo=timezone.utc)]*9),
-        ]
-    )
-    def test_value(
-            self, data_name, attribute_to_check,
-            filter_attribute, filter_value, expected, uploaded_file
-    ):
-        self.check_value(
-            data_name, attribute_to_check,
-            filter_attribute, filter_value, expected,
+    @pytest.mark.usefixtures("uploaded_file")
+    def test_values(self):
+        date(2019, 12, 20)
+        records = self.check_value(
+            'depth', 'value', 'date', date(2019, 12, 20),
+            [121.0, 120.0, 120.0, 120.0, 119.0, 119.0, 120.0, 120.0, np.nan]
         )
+        # Data was at 13:00 MST and DB stores UTC
+        assert records[0].datetime.hour == 20
 
-    @pytest.mark.parametrize(
-        "data_name, expected", [
-            ("depth", 9)
-        ]
-    )
-    def test_count(self, data_name, expected, uploaded_file):
-        n = self.check_count(data_name)
-        assert n == expected
-
-    @pytest.mark.parametrize(
-        "data_name, attribute_to_count, expected", [
-            ("depth", "value", 4),  # lots of repeat depths
-            ("depth", "units", 1)
-        ]
-    )
-    def test_unique_count(self, data_name, attribute_to_count, expected, uploaded_file):
-        self.check_unique_count(
-            data_name, attribute_to_count, expected
-        )
+    @pytest.mark.usefixtures("uploaded_file")
+    def test_count(self):
+        assert 9 == self.check_count("depth")

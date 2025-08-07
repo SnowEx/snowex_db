@@ -81,9 +81,13 @@ class TableTestBase:
         if query is None:
             query = session.query(self.TableClass)
 
-        fa = getattr(self.TableClass, filter_attribute)
-        q = query.filter(fa == filter_value).order_by(asc(fa))
-        return q
+        filter_attribute = getattr(self.TableClass, filter_attribute)
+        query = query.filter(
+            filter_attribute == filter_value
+        ).order_by(
+            asc(filter_attribute)
+        )
+        return query
 
     def check_count(self, data_name):
         """
@@ -123,6 +127,8 @@ class TableTestBase:
         else:
             assert pytest.approx(received) == expected, \
                 f"Assertion failed: Expected {expected}, but got {received}"
+
+        return records
 
     def check_unique_count(self, data_name, attribute_to_count, expected_count):
         """

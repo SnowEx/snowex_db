@@ -206,8 +206,7 @@ class PointDataCSV(BaseUpload):
                 # IMPORTANT: Add observations first, so we can use them in the
                 # entries
 
-                # TODO: how do these link back?
-                self._add_campaign_observation(df)
+                c_observations = self._add_campaign_observation(df)
 
                 for row in df.to_dict(orient="records"):
                     row["geometry"] = WKTElement(
@@ -216,7 +215,7 @@ class PointDataCSV(BaseUpload):
                     )
 
                     # TODO: instrument name logic here?
-                    d = self._add_entry(row)
+                    d = self._add_entry(row, c_observations)
 
                     # session.bulk_save_objects(objects) does not resolve
                     # foreign keys, DO NOT USE IT
@@ -244,9 +243,13 @@ class PointDataCSV(BaseUpload):
     
     def _get_first_check_unique(self, df, key):
         """
-        Get the first entry for a given key of the dataframe and check if
+        Get the first entry for a given key if present in the dataframe and check if
         it is unique. If not, raise a DataValidationError
         """
+        unique_values = df.get(key, None)
+        if unique_values is None:
+            return None
+
         unique_values = df[key].unique()
 
         if len(unique_values) > 1:
@@ -256,12 +259,22 @@ class PointDataCSV(BaseUpload):
 
         return unique_values[0]
 
-    def _add_campaign_observation(self, df):
+    def _add_campaign_observation(self, df) -> dict:
         """
-        Add the campaign observation and each of the entries it is linked to
-        Returns:
+        Processes a DataFrame and adds unique entries of instruments, measurement types,
+        campaigns, and observer.
 
+        Parameters:
+        df : pandas.DataFrame
+            DataFrame containing relevant point data metadata information.
+
+        Returns:
+        dict
+            A nested dictionary with primary keys of measurement names, and the secondary
+            keys are dates of observations. Each value corresponds to an observation
+            object or entry created in the session.
         """
+        c_observations = {}
         df["date"] = pd.to_datetime(df["datetime"]).dt.date
 
         # Group by our observation keys to add records uniquely into the database
@@ -275,12 +288,12 @@ class PointDataCSV(BaseUpload):
             instrument = self._check_or_add_object(
                 self._session, Instrument, dict(
                     name=self._get_first_check_unique(grouped_df, 'instrument'),
-                    model=self._get_first_check_unique(grouped_df, 'instrument_model')
+                    model=self._get_first_check_unique(grouped_df, 'instrument_model'),
                 )
             )
     
             # Add measurement type
-            measurement_obj = self._check_or_add_object(
+            measurement = self._check_or_add_object(
                 # Add units and 'derived' flag for the measurement
                 self._session, MeasurementType, dict(
                     name=self._get_first_check_unique(grouped_df, "type"),
@@ -333,59 +346,60 @@ class PointDataCSV(BaseUpload):
                 )
 
             date_obj = self._get_first_check_unique(grouped_df, "date")
+            object_args = dict(
+                date=date_obj,
+                name=measurement_name,
+                # Link objects
+                doi=doi,
+                instrument=instrument,
+                measurement_type=measurement,
+            )
             observation = self._check_or_add_object(
-                self._session, PointObservation, dict(
-                    name=measurement_name,
-                    date=date_obj,
-                    instrument=instrument,
-                    doi=doi,
-                    measurement_type=measurement_obj,
-                ),
+                self._session,
+                PointObservation,
+                object_args,
                 object_kwargs=dict(
-                    name=measurement_name,
+                    **object_args,
                     description=description,
-                    date=date_obj,
-                    instrument=instrument,
-                    doi=doi,
-                    # type=row["type"],  # THIS TYPE IS RESERVED FOR POLYMORPHIC STUFF
-                    measurement_type=measurement_obj,
-                    observer=observer,
+                    # Link objects
                     campaign=campaign,
+                    observer=observer,
                 )
             )
 
-    def _add_entry(self, row: dict):
+            if measurement_name not in c_observations:
+                c_observations[measurement_name] = {}
+            c_observations[measurement_name][date_obj] = observation
+
+        return c_observations
+
+    def _add_entry(self, row: dict, observations: dict) -> PointData:
         """
+        Add a single point entry and map with the metadata.
+
         Args:
             row: dataframe row of data to add
+            observations: dictionary of PointObservation created previously as metadata
+
         Returns:
-            Added record object
+            Added point data record object
         """
-        observation_kwargs = dict(
-            name=self._observation_name_from_row(row),
-            date=row["datetime"].date()
-        )
-        # Get the observation object
-        observation = self._session.query(PointObservation).filter_by(
-            **observation_kwargs
-        ).first()
-        if not observation:
+        observation_name = self._observation_name_from_row(row)
+        try:
+            observation = observations[observation_name][row["date"]]
+        except KeyError:
             raise RuntimeError(
-                f"No corresponding PointObservation for {observation_kwargs}"
+                f"No corresponding PointObservation for {observation_name} and "
+                f"date: {row['date']}"
             )
 
         # Now that the other objects exist, create the entry
         new_entry = self.TABLE_CLASS(
-            # Linked tables
-            value=row["value"],
-            units=row["units"],  # TODO: isn't this in measurement obj?
-            observation=observation,
             datetime=row["datetime"],
-            # Arguments from kwargs
-            geom=row['geometry'],
-            version_number=row.get('version_number', None),
             elevation=row.get('elevation', None),
-            equipment=row['instrument']
+            geom=row['geometry'],
+            observation=observation,
+            value=row["value"],
         )
 
         return new_entry
