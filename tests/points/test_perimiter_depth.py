@@ -4,13 +4,12 @@ import numpy as np
 import pytest
 from geoalchemy2 import WKTElement
 from snowexsql.tables import PointData, DOI, Campaign, Instrument, \
-    MeasurementType
+    MeasurementType, PointObservation
 
 from snowex_db.upload.points import PointDataCSV
 
 from tests.helpers import WithUploadedFile
 from tests.sql_test_base import TableTestBase
-from tables import PointObservation
 
 
 class TestPerimeterDepth(TableTestBase, WithUploadedFile):
