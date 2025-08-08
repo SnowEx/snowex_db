@@ -6,16 +6,11 @@ from snowexsql.tables import PointData, DOI, Campaign, Instrument, \
     MeasurementType, PointObservation
 
 from snowex_db.upload.points import PointDataCSV
+from tests.helpers import WithUploadedFile
+from tests.sql_test_base import TableTestBase
 
-from _base import PointBaseTesting
 
-
-class TestGPR(PointBaseTesting):
-    """
-    Test that a density file is uploaded correctly including sample
-    averaging for the main value.
-    """
-    gpr_dt = date(2019, 1, 28)
+class TestGPR(TableTestBase, WithUploadedFile):
     kwargs = {
         'timezone': "UTC",
         'doi': "some_gpr_point_doi",
@@ -34,10 +29,10 @@ class TestGPR(PointBaseTesting):
         )
 
     @pytest.mark.usefixtures("uploaded_file")
-    def test_instrument(self, session):
-        record = self.get_records(session, Instrument, "name", "gpr")
+    def test_instrument(self):
+        record = self.get_records(Instrument, "name", self.kwargs['instrument'])
         assert len(record) == 1
-        assert record[0].model == "GPR 1"
+        assert record[0].model == self.kwargs['instrument_model']
 
     @pytest.mark.usefixtures("uploaded_file")
     @pytest.mark.parametrize(
@@ -48,8 +43,8 @@ class TestGPR(PointBaseTesting):
             ("swe", "mm", False),
         ]
     )
-    def test_measurement_type(self, name, units, derived, session):
-        record = self.get_records(session, MeasurementType, "name", name)
+    def test_measurement_type(self, name, units, derived):
+        record = self.get_records(MeasurementType, "name", name)
 
         assert len(record) == 1
         assert record[0].units == units
@@ -58,30 +53,22 @@ class TestGPR(PointBaseTesting):
 
     @pytest.mark.usefixtures("uploaded_file")
     @pytest.mark.parametrize(
-        "name", [
-            "GPR DATA_gpr_GPR 1_two_way_travel",
-            "GPR DATA_gpr_GPR 1_density",
-            "GPR DATA_gpr_GPR 1_depth",
-            "GPR DATA_gpr_GPR 1_swe",
-        ]
+        "name", ["GPR DATA gpr GPR 1"]
     )
-    def test_point_observation(self, name, session):
-        records = self.get_records(session, PointObservation, "name", name)
-        assert len(records) == 3
+    def test_point_observation(self, name):
+        records = self.get_records(PointObservation, "name", name)
+        dates = [date(2019, 1, 28), date(2019, 1, 29), date(2019, 2, 4)]
+
+        assert len(records) == len(dates)
 
         for record in records:
             # Attributes
-            assert record.date in [
-                date(2019, 1, 28), date(2019, 1, 29), date(2019, 2, 4),
-            ]
+            assert record.date in dates
             # Relationships
-            assert record.doi.doi == "some_gpr_point_doi"
+            assert record.doi.doi == self.kwargs['doi']
             assert record.observer.name == "unknown"
-            assert record.instrument.name == "gpr"
-            assert record.measurement_type.name in [
-                "two_way_travel", "density", "depth", "swe"
-            ]
-            assert record.campaign.name == "Grand Mesa"
+            assert record.instrument.name == self.kwargs['instrument']
+            assert record.campaign.name == self.kwargs['campaign_name']
 
     @pytest.mark.usefixtures("uploaded_file")
     @pytest.mark.parametrize(
@@ -97,7 +84,7 @@ class TestGPR(PointBaseTesting):
         self._check_metadata(table, attribute, expected_value)
 
     @pytest.mark.parametrize(
-        "data_name, attribute_to_check, filter_attribute, filter_value, expected",
+        "measurement_type, attribute_to_check, filter_attribute, filter_value, expected",
         [
             (
                 "two_way_travel",
@@ -130,13 +117,14 @@ class TestGPR(PointBaseTesting):
         ],
     )
     def test_value(
-            self, data_name, attribute_to_check,
+            self, measurement_type, attribute_to_check,
             filter_attribute, filter_value, expected, uploaded_file
     ):
-        self.check_value(
-            data_name, attribute_to_check,
-            filter_attribute, filter_value, expected,
+        records = self.check_value(
+            measurement_type, attribute_to_check,
+            filter_attribute, filter_value, expected
         )
+        assert records[0].measurement_type.name == measurement_type
 
     @pytest.mark.parametrize(
         "data_name, expected", [

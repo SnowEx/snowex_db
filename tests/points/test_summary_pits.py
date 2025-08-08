@@ -5,10 +5,11 @@ from snowexsql.tables import PointData, DOI, Campaign, Instrument, \
     MeasurementType, PointObservation
 
 from snowex_db.upload.points import PointDataCSV
-from tests.points._base import PointBaseTesting
+from tests.helpers import WithUploadedFile
+from tests.sql_test_base import TableTestBase
 
 
-class TestSummaryPits(PointBaseTesting):
+class TestSummaryPits(TableTestBase, WithUploadedFile):
     """
     Test the summary csvs for a collection of pits
     """
@@ -42,8 +43,8 @@ class TestSummaryPits(PointBaseTesting):
     @pytest.mark.usefixtures('uploaded_file')
     @pytest.mark.parametrize(
         "name, count", [
-            ("CAAMCL", 21),
-            ("COER12", 15),
+            ("CAAMCL", 14),
+            ("COER12", 10),
         ]
     )
     def test_point_observation(self, name, count, session):
@@ -63,8 +64,8 @@ class TestSummaryPits(PointBaseTesting):
             ("density", "kg/m^3", True),
         ]
     )
-    def test_measurement_types(self, name, units, derived, session):
-        record = self.get_records(session, MeasurementType, 'name', name)
+    def test_measurement_types(self, name, units, derived):
+        record = self.get_records(MeasurementType, 'name', name)
 
         assert len(record) == 1
         assert record[0].units == units
@@ -77,13 +78,13 @@ class TestSummaryPits(PointBaseTesting):
             "East River",
         ]
     )
-    def test_campaign(self, name, session):
-        assert len(self.get_records(session, Campaign, 'name', name)) == 1
+    def test_campaign(self, name):
+        assert len(self.get_records(Campaign, 'name', name)) == 1
 
     @pytest.mark.usefixtures('uploaded_file')
     @pytest.mark.parametrize("name", [ "cutter", "manual" ])
-    def test_instrument(self, name, session):
-        assert len(self.get_records(session, Instrument, 'name', name)) == 1
+    def test_instrument(self, name):
+        assert len(self.get_records(Instrument, 'name', name)) == 1
 
     @pytest.mark.parametrize(
         "table, attribute, expected_value", [
@@ -98,7 +99,7 @@ class TestSummaryPits(PointBaseTesting):
 
     @pytest.mark.usefixtures('uploaded_file')
     @pytest.mark.parametrize(
-        "data_name, attribute_to_check, filter_attribute, filter_value",
+        "measurement_type, attribute_to_check, filter_attribute, filter_value",
         [
             ("depth", "value", "value", [135, 123, 119, 117, 92, 72, 50]),
             (
@@ -137,11 +138,12 @@ class TestSummaryPits(PointBaseTesting):
             ),
         ],
     )
-    def test_value(self, data_name, attribute_to_check, filter_attribute, filter_value):
+    def test_value(self, measurement_type, attribute_to_check, filter_attribute, filter_value):
         for value in filter_value:
-            self.check_value(
-                data_name, attribute_to_check, filter_attribute, value, [value]
+            records = self.check_value(
+                measurement_type, attribute_to_check, filter_attribute, value, [value]
             )
+            assert records[0].measurement_type.name == measurement_type
 
     @pytest.mark.usefixtures('uploaded_file')
     @pytest.mark.parametrize(
