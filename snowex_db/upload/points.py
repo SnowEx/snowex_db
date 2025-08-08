@@ -208,8 +208,8 @@ class PointDataCSV(BaseUpload):
 
                 for row in df.to_dict(orient="records"):
                     row["geometry"] = WKTElement(
-                        str(row["geometry"]),
-                        srid=int(df.crs.srs.replace("EPSG:", ""))
+                        str(f"POINT ({row['longitude']} {row['latitude']})"),
+                        srid=4326,
                     )
 
                     d = self._add_entry(row, c_observations, measurement_types)

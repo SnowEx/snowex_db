@@ -1,7 +1,6 @@
 import logging
 from typing import List
 
-import geopandas as gpd
 import numpy as np
 import pandas as pd
 from insitupy.io.dates import DateTimeManager
@@ -166,14 +165,6 @@ class SnowExPointData(MeasurementData):
                 self._get_datetime, axis=1, result_type="expand"
             )
 
-        location = gpd.points_from_xy(
-            self._df["longitude"], self._df["latitude"]
-        )
-        # self._df = self._df.drop(columns=["longitude", "latitude"])
-
-        self._df = gpd.GeoDataFrame(
-            self._df, geometry=location
-        ).set_crs("EPSG:4326")
         self._df = self._df.replace(-9999, np.NaN)
 
 
