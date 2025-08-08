@@ -38,12 +38,12 @@ class TestUploadProfileBatch(TableTestBase, WithUploadBatchFiles):
         assert n == expected
 
     @pytest.mark.usefixtures("uploaded_file")
-    def test_only_one_site(self, session):
+    def test_only_one_site(self):
         """
         The three CSVs are for the same site. Verify we only create one
         Site record and properly associate the layer information with it.
         """
-        records = self.get_records(session, Site, 'name', 'COGM1N20_20200205')
+        records = self.get_records(Site, 'name', 'COGM1N20_20200205')
         assert len(records) == 1
 
         site = records[0]

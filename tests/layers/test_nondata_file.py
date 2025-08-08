@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 import numpy as np
 import pytest
 from geoalchemy2 import WKTElement
-from snowexsql.tables import LayerData, Site, Campaign, Observer
+from snowexsql.tables import LayerData, Site
 
 from snowex_db.upload.layers import UploadProfileData
 from tests.helpers import WithUploadedFile
@@ -59,7 +59,7 @@ class TestMetadata2020(TableTestBase, WithUploadedFile):
 
     @pytest.fixture
     def site_records(self, uploaded_site_details_file, session):
-        return self.get_records(session, Site, "name", "COGM1N20_20200205")
+        return self.get_records(Site, "name", "COGM1N20_20200205")
 
     @pytest.mark.parametrize(
         "attribute, expected_value", [
@@ -94,14 +94,14 @@ class TestMetadata2020(TableTestBase, WithUploadedFile):
         else:
             assert getattr(site, attribute) == expected_value
 
-    def test_query_by_site_geom(self, site_records, session):
+    def test_query_by_site_geom(self, site_records):
         """
         Test that we can find the site by its coordinates.
         """
         site_coordinate = WKTElement(
                 'POINT (-108.1894813320662 39.031261970372725)', srid=4326
         )
-        site = self.get_records(session, Site, "geom", site_coordinate)
+        site = self.get_records(Site, "geom", site_coordinate)
 
         assert site[0].name == site_records[0].name
         assert site[0].geom == site_records[0].geom

@@ -28,7 +28,7 @@ def pytest_generate_tests(metafunc):
                 argnames, [[funcargs[name] for name in argnames] for funcargs in funcarglist]
             )
 
-
+# TODO: Review methods for similarity and combine those
 class TableTestBase:
     """
     Test any table by picking
@@ -153,3 +153,22 @@ class TableTestBase:
         obj = getattr(table, attribute)
         result = self._session.query(obj).all()
         return [r[0] for r in result]
+
+    def get_records(self, table, attribute, value):
+        """
+        Fetches records that match criteria.
+
+        Using the session object from the test class allows for lazy loading
+        associated records.
+
+        Arguments:
+            table: Table to query
+            attribute: The name of the attribute in the table to use as a filter.
+            value: The attribute value to filter by.
+
+        Returns:
+            A list of records
+        """
+        attribute = getattr(table, attribute)
+        return self._session.query(table).filter(attribute == value).all()
+

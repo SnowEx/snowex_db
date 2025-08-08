@@ -16,25 +16,6 @@ class WithUploadedFile:
         )
         u.submit()
 
-    def get_records(self, session, table, attribute, value):
-        """
-        Fetches records that match criteria.
-
-        Using the session object from the test class allows for lazy loading
-        associated records.
-
-        Arguments:
-            session: The database session from the test class
-            table: Table to query
-            attribute: The name of the attribute in the table to use as a filter.
-            value: The attribute value to filter by.
-
-        Returns:
-            A list of records
-        """
-        attribute = getattr(table, attribute)
-        return session.query(table).filter(attribute == value).all()
-
     def _check_metadata(self, table, attribute, expected_value):
         # Get multiple values for observers
         if table in [Observer, MeasurementType]:
