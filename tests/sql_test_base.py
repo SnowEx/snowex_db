@@ -55,6 +55,11 @@ class TableTestBase:
 
             yield session
 
+    @pytest.fixture(autouse=True)
+    def setup(self, session):
+        # Store the session as an attribute to use in helper functions
+        self._session = session # noqa
+
     def filter_measurement_type(self, session, measurement_type, query=None):
         if query is None:
             query = session.query(self.TableClass)
@@ -93,9 +98,8 @@ class TableTestBase:
         """
         Test the record count of a data type
         """
-        with db_session_with_credentials() as (engine, session):
-            q = self.filter_measurement_type(session, data_name)
-            records = q.all()
+        q = self.filter_measurement_type(self._session, data_name)
+        records = q.all()
         return len(records)
 
     def check_value(
@@ -106,13 +110,13 @@ class TableTestBase:
         Test that the first value in a filtered record search is as expected
         """
         # Filter to the queried data type
-        with db_session_with_credentials() as (engine, session):
-            q = self.filter_measurement_type(session, measurement_type)
+        q = self.filter_measurement_type(self._session, measurement_type)
 
-            # Add another filter by some attribute
-            q = self.get_query(session, filter_attribute, filter_value, query=q)
+        # Add another filter by some attribute
+        q = self.get_query(self._session, filter_attribute, filter_value, query=q)
 
-            records = q.all()
+        records = q.all()
+
         if records:
             received = [getattr(r, attribute_to_check) for r in records]
             received = [safe_float(r) for r in received]
@@ -135,8 +139,17 @@ class TableTestBase:
         Test that the number of unique values in a given attribute is as expected
         """
         # Add another filter by some attribute
-        with db_session_with_credentials() as (engine, session):
-            q = self.filter_measurement_type(session, data_name)
-            records = q.all()
+        q = self.filter_measurement_type(self._session, data_name)
+        records = q.all()
         received = len(set([getattr(r, attribute_to_count) for r in records]))
         assert received == expected_count
+
+    def get_value(self, table, attribute):
+        obj = getattr(table, attribute)
+        result = self._session.query(obj).all()
+        return result[0][0]
+
+    def get_values(self, table, attribute):
+        obj = getattr(table, attribute)
+        result = self._session.query(obj).all()
+        return [r[0] for r in result]
