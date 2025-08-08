@@ -138,8 +138,6 @@ class SnowExPointData(MeasurementData):
             # Verify the sample column exists and rename to variable
             self._check_sample_columns()
 
-        columns = self._df.columns.tolist()
-
         # If we do not have a geometry column, we need to parse
         # the raw df, otherwise we assume this has been done already,
         # likely on the first read of the file
