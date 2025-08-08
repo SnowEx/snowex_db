@@ -14,20 +14,6 @@ def safe_float(r):
         return r
 
 
-def pytest_generate_tests(metafunc):
-    """
-    Function used to parametrize functions. If the function is in the
-    params keys then run it. Otherwise run all the tests normally.
-    """
-    # Were params provided?
-    if hasattr(metafunc.cls, 'params'):
-        if metafunc.function.__name__ in metafunc.cls.params.keys():
-            funcarglist = metafunc.cls.params[metafunc.function.__name__]
-            argnames = sorted(funcarglist[0])
-            metafunc.parametrize(
-                argnames, [[funcargs[name] for name in argnames] for funcargs in funcarglist]
-            )
-
 # TODO: Review methods for similarity and combine those
 class TableTestBase:
     """
