@@ -65,7 +65,8 @@ class SnowExPointData(MeasurementData):
             skiprows=header_position,
             names=columns,
             encoding='latin',
-            dtype=str  # treat all columns as strings to get weird date format
+            dtype=str,  # treat all columns as strings to get weird date format,
+            engine='c',
         )
         if "flags" in df.columns:
             # Max length of the flags column
