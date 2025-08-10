@@ -36,7 +36,14 @@ class SnowExPointData(MeasurementData):
         """
         self._row_based_timezone = row_based_timezone
         self._in_timezone = timezone
+        self._timezonefinder = None
         super().__init__(variable, meta_parser)
+
+    @property
+    def timezonefinder(self):
+        if self._timezonefinder is None:
+            self._timezonefinder = TimezoneFinder(in_memory=True)
+        return self._timezonefinder
 
     @staticmethod
     def read_csv_dataframe(profile_filename, columns, header_position):
@@ -95,7 +102,7 @@ class SnowExPointData(MeasurementData):
         tz = self._in_timezone
         if self._row_based_timezone:
             # Look up the timezone for the location and apply that
-            timezone_str = TimezoneFinder().timezone_at(
+            timezone_str = self.timezonefinder.timezone_at(
                 lat=row["latitude"], lng=row["longitude"]
             )
             tz = timezone_str  # e.g., 'America/Denver'
