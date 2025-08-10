@@ -35,22 +35,21 @@ class TableTestBase:
         # Store the session as an attribute to use in helper functions
         self._session = session # noqa
 
-    def filter_measurement_type(self, session, measurement_type, query=None):
+    def filter_measurement_type(self, measurement_type, query=None):
         if query is None:
-            query = session.query(self.TableClass)
+            query = self._session.query(self.TableClass)
 
         query = query.join(
             self.TableClass.measurement_type
         ).filter(MeasurementType.name == measurement_type)
         return query
 
-    def get_query(self, session, filter_attribute, filter_value, query=None):
+    def get_query(self, filter_attribute, filter_value, query=None):
         """
         Return the base query using an attribute and value that it is supposed
         to be
 
         Args:
-            session: DB Session object
             filter_attribute: Name of attribute to search for
             filter_value: Value that attribute should be to filter db search
             query: If were extended a query use it instead of forming a new one
@@ -59,7 +58,7 @@ class TableTestBase:
         """
 
         if query is None:
-            query = session.query(self.TableClass)
+            query = self._session.query(self.TableClass)
 
         filter_attribute = getattr(self.TableClass, filter_attribute)
         query = query.filter(
@@ -73,7 +72,7 @@ class TableTestBase:
         """
         Test the record count of a data type
         """
-        q = self.filter_measurement_type(self._session, data_name)
+        q = self.filter_measurement_type(data_name)
         records = q.all()
         return len(records)
 
@@ -85,10 +84,10 @@ class TableTestBase:
         Test that the first value in a filtered record search is as expected
         """
         # Filter to the queried data type
-        q = self.filter_measurement_type(self._session, measurement_type)
+        q = self.filter_measurement_type(measurement_type)
 
         # Add another filter by some attribute
-        q = self.get_query(self._session, filter_attribute, filter_value, query=q)
+        q = self.get_query(filter_attribute, filter_value, query=q)
 
         records = q.all()
 
@@ -114,7 +113,7 @@ class TableTestBase:
         Test that the number of unique values in a given attribute is as expected
         """
         # Add another filter by some attribute
-        q = self.filter_measurement_type(self._session, data_name)
+        q = self.filter_measurement_type(data_name)
         records = q.all()
         received = len(set([getattr(r, attribute_to_count) for r in records]))
         assert received == expected_count
