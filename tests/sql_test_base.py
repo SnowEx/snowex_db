@@ -3,7 +3,6 @@ import pytest
 from numpy.testing import assert_almost_equal
 from sqlalchemy import asc
 
-from snowexsql.db import initialize, db_session_with_credentials
 from snowexsql.tables import MeasurementType
 
 
@@ -30,16 +29,6 @@ class TableTestBase:
 
     # Always define this using a table class from data.py and is used for ORM
     TableClass = None
-
-    @pytest.fixture(scope="class")
-    def session(self):
-        """
-        Interact with the DB when running tests.
-        """
-        with db_session_with_credentials() as (engine, session):
-            initialize(engine)
-
-            yield session
 
     @pytest.fixture(autouse=True)
     def setup(self, session):
