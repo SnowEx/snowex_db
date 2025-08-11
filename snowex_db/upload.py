@@ -12,10 +12,10 @@ from snowexsql.db import get_table_attributes
 from snowexsql.tables import LayerData, PointData
 
 from .interpretation import add_date_time_keys, standardize_depth
-from .metadata import DataHeader
+from .metadata import ExtendedSnowExMetadataParser
 from .string_management import parse_none, remap_data_names
 from .utilities import (assign_default_kwargs, get_file_creation_date,
-                        get_logger)
+                        get_logger, metadata_to_dict)
 from .projection import reproject_point_in_dict
 
 
@@ -24,6 +24,74 @@ LOG = logging.getLogger("snowex_db.upload")
 
 class DataValidationError(ValueError):
     pass
+
+
+def determine_data_names(raw_columns, depth_is_metadata=True):
+    """
+    Determine the names of the data to be uploaded from the raw column
+    header. Also determine if this is the type of profile file that will
+    submit more than one main value (e.g. hand_hardness, grain size all in
+    the same file)
+
+    Args:
+        raw_columns: list of raw text split on commas of the column names
+        depth_is_metadata: Whether or not to include depth as a main variable
+
+    Returns:
+        tuple: (data_names, multi_sample_profiles)
+               data_names - list of column names to upload as main values
+               multi_sample_profiles - list of profile types with multiple samples
+    """
+    # Known possible profile types
+    available_data_names = [
+        'density', 'permittivity', 'lwc_vol', 'temperature',
+        'force', 'reflectance', 'sample_signal',
+        'specific_surface_area', 'equivalent_diameter',
+        'grain_size', 'hand_hardness', 'grain_type',
+        'manual_wetness', 'two_way_travel', 'depth', 'swe',
+        'relative_humidity_10ft', 'barometric_pressure',
+        'air_temp_10ft', 'wind_speed_10ft', 'wind_direction_10ft',
+        'incoming_shortwave', 'outgoing_shortwave', 'incoming_longwave',
+        'outgoing_longwave', 'soil_moisture_20cm', 'soil_temp_20cm',
+        'snow_void'
+    ]
+    
+    # Names of columns we are going to submit as main values
+    data_names = []
+    multi_sample_profiles = []
+
+    # String of the columns for counting
+    str_cols = ' '.join(raw_columns).replace(' ', "_").lower()
+
+    for dname in available_data_names:
+        kw_count = str_cols.count(dname)
+
+        # if we have keyword match in our columns then add the type
+        if kw_count > 0:
+            data_names.append(dname)
+
+            # Avoid triggering on depth and bottom depth in profiles
+            if kw_count > 1 and dname != 'depth':
+                LOG.debug('{} is multisampled...'.format(dname))
+                multi_sample_profiles.append(dname)
+
+    # If depth is metadata (e.g. profiles) then remove it as a main variable
+    if 'depth' in data_names and depth_is_metadata:
+        data_names.pop(data_names.index('depth'))
+
+    if data_names:
+        LOG.info('Names to be uploaded as main data are: {}'
+                 ''.format(', '.join(data_names)))
+    else:
+        raise ValueError('Unable to determine data names from'
+                         ' header/columns columns: {}'.format(", ".join(raw_columns)))
+
+    if multi_sample_profiles:
+        LOG.info('{} contains multiple samples for each '
+                 'layer. The main value will be the average of '
+                 'these samples.'.format(', '.join(multi_sample_profiles)))
+
+    return data_names, multi_sample_profiles
 
 
 class UploadProfileData:
@@ -38,18 +106,77 @@ class UploadProfileData:
 
         self.filename = profile_filename
 
-        # Read in the file header
-        self.hdr = DataHeader(profile_filename, **kwargs)
-
-        # Transfer a couple attributes for brevity
-        for att in ['data_names', 'multi_sample_profiles']:
-            setattr(self, att, getattr(self.hdr, att))
+        # Read in the file header using insitupy
+        # Map in_timezone to timezone parameter for insitupy compatibility
+        parser_kwargs = kwargs.copy()
+        if 'in_timezone' in parser_kwargs:
+            parser_kwargs['timezone'] = parser_kwargs.pop('in_timezone')
+        
+        parser = ExtendedSnowExMetadataParser(**parser_kwargs)
+        self.metadata, self.columns, self.columns_map, self.header_pos = parser.parse(profile_filename)
+        
+        # Determine data names and multi-sample profiles
+        depth_is_metadata = kwargs.get('depth_is_metadata', True)
+        self.data_names, self.multi_sample_profiles = determine_data_names(
+            self.columns, depth_is_metadata=depth_is_metadata
+        )
+        
+        # Apply data name remapping
+        rename_map = {
+            'location': 'site_name', 'top': 'depth', 'snow void': "snow_void",
+            'height': 'depth', 'bottom': 'bottom_depth', 'site': 'site_id',
+            'pitid': 'pit_id', 'slope': 'slope_angle', 'weather': 'weather_description',
+            'sky': 'sky_cover', 'notes': 'site_notes', 'sample_top_height': 'depth',
+            'deq': 'equivalent_diameter', 'operator': 'observers', 'surveyors': 'observers',
+            'observer': 'observers', 'total_snow_depth': 'total_depth',
+            'smp_serial_number': 'instrument', 'lat': 'latitude', 'long': 'longitude',
+            'lon': 'longitude', 'twt': 'two_way_travel', 'twt_ns': 'two_way_travel',
+            'utmzone': 'utm_zone', 'measurement_tool': 'instrument',
+            'avgdensity': 'density', 'avg_density': 'density', 'density_mean': 'density',
+            'dielectric_constant': 'permittivity', 'flag': 'flags', 'hs': 'depth',
+            'swe_mm': 'swe', 'depth_m': 'depth', 'date_dd_mmm_yy': 'date',
+            'time_gmt': 'time', 'elev_m': 'elevation', 'rh_10ft': 'relative_humidity_10ft',
+            'bp_kpa_avg': 'barometric_pressure', 'airtc_10ft_avg': 'air_temp_10ft',
+            'wsms_10ft_avg': 'wind_speed_10ft', 'winddir_10ft_d1_wvt': 'wind_direction_10ft',
+            'sup_avg': 'incoming_shortwave', 'sdn_avg': 'outgoing_shortwave',
+            'lupco_avg': 'incoming_longwave', 'ldnco_avg': 'outgoing_longwave',
+            'sm_20cm_avg': 'soil_moisture_20cm', 'tc_20cm_avg': 'soil_temp_20cm',
+            'snowdepthfilter(m)': 'depth'
+        }
+        self.data_names = remap_data_names(self.data_names, rename_map)
+        
+        # Create info dict from metadata object for compatibility
+        self.info = metadata_to_dict(self.metadata)
 
         # Read in data
         self.df = self._read(profile_filename)
 
         # Use the files creation date as the date accessed for NSIDC citation
         self.date_accessed = get_file_creation_date(self.filename)
+
+
+    def check_integrity(self, site_info):
+        """
+        Compare the attribute info to the site dictionary to insure integrity
+        between datasets. Comparisons are only done as strings currently.
+
+        Args:
+            site_info: Dictionary containing the site details file header
+
+        Returns:
+            mismatch: Dictionary with a message about how a piece of info is
+                      mismatched
+        """
+        mismatch = {}
+
+        for k, v in self.info.items():
+            if k not in site_info.keys():
+                mismatch[k] = 'Key not found in site details'
+            else:
+                if v != site_info[k]:
+                    mismatch[k] = 'Profile header != Site details header'
+
+        return mismatch
 
     def _handle_force(self, df, profile_filename):
         if 'force' in df.columns:
@@ -94,8 +221,8 @@ class UploadProfileData:
         # header=0 because docs say to if using skip rows and columns
         try:
             df = pd.read_csv(
-                profile_filename, header=0, skiprows=self.hdr.header_pos,
-                names=self.hdr.columns, encoding='latin'
+                profile_filename, header=0, skiprows=self.header_pos,
+                names=self.columns, encoding='latin'
             )
         except pd.errors.ParserError as e:
             LOG.error(e)
@@ -125,7 +252,7 @@ class UploadProfileData:
 
             delta = abs(df['depth'].max() - df['depth'].min())
             self.log.info('File contains {} profiles each with {:,} layers across '
-                          '{:0.2f} cm'.format(len(self.hdr.data_names), len(df), delta))
+                          '{:0.2f} cm'.format(len(self.data_names), len(df), delta))
         return df
 
     def check(self, site_info):
@@ -143,7 +270,7 @@ class UploadProfileData:
         """
 
         # Ensure information matches between site details and profile headers
-        mismatch = self.hdr.check_integrity(site_info)
+        mismatch = self.check_integrity(site_info)
 
         if len(mismatch.keys()) > 0:
             self.log.error('Header Error with {}'.format(self.filename))
@@ -152,7 +279,7 @@ class UploadProfileData:
                 raise ValueError('Site Information Header and Profile Header '
                                  'do not agree!\n Key: {} does yields {} from '
                                  'here and {} from site info.'.format(k,
-                                                                      self.hdr.info[k],
+                                                                      self.info[k],
                                                                       site_info[k]))
 
     def build_data(self, data_name):
@@ -171,7 +298,7 @@ class UploadProfileData:
         df = self.df.copy()
 
         # Assign all meta data to every entry to the data frame
-        for k, v in self.hdr.info.items():
+        for k, v in self.info.items():
             if not pd.isna(v):
                 df[k] = v
 
@@ -284,15 +411,24 @@ class PointDataCSV(object):
         self.date_accessed = get_file_creation_date(filename)
 
         # NOTE: This will error if in_timezone is not provided
-        self.hdr = DataHeader(
-            filename, in_timezone=in_timezone,
-            **self.kwargs
-        )
+        # Read in the file header using insitupy
+        parser_kwargs = {'timezone': in_timezone}
+        parser_kwargs.update(self.kwargs)
+        # Map in_timezone to timezone if present in kwargs
+        if 'in_timezone' in parser_kwargs:
+            parser_kwargs['timezone'] = parser_kwargs.pop('in_timezone')
+            
+        parser = ExtendedSnowExMetadataParser(**parser_kwargs)
+        self.metadata, self.columns, self.columns_map, self.header_pos = parser.parse(filename)
+        
+        # Create info dict from metadata object for compatibility
+        self.info = metadata_to_dict(self.metadata)
         self.df = self._read(filename)
 
         # Performance tracking
         self.errors = []
         self.points_uploaded = 0
+
 
     def _read(self, filename):
         """
@@ -300,8 +436,8 @@ class PointDataCSV(object):
         """
 
         self.log.info('Reading in CSV data from {}'.format(filename))
-        df = pd.read_csv(filename, header=self.hdr.header_pos,
-                         names=self.hdr.columns,
+        df = pd.read_csv(filename, header=self.header_pos,
+                         names=self.columns,
                          dtype={'date': str, 'time': str})
 
         # Assign the measurement tool verbose name
@@ -315,9 +451,9 @@ class PointDataCSV(object):
         # Add date and time keys
         self.log.info('Adding date and time to metadata...')
         # Date/time was only provided in the header
-        if 'date' in self.hdr.info.keys() and 'date' not in df.columns:
-            df['date'] = self.hdr.info['date']
-            df['time'] = self.hdr.info['time']
+        if 'date' in self.info.keys() and 'date' not in df.columns:
+            df['date'] = self.info['date']
+            df['time'] = self.info['time']
         else:
             # date/time was provided in the
             if self._row_based_tz:
@@ -346,9 +482,9 @@ class PointDataCSV(object):
             df = df.apply(lambda row: reproject_point_in_dict(row), axis=1)
 
         # Use header projection info
-        elif any(k in self.hdr.info.keys() for k in proj_columns):
+        elif any(k in self.info.keys() for k in proj_columns):
             for k in proj_columns:
-                df[k] = self.hdr.info[k]
+                df[k] = self.info[k]
 
         # Add geometry
         if self._row_based_crs:
@@ -364,7 +500,7 @@ class PointDataCSV(object):
                 'POINT({} {})'.format(
                     row['easting'],
                     row['northing']),
-                srid=self.hdr.info['epsg']), axis=1)
+                srid=self.info['epsg']), axis=1)
 
         # 2. Add all kwargs that were valid
         for v in valid:
@@ -381,7 +517,7 @@ class PointDataCSV(object):
 
         # 3. Remove columns that are not valid
         drops = \
-            [c for c in df.columns if c not in valid and c not in self.hdr.data_names]
+            [c for c in df.columns if c not in valid and c not in self.data_names]
         self.log.info(
             'Dropping {} as they are not valid columns in the database...'.format(
                 ', '.join(drops)))
@@ -408,13 +544,13 @@ class PointDataCSV(object):
         if data_name in self.units.keys():
             df['units'] = self.units[data_name]
 
-        df = df.drop(columns=self.hdr.data_names)
+        df = df.drop(columns=self.data_names)
 
         return df
 
     def submit(self, session):
         # Loop through all the entries and add them to the db
-        for pt in self.hdr.data_names:
+        for pt in self.data_names:
             objects = []
             df = self.build_data(pt)
             self.log.info('Submitting {:,} points of {} to the database...'.format(
