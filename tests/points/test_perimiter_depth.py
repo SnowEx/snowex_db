@@ -8,8 +8,13 @@ from snowexsql.tables import PointData, DOI, Campaign, Instrument, \
 
 from snowex_db.upload.points import PointDataCSV
 
+<<<<<<< HEAD
 from tests.helpers import WithUploadedFile
 from tests.sql_test_base import TableTestBase
+=======
+from _base import PointBaseTesting
+#from tables import PointObservation
+>>>>>>> 1961f8a (import PointObservation correctly to pass tests)
 
 
 class TestPerimeterDepth(TableTestBase, WithUploadedFile):
