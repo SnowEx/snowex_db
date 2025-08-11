@@ -159,3 +159,13 @@ def get_file_creation_date(file):
 
     result = datetime.datetime.fromtimestamp(getctime(file)).date()
     return result
+
+def metadata_to_dict(metadata):
+      """Convert metadata object to dictionary for compatibility"""
+      info = {}
+      if metadata:
+          # Convert all non-None attributes to dict
+          for field_name, field_value in metadata.__dict__.items():
+              if field_value is not None:
+                  info[field_name] = field_value
+      return info
