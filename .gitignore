@@ -27,6 +27,7 @@ docs/_build/*
 scripts/upload/test*.txt
 scripts/download/data/*
 venv/
+snowex_venv/
 
 # IDE files
 .idea/*
