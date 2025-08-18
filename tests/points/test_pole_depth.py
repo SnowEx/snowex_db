@@ -8,15 +8,11 @@ from snowexsql.tables.campaign_observation import CampaignObservation
 
 from snowex_db.upload.points import PointDataCSV
 
-from _base import PointBaseTesting
+from tests.helpers import WithUploadedFile
+from tests.sql_test_base import TableTestBase
 
 
-class TestPollDepth(PointBaseTesting):
-    """
-    Test that a density file is uploaded correctly including sample
-    averaging for the main value.
-    """
-
+class TestPollDepth(TableTestBase, WithUploadedFile):
     kwargs = {
         'timezone': 'MST',
         'doi': "some_point_doi_poles",
@@ -34,8 +30,8 @@ class TestPollDepth(PointBaseTesting):
         )
 
     @pytest.mark.usefixtures("uploaded_file")
-    def test_measurement_type(self, session):
-        record = self.get_records(session, MeasurementType, "name", "depth")
+    def test_measurement_type(self):
+        record = self.get_records(MeasurementType, "name", "depth")
         assert len(record) == 1
         record = record[0]
         assert record.units == 'cm'
@@ -43,8 +39,8 @@ class TestPollDepth(PointBaseTesting):
 
     @pytest.mark.usefixtures("uploaded_file")
     @pytest.mark.parametrize("model", ["W1B", "E9B", "E8A", "E6A"])
-    def test_instrument(self, model, session):
-        record = self.get_records(session, Instrument, "model", model)
+    def test_instrument(self, model):
+        record = self.get_records(Instrument, "model", model)
         assert len(record) == 1
         record = record[0]
         assert record.name == "camera"
@@ -69,28 +65,27 @@ class TestPollDepth(PointBaseTesting):
             date(2020, 5, 3),
         ],
     )
-    def test_point_observation(self, date, session):
-        record = self.get_records(session, PointObservation, "date", date)
+    def test_point_observation(self, date):
+        record = self.get_records(PointObservation, "date", date)
         assert len(record) == 1
 
     @pytest.mark.usefixtures("uploaded_file")
     @pytest.mark.parametrize(
         "name, count",
         [
-            ("example_pole_point_name_camera_E6A_depth", 4),
-            ("example_pole_point_name_camera_E8A_depth", 3),
-            ("example_pole_point_name_camera_E9B_depth", 4),
-            ("example_pole_point_name_camera_W1B_depth", 3),
+            ("example_pole_point_name camera E6A", 4),
+            ("example_pole_point_name camera E8A", 3),
+            ("example_pole_point_name camera E9B", 4),
+            ("example_pole_point_name camera W1B", 3),
         ],
     )
-    def test_campaign_observation(self, name, count, session):
-        names = self.get_records(session, CampaignObservation, "name", name)
+    def test_campaign_observation(self, name, count):
+        names = self.get_records(CampaignObservation, "name", name)
         assert len(names) == count
 
         # Check relationships
         for record in names:
             assert record.campaign.name == "Grand Mesa"
-            assert record.measurement_type.name == "depth"
             assert record.doi.doi == "some_point_doi_poles"
             assert record.observer.name == 'unknown'
             assert record.instrument.name == "camera"
@@ -108,19 +103,20 @@ class TestPollDepth(PointBaseTesting):
         self._check_metadata(table, attribute, expected_value)
 
     @pytest.mark.parametrize(
-        "data_name, attribute_to_check, filter_attribute, filter_value, expected", [
+        "measurement_type, attribute_to_check, filter_attribute, filter_value, expected", [
             ('depth', 'value', 'date', date(2020, 2, 1), [101.2728]),
             ('depth', 'datetime', 'date', date(2020, 2, 1), [datetime(2020, 2, 1, 20, 0, tzinfo=timezone.utc)]),
         ]
     )
     def test_value(
-            self, data_name, attribute_to_check,
+            self, measurement_type, attribute_to_check,
             filter_attribute, filter_value, expected, uploaded_file
     ):
-        self.check_value(
-            data_name, attribute_to_check,
+        records = self.check_value(
+            measurement_type, attribute_to_check,
             filter_attribute, filter_value, expected,
         )
+        assert records[0].measurement_type.name == measurement_type
 
     @pytest.mark.parametrize(
         "data_name, expected", [

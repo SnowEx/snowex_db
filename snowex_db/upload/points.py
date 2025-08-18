@@ -203,10 +203,8 @@ class PointDataCSV(BaseUpload):
 
             # Grab each row, convert it to dict and join it with site info
             if not df.empty:
-                # IMPORTANT: Add observations first, so we can use them in the
-                # entries
-
                 c_observations = self._add_campaign_observation(df)
+                measurement_types = self._add_measurement_types(df)
 
                 for row in df.to_dict(orient="records"):
                     row["geometry"] = WKTElement(
@@ -214,8 +212,7 @@ class PointDataCSV(BaseUpload):
                         srid=int(df.crs.srs.replace("EPSG:", ""))
                     )
 
-                    # TODO: instrument name logic here?
-                    d = self._add_entry(row, c_observations)
+                    d = self._add_entry(row, c_observations, measurement_types)
 
                     # session.bulk_save_objects(objects) does not resolve
                     # foreign keys, DO NOT USE IT
@@ -228,19 +225,14 @@ class PointDataCSV(BaseUpload):
                 )
 
     def _observation_name_from_row(self, row):
-        name = row.get('name') or row.get('pit_id')
-        value = f"{name}_{row['instrument']}"
+        name = row.get("name") or row.get("pit_id")
+        value = f"{name} {row['instrument']}"
 
         if row.get('instrument_model'):
-            value += '_' + row['instrument_model']
-
-        # Add the type of measurement
-        # This is necessary because the GPR returns multiple variables
-        if row.get('type'):
-            value += "_" + row['type']
+            value = f"{value} {row['instrument_model']}"
 
         return value
-    
+
     def _get_first_check_unique(self, df, key):
         """
         Get the first entry for a given key if present in the dataframe and check if
@@ -278,7 +270,7 @@ class PointDataCSV(BaseUpload):
         df["date"] = pd.to_datetime(df["datetime"]).dt.date
 
         # Group by our observation keys to add records uniquely into the database
-        base_groups = ['instrument', 'instrument_model', 'name', 'type', 'date']
+        base_groups = ['instrument', 'instrument_model', 'name', 'date']
         if 'pit_id' in df.columns:
             base_groups.append('pit_id')
 
@@ -292,16 +284,6 @@ class PointDataCSV(BaseUpload):
                 )
             )
     
-            # Add measurement type
-            measurement = self._check_or_add_object(
-                # Add units and 'derived' flag for the measurement
-                self._session, MeasurementType, dict(
-                    name=self._get_first_check_unique(grouped_df, "type"),
-                    units=self._get_first_check_unique(grouped_df, "units"),
-                    derived=self._derived
-                )
-            )
-            
             # Check name is unique because we are adding ONE
             # campaign observation here
             self._get_first_check_unique(grouped_df, "name")
@@ -352,7 +334,6 @@ class PointDataCSV(BaseUpload):
                 # Link objects
                 doi=doi,
                 instrument=instrument,
-                measurement_type=measurement,
             )
             observation = self._check_or_add_object(
                 self._session,
@@ -373,13 +354,47 @@ class PointDataCSV(BaseUpload):
 
         return c_observations
 
-    def _add_entry(self, row: dict, observations: dict) -> PointData:
+    def _add_measurement_types(self, df) -> dict:
+        """
+        Adds unique measurement types from the points data to the database.
+
+        Parameters:
+        df: DataFrame
+            Parsed CSV dataframe
+
+        Returns:
+        dict
+            Dictionary with DB records mapped to measurement names.
+        """
+        types = {}
+
+        for name, grouped_df in df.groupby('type'):
+            units = grouped_df.units.unique()
+
+            if len(units) > 1:
+                raise DataValidationError(
+                    f"Multiple units found for measurement type {name}: {units}"
+                )
+
+            measurement_args = dict(
+                    name=name,
+                    units=units[0],
+                    derived=self._derived
+                )
+            types[name] = self._check_or_add_object(
+                self._session, MeasurementType, measurement_args, measurement_args
+            )
+
+        return types
+
+    def _add_entry(self, row: dict, observations: dict, measurement_types: dict) -> PointData:
         """
         Add a single point entry and map with the metadata.
 
         Args:
-            row: dataframe row of data to add
-            observations: dictionary of PointObservation created previously as metadata
+            row: (DataFrame) Row data to add
+            observations: (dict) PointObservation created previously as metadata
+            measurement_types: (dict) Measurement types created previously as metadata
 
         Returns:
             Added point data record object
@@ -398,6 +413,7 @@ class PointDataCSV(BaseUpload):
             datetime=row["datetime"],
             elevation=row.get('elevation', None),
             geom=row['geometry'],
+            measurement_type=measurement_types[row["type"]],
             observation=observation,
             value=row["value"],
         )

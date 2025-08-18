@@ -1,21 +1,17 @@
-from datetime import datetime, timezone, date
+from datetime import date
 
 import pytest
 from geoalchemy2 import WKTElement
 from snowexsql.tables import PointData, DOI, Campaign, Instrument, \
     MeasurementType, PointObservation
-from snowexsql.tables.campaign_observation import CampaignObservation
 
 from snowex_db.upload.points import PointDataCSV
 
-from _base import PointBaseTesting
+from tests.helpers import WithUploadedFile
+from tests.sql_test_base import TableTestBase
 
 
-class TestCSUGPR(PointBaseTesting):
-    """
-    Test that a density file is uploaded correctly including sample
-    averaging for the main value.
-    """
+class TestCSUGPR(TableTestBase, WithUploadedFile):
     kwargs = {
         # Constant Metadata for the GPR data
         'campaign_name': 'Grand Mesa',
@@ -33,60 +29,108 @@ class TestCSUGPR(PointBaseTesting):
     def uploaded_file(self, session, data_dir):
         self.upload_file(session, str(data_dir.joinpath("csu_gpr.csv")))
 
-    def filter_measurement_type(self, session, measurement_type, query=None):
-        if query is None:
-            query = session.query(self.TableClass)
+    @pytest.mark.usefixtures("uploaded_file")
+    def test_instrument(self):
+        record = self.get_records(Instrument, "name", self.kwargs['instrument'])
+        assert len(record) == 1
+        assert record[0].model == self.kwargs['instrument_model']
 
-        query = query.join(
-            self.TableClass.observation
-        ).join(
-            PointObservation.measurement_type
-        ).filter(MeasurementType.name == measurement_type)
-        return query
+    @pytest.mark.usefixtures("uploaded_file")
+    @pytest.mark.parametrize(
+        "name, units, derived",
+        [
+            ("two_way_travel", "ns", False),
+            ("depth", "cm", False),
+            ("swe", "mm", False),
+        ],
+    )
+    def test_measurement_type(self, name, units, derived):
+        record = self.get_records(MeasurementType, "name", name)
+        assert len(record) == 1
+        assert record[0].units == units
+        assert record[0].derived == derived
 
+    @pytest.mark.usefixtures("uploaded_file")
+    @pytest.mark.parametrize(
+        "name", [ "CSU GPR Data gpr pulse EKKO Pro multi-polarization 1 GHz GPR" ]
+    )
+    def test_point_observation(self, name):
+        records = self.get_records(PointObservation, "name", name)
+        dates = [date(2020, 2, 6)]
+
+        assert len(records) == len(dates)
+
+        for record in records:
+            # Attributes
+            assert record.date in dates
+            assert record.doi.doi == self.kwargs['doi']
+            assert record.observer.name == self.kwargs['observer']
+            assert record.instrument.name == self.kwargs['instrument']
+            assert record.campaign.name == self.kwargs['campaign_name']
+
+    @pytest.mark.usefixtures("uploaded_file")
     @pytest.mark.parametrize(
         "table, attribute, expected_value", [
             (Campaign, "name", "Grand Mesa"),
-            (Instrument, "name", "gpr"),
-            (Instrument, "model", "pulse EKKO Pro multi-polarization 1 GHz GPR"),
-            (MeasurementType, "name", ['two_way_travel', 'depth', "swe"]),
-            (MeasurementType, "units", ['ns', 'cm', 'mm']),
-            (MeasurementType, "derived", [False, False, False]),
             (DOI, "doi", "https://doi.org/10.5067/S5EGFLCIAB18"),
-            (CampaignObservation, "name", "CSU GPR Data_gpr_pulse EKKO Pro multi-polarization 1 GHz GPR_two_way_travel"),
             (PointData, "geom",
                 WKTElement('POINT (-108.176474337253 39.0192013494439)', srid=4326)
              ),
-            (PointObservation, "date", date(2020, 2, 6)),
         ]
     )
-    def test_metadata(self, table, attribute, expected_value, uploaded_file):
+    def test_metadata(self, table, attribute, expected_value):
         self._check_metadata(table, attribute, expected_value)
 
+    @pytest.mark.usefixtures("uploaded_file")
     @pytest.mark.parametrize(
-        "data_name, attribute_to_check, filter_attribute, filter_value, expected", [
-            ('two_way_travel', 'value', 'date', date(2020, 2, 6), [
-                7.348628, 7.225466, 7.102305, 6.979144, 6.814929
-            ]),
-            ('depth', 'value', 'date', date(2020, 2, 6), [
-                89.5675335280758, 88.0663939188338, 86.5652664979259,
-                85.0641390770181, 83.0626317863629
-            ],),
-            ('swe', 'value', 'date', date(2020, 2, 6), [
-                244.519366531647, 240.421255398416, 236.323177539338,
-                232.225099680259, 226.760984776771
-            ]),
-        ]
+        "measurement_type, attribute_to_check, filter_attribute, filter_value, expected",
+        [
+            (
+                "two_way_travel",
+                "value",
+                "date",
+                date(2020, 2, 6),
+                [7.348628, 7.225466, 7.102305, 6.979144, 6.814929],
+            ),
+            (
+                "depth",
+                "value",
+                "date",
+                date(2020, 2, 6),
+                [
+                    89.5675335280758,
+                    88.0663939188338,
+                    86.5652664979259,
+                    85.0641390770181,
+                    83.0626317863629,
+                ],
+            ),
+            (
+                "swe",
+                "value",
+                "date",
+                date(2020, 2, 6),
+                [
+                    244.519366531647,
+                    240.421255398416,
+                    236.323177539338,
+                    232.225099680259,
+                    226.760984776771,
+                ],
+            ),
+        ],
     )
     def test_value(
-            self, data_name, attribute_to_check,
-            filter_attribute, filter_value, expected, uploaded_file
+            self, measurement_type, attribute_to_check,
+            filter_attribute, filter_value, expected,
     ):
-        self.check_value(
-            data_name, attribute_to_check,
+        records = self.check_value(
+            measurement_type, attribute_to_check,
             filter_attribute, filter_value, expected,
         )
+        assert records[0].measurement_type.name == measurement_type
 
+    @pytest.mark.usefixtures("uploaded_file")
     @pytest.mark.parametrize(
         "data_name, expected", [
             ("depth", 5),
@@ -95,18 +139,6 @@ class TestCSUGPR(PointBaseTesting):
             ("density", 0),  # no measurements
         ]
     )
-    def test_count(self, data_name, expected, uploaded_file):
+    def test_count(self, data_name, expected):
         n = self.check_count(data_name)
         assert n == expected
-
-    @pytest.mark.parametrize(
-        "data_name, attribute_to_count, expected", [
-            ("depth", "value", 5),
-            ("swe", "value", 5),
-            ("swe", "units", 1)
-        ]
-    )
-    def test_unique_count(self, data_name, attribute_to_count, expected, uploaded_file):
-        self.check_unique_count(
-            data_name, attribute_to_count, expected
-        )

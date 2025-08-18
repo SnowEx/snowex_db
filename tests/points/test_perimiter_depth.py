@@ -8,16 +8,12 @@ from snowexsql.tables import PointData, DOI, Campaign, Instrument, \
 
 from snowex_db.upload.points import PointDataCSV
 
-from _base import PointBaseTesting
+from tests.helpers import WithUploadedFile
+from tests.sql_test_base import TableTestBase
 from tables import PointObservation
 
 
-class TestPerimeterDepth(PointBaseTesting):
-    """
-    Test that a density file is uploaded correctly including sample
-    averaging for the main value.
-    """
-
+class TestPerimeterDepth(TableTestBase, WithUploadedFile):
     kwargs = {
         'timezone': 'MST',
         'doi': "some_point_doi_perimeter",
@@ -35,23 +31,23 @@ class TestPerimeterDepth(PointBaseTesting):
         )
 
     @pytest.mark.usefixtures("uploaded_file")
-    def test_instrument(self, session):
-        record = self.get_records(session, Instrument, "name", "probe")
+    def test_instrument(self):
+        record = self.get_records(Instrument, "name", "probe")
         assert len(record) == 1
         record = record[0]
         assert record.model is None
 
     @pytest.mark.usefixtures("uploaded_file")
-    def test_measurement_type(self, session):
-        record = self.get_records(session, MeasurementType, "name", "depth")
+    def test_measurement_type(self):
+        record = self.get_records(MeasurementType, "name", "depth")
         assert len(record) == 1
         assert record[0].units == 'cm'
         assert record[0].derived is False
 
     @pytest.mark.usefixtures("uploaded_file")
-    def test_point_observation(self, session):
+    def test_point_observation(self):
         record = self.get_records(
-            session, PointObservation, "name", "example_pole_point_name_probe_depth"
+            PointObservation, "name", "example_pole_point_name probe"
         )
         assert len(record) == 1
         record = record[0]
@@ -60,7 +56,6 @@ class TestPerimeterDepth(PointBaseTesting):
         # Relationships
         assert record.campaign.name == "Grand Mesa"
         assert record.instrument.name == "probe"
-        assert record.measurement_type.name == "depth"
 
     @pytest.mark.usefixtures("uploaded_file")
     @pytest.mark.parametrize(
@@ -80,10 +75,11 @@ class TestPerimeterDepth(PointBaseTesting):
         date(2019, 12, 20)
         records = self.check_value(
             'depth', 'value', 'date', date(2019, 12, 20),
-            [121.0, 120.0, 120.0, 120.0, 119.0, 119.0, 120.0, 120.0, np.nan]
+            [121.0, 120.0, 120.0, 120.0, 119.0, 119.0, 120.0, 120.0, np.nan],
         )
         # Data was at 13:00 MST and DB stores UTC
         assert records[0].datetime.hour == 20
+        assert records[0].measurement_type.name == "depth"
 
     @pytest.mark.usefixtures("uploaded_file")
     def test_count(self):
