@@ -28,6 +28,7 @@ class UploadRaster(BaseUpload):
             self, session, filename, epsg,
             use_s3=True, no_data=None, cog_dir="./snowex_cog_storage",
             doi=None, description=None, measurement_type=None, units=None,
+            date=None,
             **kwargs
     ):
         """
@@ -42,6 +43,9 @@ class UploadRaster(BaseUpload):
             cog_dir: directory to store COGs if not using S3
             doi: optional DOI for the measurement
             description: optional description for the measurement
+            measurement_type: type of measurement
+            units: units of the measurement, e.g. 'meters'
+            date_obj: date object for the measurement
             **kwargs:
         """
 
@@ -56,6 +60,7 @@ class UploadRaster(BaseUpload):
         self._cog_dir = cog_dir
         self._doi = doi
         self._description = description
+        self._date_obj = date
 
         self._campaign_name = kwargs.get("campaign_name")
         # Is this file for derived measurements
@@ -149,7 +154,7 @@ class UploadRaster(BaseUpload):
         observation = self._check_or_add_object(
             self._session, ImageObservation, dict(
                 name=measurement_name,
-                date=date_obj,
+                date=self._date_obj,
                 instrument=instrument,
                 doi=doi,
                 measurement_type=measurement_obj,
@@ -157,7 +162,7 @@ class UploadRaster(BaseUpload):
             object_kwargs=dict(
                 name=measurement_name,
                 description=self._description,
-                date=date_obj,
+                date=self._date_obj,
                 instrument=instrument,
                 doi=doi,
                 # type=row["type"],  # THIS TYPE IS RESERVED FOR POLYMORPHIC STUFF
