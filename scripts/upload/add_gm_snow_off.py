@@ -21,8 +21,13 @@ U.S. Geological Survey, 20171101, USGS NED Original Product Resolution CO MesaCo
 
 import glob
 from os.path import abspath, expanduser, join
+from pathlib import Path
 
-from snowex_db.batch import UploadRasterBatch
+from snowexsql.db import db_session_with_credentials
+
+from snowex_db.upload.raster_mapping import metadata_from_single_file, \
+    RasterType
+from snowex_db.upload.rasters import UploadRaster
 
 
 def main():
@@ -34,39 +39,33 @@ def main():
     epsg = 26912
 
     # Metadata
-    observers = 'USGS'
-    instrument = 'lidar'
-    site_name = 'Grand Mesa'
-    units = 'meters'  # Add from the Annotation file
-    desc = 'US Geological Survey 1m snow off DEM from the 3DEP'
-    dtype = 'DEM'
+    kwargs = dict(
+        observer='USGS',
+        instrument='lidar',
+        campaign_name='Grand Mesa',
+        units='meters',  # Add from the Annotation file
+        comments='US Geological Survey 1m snow off DEM from the 3DEP',
+        tiled=True,
+        doi='https://doi.org/10.3133/fs20203062',
+        timezone='MST'
+    )
 
     # Expand the paths
     downloads = abspath(expanduser(downloads))
 
-    # error counting
-    errors_count = 0
-
-    # Build metadata that gets copied to all rasters being uploaded
-    data = {'site_name': site_name,
-            'description': desc,
-            'units': units,
-            'epsg': epsg,
-            'observers': observers,
-            'instrument': instrument,
-            'tiled': True,
-            'type': dtype,
-            'doi': 'https://doi.org/10.3133/fs20203062',
-            'in_timezone': 'MST'
-            }
-
     # Grab all the geotiff,
     files = glob.glob(join(downloads, '*.tif'))
-    rs = UploadRasterBatch(files, **data)
-    rs.push()
-    errors_count += len(rs.errors)
-
-    return errors_count
+    with db_session_with_credentials() as (_engine, session):
+        for fpath in files:
+            # TODO: what do we do for date?
+            raster_metadata = metadata_from_single_file(
+                Path(fpath), date=dt, type=RasterType.DEM,
+                **kwargs
+            )
+            rs = UploadRaster(
+                session, fpath, epsg, **raster_metadata
+            )
+            rs.submit()
 
 
 if __name__ == '__main__':
