@@ -13,27 +13,31 @@ from datetime import date
 from pathlib import Path
 from subprocess import Popen
 
-from snowex_db.batch import UploadRasterBatch
+from snowexsql.db import db_session_with_credentials
+
+from snowex_db.upload.raster_mapping import RasterType, \
+    metadata_from_single_file
+from snowex_db.upload.rasters import UploadRaster
 
 
 def main():
     """
     Uploader script partial SnowEx Lidar
     """
+    EPSG = 26906  # EPSG code for Alaska Zone 6
 
     # Typical kwargs for the dataset
-    kwargs = {'instrument': 'lidar',
-              'observers': 'chris larsen',
-              'description': '0.5m products', # Datasheet says 0.25 but data is actually 0.5
-              'tiled': True,
-              'epsg': 26906, # Alaska is Zone 6
-              'no_data': -9999,
-              'in_timezone': 'AKST',
-              'doi':'https://doi.org/10.5067/BV4D8RRU1H7U',
-              "site_name": "farmers-creamers"
-              }
-    # Build a list of uploaders and then execute them
-    uploaders = []
+    kwargs = {
+        'instrument': 'lidar',
+        'observer': 'chris larsen',
+        'comments': '0.5m products', # Datasheet says 0.25 but data is actually 0.5
+        'tiled': True,
+        'no_data': -9999,
+        'timezone': 'AKST',
+        'doi': 'https://doi.org/10.5067/BV4D8RRU1H7U',
+        # TODO: what is the campaign name?
+        "campaign_name": "farmers-creamers"
+        }
 
     # Directory of SNOWEX products
     lidar_dir = Path('../download/data/SNOWEX/SNEX23_Lidar.001/')
@@ -41,7 +45,6 @@ def main():
 
     if not reprojected.is_dir():
         os.mkdir(reprojected)
-
 
     # Reproject using GDAL
     print('Reprojecting files...')
@@ -56,20 +59,23 @@ def main():
             p.wait()
 
     ######################################## Farmers/Creamers Field (FLCF) ###################################################
-    # Snow off - canopy height
-    f = reprojected.joinpath("SNEX23_Lidar_FLCF_CH_0.25M_20221024_V01.0.tif")
-    uploaders.append(UploadRasterBatch([f], date=date(2022, 10, 24),
-                                       type="canopy_height", units="meters", **kwargs))
 
-    # Snow Depth
-    f = reprojected.joinpath("SNEX23_Lidar_FLCF_SD_0.25M_20230311_V01.0.tif")
-    uploaders.append(UploadRasterBatch([f], date=date(2023, 3, 11),
-                                       type="depth", units="meters", **kwargs))
-
-    errors = 0
-    for u in uploaders:
-        u.push()
-        errors += len(u.errors)
+    with db_session_with_credentials() as (_engine, session):
+        # SWE flights
+        for f, dt, raster_type in [
+            ("SNEX23_Lidar_FLCF_CH_0.25M_20221024_V01.0.tif",
+             date(2022, 10, 24), RasterType.CANOPY_HEIGHT),
+            ("SNEX23_Lidar_FLCF_SD_0.25M_20230311_V01.0.tif",
+             date(2023, 3, 11), RasterType.DEPTH),
+        ]:
+            fpath = reprojected.joinpath(f)
+            raster_metadata = metadata_from_single_file(
+                Path(fpath), date=dt, type=RasterType.SWE,
+                **kwargs
+            )
+            u = UploadRaster(
+                session, fpath, EPSG, **raster_metadata)
+            u.submit()
 
 
 # Add this so you can run your script directly without running run.py

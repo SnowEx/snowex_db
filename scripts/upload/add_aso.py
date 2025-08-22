@@ -39,7 +39,6 @@ def main():
 
     # Directory of ASO products reprojected
     reprojected = '../download/data/aso/reprojected'
-    geotif_loc = join("../download/", "geotiffs")
 
     ########################################### Grand MESA #############################################################
     with db_session_with_credentials() as (_engine, session):
@@ -66,8 +65,7 @@ def main():
             if "snowdepth_3m" in f:
                 raster_metadata['comments'] = "3m snow depth product"
             rs = UploadRaster(
-                session, fpath, EPSG,
-                cog_dir=geotif_loc, **raster_metadata
+                session, fpath, EPSG, **raster_metadata
             )
             rs.submit()
 
