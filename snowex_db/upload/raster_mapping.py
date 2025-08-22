@@ -21,6 +21,8 @@ class RasterType(Enum):
     DEM = "dem"
     DEPTH = "depth"
     SWE = "swe"
+    CANOPY_HEIGHT = "canopy_height"
+    # SAR raster types
     INT = "int", "interferogram", "interferogram"
     AMP1 = "amp1", "amplitude of pass 1", "amplitude", 1
     AMP2 = "amp2", "amplitude of pass 2", "amplitude", 2
@@ -189,6 +191,10 @@ def metadata_from_single_file(
     if raster_type == RasterType.DEPTH:
         meta['units'] = 'meters'
     elif raster_type == RasterType.DEM:
+        meta['units'] = 'meters'
+    elif raster_type == RasterType.SWE:
+        meta['units'] = 'meters'
+    elif raster_type == RasterType.CANOPY_HEIGHT:
         meta['units'] = 'meters'
     else:
         meta['units'] = 'unknown'
