@@ -9,62 +9,68 @@ python add_aso.py
 """
 from datetime import date
 from os.path import join
+from pathlib import Path
 
-from snowex_db.batch import UploadRasterBatch
+from snowexsql.db import db_session_with_credentials
+
+from snowex_db.upload.raster_mapping import RasterType, \
+    metadata_from_single_file
+from snowex_db.upload.rasters import UploadRaster
 
 
 def main():
     """
     Uploader script for ASO Snow off data
     """
+    EPSG = 26912  # EPSG code for the Grand Mesa area
 
     # Typical kwargs
-    kwargs = {'instrument': 'lidar',
-              'observers': 'ASO Inc.',
-              'description': '50m product',
-              'tiled': True,
-              'epsg': 26912,
-              'no_data': -9999,
-              'in_timezone': 'MST'
-              }
-    # Build a list of uploaders and then execute them
-    uploaders = []
+    kwargs = {
+        'instrument': 'lidar',
+        'observer': 'ASO Inc.',
+        'comments': '50m product',
+        'tiled': True,
+        'no_data': -9999,
+        'campaign_name': 'Grand Mesa',
+        'name': 'ASO Data',
+        'doi': "no_doi_aso_data_2020_grand_mesa",
+        'timezone': 'MST',
+    }
 
     # Directory of ASO products reprojected
     reprojected = '../download/data/aso/reprojected'
+    geotif_loc = join("../download/", "geotiffs")
 
     ########################################### Grand MESA #############################################################
-    # 1st flight Snow depth
-    # f = join(reprojected, "ASO_GrandMesa_Mosaic_2020Feb1-2_snowdepth_50m.tif")
-    # uploaders.append(UploadRasterBatch([f], date=date(2020, 2, 2), type="depth", units="meters", **kwargs))
+    with db_session_with_credentials() as (_engine, session):
+        # SWE flights
+        for f, dt, raster_type in [
+            ("ASO_GrandMesa_Mosaic_2020Feb1-2_swe_50m.tif",
+             date(2020, 2, 2), RasterType.SWE),
+            ("ASO_GrandMesa_Mosaic_2020Feb13_swe_50m.tif",
+             date(2020, 2, 13), RasterType.SWE),
+            ("ASO_GrandMesa_Mosaic_2020Feb1-2_snowdepth_50m.tif",
+             date(2020, 2, 2), RasterType.DEPTH),
+            ("ASO_GrandMesa_Mosaic_2020Feb13_snowdepth_50m.tif",
+             date(2020, 2,13), RasterType.DEPTH),
+            ("ASO_GrandMesa_Mosaic_2020Feb1-2_snowdepth_3m.tif",
+             date(2020, 2, 2), RasterType.DEPTH),
+            ("ASO_GrandMesa_Mosaic_2020Feb13_snowdepth_3m.tif",
+             date(2020, 2, 13), RasterType.DEPTH),
+        ]:
+            fpath = join(reprojected, f)
+            raster_metadata = metadata_from_single_file(
+                Path(fpath), date=dt, type=RasterType.SWE,
+                **kwargs
+            )
+            if "snowdepth_3m" in f:
+                raster_metadata['comments'] = "3m snow depth product"
+            rs = UploadRaster(
+                session, fpath, EPSG,
+                cog_dir=geotif_loc, **raster_metadata
+            )
+            rs.submit()
 
-    # 1st flight SWE
-    f = join(reprojected, "ASO_GrandMesa_Mosaic_2020Feb1-2_swe_50m.tif")
-    uploaders.append(UploadRasterBatch([f], date=date(2020, 2, 2), type="swe", units="meters", **kwargs))
-
-    # # 2nd flight snow depth
-    # f =  join(reprojected, "ASO_GrandMesa_Mosaic_2020Feb13_snowdepth_50m.tif")
-    # uploaders.append(UploadRasterBatch([f], date=date(2020, 2, 13), type="depth", units="meters", **kwargs))
-
-    # 2nd flight snow depth
-    f = join(reprojected, "ASO_GrandMesa_Mosaic_2020Feb13_swe_50m.tif")
-    uploaders.append(UploadRasterBatch([f], date=date(2020, 2, 13), type="swe", units="meters", **kwargs))
-
-    # Upload th 3m products
-    kwargs['description'] = "3m snow depth product"
-
-    f = join(reprojected, "ASO_GrandMesa_2020Feb1-2_snowdepth_3m.tif")
-    uploaders.append(UploadRasterBatch([f], date=date(2020, 2, 2), type="depth", units="meters", **kwargs))
-
-    f = join(reprojected, "ASO_GrandMesa_2020Feb13_snowdepth_3m.tif")
-    uploaders.append(UploadRasterBatch([f], date=date(2020, 2, 13), type="depth", units="meters", **kwargs))
-
-    ########################################### East River #############################################################
-
-    errors = 0
-    for u in uploaders:
-        u.push()
-        errors += len(u.errors)
 
 # Add this so you can run your script directly without running run.py
 if __name__ == '__main__':

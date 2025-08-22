@@ -20,6 +20,7 @@ class RasterType(Enum):
     """
     DEM = "dem"
     DEPTH = "depth"
+    SWE = "swe"
     INT = "int", "interferogram", "interferogram"
     AMP1 = "amp1", "amplitude of pass 1", "amplitude", 1
     AMP2 = "amp2", "amplitude of pass 2", "amplitude", 2
@@ -108,6 +109,12 @@ def meta_from_annotation_file(
         **kwargs: Additional keyword arguments for metadata
     Returns:
         A dictionary containing metadata for the raster file.
+        keys are:
+        - type: Type of the raster file
+        - date: Date of the acquisition
+        - units: Units of the raster file
+        - comments: Comments about the raster file
+
     """
     meta = deepcopy(kwargs)
     desc = read_InSar_annotation(annotation_file)
@@ -160,6 +167,12 @@ def metadata_from_single_file(
         **kwargs: Additional keyword arguments for metadata
 
     Returns:
+        A dictionary containing metadata for the raster file.
+        keys are:
+        - type: Type of the raster file
+        - date: Date of the acquisition
+        - units: Units of the raster file
+        - comments: Comments about the raster file
 
     """
     meta = deepcopy(kwargs)
@@ -167,12 +180,17 @@ def metadata_from_single_file(
     meta['type'] = raster_type.value
     # TODO: figure the rest of this out
     # Assign the date from the filename
+    if 'date' not in meta:
+        raise ValueError(
+            "Date must be provided in metadata or extracted from filename."
+        )
+
     # Assign units based on raster type
-    # if raster_type == RasterType.DEPTH:
-    #     meta['units'] = 'meters'
-    # elif raster_type == RasterType.DEM:
-    #     meta['units'] = 'meters'
-    # else:
-    #     meta['units'] = 'unknown'
+    if raster_type == RasterType.DEPTH:
+        meta['units'] = 'meters'
+    elif raster_type == RasterType.DEM:
+        meta['units'] = 'meters'
+    else:
+        meta['units'] = 'unknown'
 
     return meta
