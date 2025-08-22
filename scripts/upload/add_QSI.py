@@ -23,7 +23,7 @@ from subprocess import check_output
 
 import pandas as pd
 
-from snowex_db.batch import UploadRasterBatch
+from snowex_db.upload.rasters import UploadRaster
 from snowex_db.utilities import find_files, get_logger
 
 
@@ -81,18 +81,19 @@ def main():
     downloads = abspath(expanduser(downloads))
 
     # build our common metadata
+    EPSG = 26912
     base = {
         # Build our metadata
-        'epsg': 26912,
 
         # Add these attributes to the db entry
-        'observers': 'QSI',
+        'observer': 'QSI',
         'instrument': 'lidar',
-        'site_name': 'Grand Mesa',
-        'units': 'meters',
-        'in_timezone': 'MST'
+        'Campaign Name': 'Grand Mesa',
+        'timezone': 'MST',
+        'doi': 'What is the DOI?'  # TODO: doi
     }
 
+    # TODO: modify this for the new uploader
     # descriptions of the two flights
     desc1 = 'First overflight at GM with snow on, partially flown on 05-02-2020 due to cloud coverage'
     desc2 = 'Second overflight at GM with snow on'
@@ -102,8 +103,8 @@ def main():
     date2 = pd.to_datetime('02/13/2020').date()
     # Meta Data for the first over flight
     meta1 = base.copy()
-    meta1['description'] = desc1
-    meta1['date'] = date1,
+    meta1['comments'] = desc1
+    meta1['date'] = date1
 
     # Meta Data for the second over flight
     meta2 = base.copy()
@@ -142,6 +143,7 @@ def main():
             data['type'] = names[dem]
 
             # Instantiate the uploader
+            # TODO: use the new class here
             rs = UploadRasterBatch(final, **data)
 
             # Submit to the DB

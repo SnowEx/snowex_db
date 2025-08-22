@@ -33,7 +33,7 @@ def main():
         'no_data': -9999,
         'campaign_name': 'Grand Mesa',
         'name': 'ASO Data',
-        'doi': "no_doi_aso_data_2020_grand_mesa",
+        'doi': "no_doi_aso_data_2020_grand_mesa",  # TODO: ASO doi?
         'timezone': 'MST',
     }
 

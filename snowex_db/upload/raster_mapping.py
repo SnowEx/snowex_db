@@ -18,7 +18,7 @@ class RasterType(Enum):
     Enum for different types of raster files.
     value, description, abbreviation
     """
-    DEM = "dem"
+    DEM = "DEM"
     DEPTH = "depth"
     SWE = "swe"
     CANOPY_HEIGHT = "canopy_height"
