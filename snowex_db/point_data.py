@@ -60,6 +60,8 @@ class SnowExPointData(MeasurementData):
             df: pd.dataframe contain csv data with desired column names
         """
         # header=0 because docs say to if using skip rows and columns
+        # NOTE: Using the 'c' engine won't automatically detect any delimiters
+        #       and won't parse any files that hava a non comma separator,
         df = pd.read_csv(
             profile_filename, header=0,
             skiprows=header_position,
