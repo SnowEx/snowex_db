@@ -58,9 +58,10 @@ class TestMetadata2020(TableTestBase, WithUploadedFile):
         )
 
     @pytest.fixture
-    def site_records(self, uploaded_site_details_file, session):
+    def site_records(self, session):
         return self.get_records(Site, "name", "COGM1N20_20200205")
 
+    @pytest.mark.usefixtures("uploaded_site_details_file")
     @pytest.mark.parametrize(
         "attribute, expected_value", [
             ("datetime", datetime(2020, 2, 5, 20, 30, tzinfo=timezone.utc)),
@@ -94,6 +95,7 @@ class TestMetadata2020(TableTestBase, WithUploadedFile):
         else:
             assert getattr(site, attribute) == expected_value
 
+    @pytest.mark.usefixtures("uploaded_site_details_file")
     def test_query_by_site_geom(self, site_records):
         """
         Test that we can find the site by its coordinates.
@@ -106,9 +108,11 @@ class TestMetadata2020(TableTestBase, WithUploadedFile):
         assert site[0].name == site_records[0].name
         assert site[0].geom == site_records[0].geom
 
+    @pytest.mark.usefixtures("uploaded_site_details_file")
     def test_site_campaign(self, site_records):
         assert site_records[0].campaign.name == "Grand Mesa"
 
+    @pytest.mark.usefixtures("uploaded_site_details_file")
     def test_site_observer(self, site_records):
         observers = [observer.name for observer in site_records[0].observers]
         assert "Chris Hiemstra", "Hans Lievens" in observers
