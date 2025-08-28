@@ -12,7 +12,7 @@ from tests.helpers import WithUploadedFile
 from tests.sql_test_base import TableTestBase
 
 
-class TestPollDepth(TableTestBase, WithUploadedFile):
+class TestPoleDepth(TableTestBase, WithUploadedFile):
     kwargs = {
         'timezone': 'MST',
         'doi': "some_point_doi_poles",

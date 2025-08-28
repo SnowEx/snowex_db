@@ -10,7 +10,7 @@ from tests.helpers import WithUploadedFile
 from tests.sql_test_base import TableTestBase
 
 
-class TestGPR(TableTestBase, WithUploadedFile):
+class TestGPRBsu(TableTestBase, WithUploadedFile):
     kwargs = {
         'timezone': "UTC",
         'doi': "some_gpr_point_doi",
