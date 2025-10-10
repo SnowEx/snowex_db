@@ -57,7 +57,10 @@ def main(file_list: list, doi: str) -> None:
             pit_id = metadata[-2]
             measurement = metadata[-3]
 
-            LOG.info(f"  Adding site {pit_id} and measurement {measurement}")
+            LOG.info(f"  Adding site {pit_id} and measurement {measurement[-5:]}")
+
+            # Now make a unique site ID to create an entry per location measurement
+            pit_id = f"{metadata[-2]}-{measurement[-5:]}"
 
             uploader = UploadProfileData(
                 session, filename=file, id=pit_id, comments=measurement, **smp_metadata
