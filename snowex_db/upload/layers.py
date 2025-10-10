@@ -188,7 +188,10 @@ class UploadProfileData(BaseUpload):
                     # session.bulk_save_objects(objects) does not resolve
                     # foreign keys, DO NOT USE IT
                     self._session.add(d)
-                    self._session.commit()
+
+                self._session.commit()
+                # Mark all cached objects as expired
+                self._session.expunge_all()
             else:
                 # procedure to still upload metadata (sites, etc)
                 self.log.warning(
