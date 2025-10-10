@@ -1,6 +1,9 @@
 class BaseUpload:
-    @staticmethod
-    def _check_or_add_object(session, clz, check_kwargs, object_kwargs=None):
+    def __init__(self):
+        # Lookup cache for inserting
+        self._lookup_cache = {}
+
+    def _check_or_add_object(self, session, clz, check_kwargs, object_kwargs=None):
         """
         Check for an existing object, add to the database if not found
 
@@ -11,17 +14,24 @@ class BaseUpload:
             object_kwargs: kwargs for instantiating the object
         """
 
-        # Check if the object exists
+        # Check in lookup cache
+        obj = self._lookup_cache.get(str(check_kwargs), None)
+        if obj:
+            return obj
+        # Check in the database
         obj = session.query(clz).filter_by(**check_kwargs).first()
+
+        # Create the object or put it in the cache
         if not obj:
             # Use check kwargs if not object_kwargs given
             object_kwargs = object_kwargs or check_kwargs
-            # If the object does not exist, create it
             obj = clz(**object_kwargs)
             session.add(obj)
             session.commit()
+        else:
+            self._lookup_cache[str(check_kwargs)] = obj
         return obj
 
     @classmethod
     def _add_entry(cls, **kwargs):
-        raise NotImplemented("You need this")
+        raise NotImplementedError("You need this")

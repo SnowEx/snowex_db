@@ -64,6 +64,7 @@ class PointDataCSV(BaseUpload):
                 row_based_timezone
                 instrument_map
         """
+        super().__init__()
         self.filename = profile_filename
         self._session = session
 

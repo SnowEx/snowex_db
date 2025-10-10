@@ -36,11 +36,7 @@ class UploadProfileData(BaseUpload):
     TABLE_CLASS = LayerData
 
     def __init__(
-        self,
-        session,
-        filename: Union[str, Path],
-        timezone: str="US/Mountain",
-        **kwargs
+        self, session, filename: Union[str, Path], timezone: str = "US/Mountain", **kwargs
     ):
         """
         Arguments:
@@ -59,6 +55,7 @@ class UploadProfileData(BaseUpload):
                 instrument_model (str): Instrument name.
                 comments (str): Additional comments.
         """
+        super().__init__()
         self.log = get_logger(__name__)
 
         self.filename = filename
