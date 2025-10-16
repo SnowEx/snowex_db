@@ -1,3 +1,11 @@
+from dataclasses import dataclass
+
+@dataclass
+class CacheObject:
+    key: str
+    id: int
+
+
 class BaseUpload:
     def __init__(self):
         # Lookup cache for inserting
@@ -18,6 +26,7 @@ class BaseUpload:
         obj = self._lookup_cache.get(str(check_kwargs), None)
         if obj:
             return obj
+
         # Check in the database
         obj = session.query(clz).filter_by(**check_kwargs).first()
 
@@ -28,8 +37,9 @@ class BaseUpload:
             obj = clz(**object_kwargs)
             session.add(obj)
             session.commit()
-        else:
-            self._lookup_cache[str(check_kwargs)] = obj
+            self._lookup_cache[str(check_kwargs)] = CacheObject(
+                key=str(check_kwargs), id=obj.id
+            )
         return obj
 
     @classmethod

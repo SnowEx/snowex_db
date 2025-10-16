@@ -35,6 +35,8 @@ class UploadProfileData(BaseUpload):
     expected_attributes = [c for c in dir(LayerData) if c[0] != '_']
     TABLE_CLASS = LayerData
 
+    INSERT_BATCH_SIZE = 10_000
+
     def __init__(
         self, session, filename: Union[str, Path], timezone: str = "US/Mountain", **kwargs
     ):
@@ -178,16 +180,21 @@ class UploadProfileData(BaseUpload):
                 if 'instrument' not in df.columns.values:
                     instrument = self._add_instrument(profile.metadata)
 
-                for row in df.to_dict(orient="records"):
-                    if row.get('value') == 'None':
+                # Skip empty records
+                df_filtered = df[df['value'] != 'None']
+
+                all_records_map = [
+                    self._add_entry(row, campaign, observer_list, site, instrument)
+                    for row in df_filtered.to_dict(orient="records")
+                ]
+
+                # Process records in batches
+                for i in range(0, len(all_records_map ), self.INSERT_BATCH_SIZE):
+                    batch = all_records_map [i:i + self.INSERT_BATCH_SIZE]
+                    if not batch:
                         continue
 
-                    d = self._add_entry(
-                        row, campaign, observer_list, site, instrument,
-                    )
-                    # session.bulk_save_objects(objects) does not resolve
-                    # foreign keys, DO NOT USE IT
-                    self._session.add(d)
+                    self._session.bulk_insert_mappings(self.TABLE_CLASS, batch)
 
                 self._session.commit()
                 # Mark all cached objects as expired
@@ -338,16 +345,14 @@ class UploadProfileData(BaseUpload):
             )
         )
 
-        # Now that the other objects exist and create the entry.
-        new_entry = self.TABLE_CLASS(
-            # Required record information
+        # Create a dictionary for bulk insert
+        new_entry = dict(
             depth=row["depth"],
             bottom_depth=row.get("bottom_depth"),
             value=row["value"],
-            # Linked tables
-            instrument=instrument,
-            measurement_type=measurement_obj,
-            site=site,
+            instrument_id=instrument.id,
+            measurement_type_id=measurement_obj.id,
+            site_id=site.id,
         )
 
         return new_entry
