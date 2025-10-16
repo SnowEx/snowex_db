@@ -290,13 +290,13 @@ class UploadProfileData(BaseUpload):
             Instrument DB record
         """
         # Give priority to passed information from kwargs
-        instrumen_name = self._instrument or metadata.instrument
+        instrument_name = self._instrument or metadata.instrument
         instrument_model = self._instrument_model or metadata.instrument_model
 
         return self._check_or_add_object(
             self._session,
             Instrument,
-            dict(name=instrumen_name, model=instrument_model)
+            dict(name=instrument_name, model=instrument_model)
         )
 
     def _add_entry(
