@@ -23,6 +23,7 @@ htmlcov/*
 docs/modules.rst
 docs/snowex_db.rst
 docs/_build/*
+docs/api/*
 
 scripts/upload/test*.txt
 scripts/upload/credentials.json
