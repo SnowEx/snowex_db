@@ -62,8 +62,9 @@ def test_site_details_upload(session):
     n_pnts = session.query(Site.site_id).count()
     assert n_pnts == 155
 
-# @pytest.mark.parametrize
-# def test_add_downsampled_smp(session):
-#     """
-#     Test the downsampled smp profiles are uploaded
-#     """
+@pytest.mark.skip(reason="no way to currently test this")
+@pytest.mark.parametrize
+def test_add_downsampled_smp(session):
+    """
+    Test the downsampled smp profiles are uploaded
+    """
