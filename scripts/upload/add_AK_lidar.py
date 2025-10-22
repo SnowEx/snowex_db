@@ -12,12 +12,18 @@ import os
 from datetime import date
 from pathlib import Path
 from subprocess import Popen
+from earthaccess_data import get_files
 
 from snowexsql.db import db_session_with_credentials
 
 from snowex_db.upload.raster_mapping import RasterType, \
     metadata_from_single_file
 from snowex_db.upload.rasters import UploadRaster
+
+
+LIDAR_DOI = {
+    "SNEX23_Lidar": "10.5067/BV4D8RRU1H7U",
+}
 
 
 def main():
@@ -36,7 +42,7 @@ def main():
         'timezone': 'AKST',
         'doi': 'https://doi.org/10.5067/BV4D8RRU1H7U',
         # TODO: what is the campaign name?
-        "campaign_name": "farmers-creamers"
+        "campaign_name": "Alaska 2023"
         }
 
     # Directory of SNOWEX products
@@ -80,4 +86,6 @@ def main():
 
 # Add this so you can run your script directly without running run.py
 if __name__ == '__main__':
-    main()
+    for data_set_id, doi in SMP_DOI.items():
+        with get_files(data_set_id, doi) as files:
+            main(files, doi)

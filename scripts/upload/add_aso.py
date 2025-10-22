@@ -59,7 +59,7 @@ def main():
         ]:
             fpath = join(reprojected, f)
             raster_metadata = metadata_from_single_file(
-                Path(fpath), date=dt, type=RasterType.SWE,
+                Path(fpath), RasterType.SWE, date=dt,
                 **kwargs
             )
             if "snowdepth_3m" in f:
