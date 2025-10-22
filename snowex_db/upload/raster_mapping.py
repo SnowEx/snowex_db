@@ -179,7 +179,7 @@ def metadata_from_single_file(
     """
     meta = deepcopy(kwargs)
     # Assign the type
-    meta['type'] = raster_type.value
+    meta['measurement_type'] = raster_type.value
     # TODO: figure the rest of this out
     # Assign the date from the filename
     if 'date' not in meta:
