@@ -19,12 +19,16 @@ will pass them through to the final uploader
 import os
 import shutil
 from os.path import abspath, basename, expanduser, isdir, isfile, join, split
+from pathlib import Path
 from subprocess import check_output
 
 import pandas as pd
+from snowexsql.db import db_session_with_credentials
 
+from snowex_db.upload.raster_mapping import metadata_from_single_file, \
+    RasterType
 from snowex_db.upload.rasters import UploadRaster
-from snowex_db.utilities import find_files, get_logger
+from snowex_db.utilities import get_logger
 
 
 def reproject(filenames, out_epsg, out_dir, adjust_vdatum=False):
@@ -76,83 +80,44 @@ def reproject(filenames, out_epsg, out_dir, adjust_vdatum=False):
 
 
 def main():
-
-    downloads = '~/Downloads/SnowEx2020_QSI/'
+    EPSG = 26912
+    downloads = "../download/data/nsidc-cumulus-prod-protected"
     downloads = abspath(expanduser(downloads))
 
     # build our common metadata
-    EPSG = 26912
-    base = {
-        # Build our metadata
-
+    kwargs = {
         # Add these attributes to the db entry
         'observer': 'QSI',
         'instrument': 'lidar',
-        'Campaign Name': 'Grand Mesa',
+        'campaign_name': 'Grand Mesa',
         'timezone': 'MST',
-        'doi': 'What is the DOI?'  # TODO: doi
+        'doi': 'https://doi.org/10.5067/M9TPF6NWL53K',
+        'name': "QSI Lidar data",
+        'tiled': True,
+        'no_data': -9999,
+        "comments": "QSI Lidar derived snow depth for SnowEx 2020 Grand Mesa campaign",
     }
 
-    # TODO: modify this for the new uploader
-    # descriptions of the two flights
-    desc1 = 'First overflight at GM with snow on, partially flown on 05-02-2020 due to cloud coverage'
-    desc2 = 'Second overflight at GM with snow on'
+    # Form the directory structure and grab all the important files
+    d = Path(downloads).joinpath(
+        "SNOWEX/SNEX20_GM_Lidar/1/2020/02/01/SNEX20_GM_Lidar_SD_20200201_20200202_v01.0.tif"
+    )
+    output_dir = d.parent.joinpath('reprojected')
+    output_dir.mkdir(exist_ok=True, parents=True)
+    final = reproject([d], EPSG, str(output_dir))[0]
 
-    # Dates
-    date1 = pd.to_datetime('02/01/2020').date()
-    date2 = pd.to_datetime('02/13/2020').date()
-    # Meta Data for the first over flight
-    meta1 = base.copy()
-    meta1['comments'] = desc1
-    meta1['date'] = date1
+    raster_metadata = metadata_from_single_file(
+        Path(final),
+        RasterType.SWE,
+        date=pd.to_datetime('02/01/2020').date(),
+        **kwargs
+    )
 
-    # Meta Data for the second over flight
-    meta2 = base.copy()
-    meta2['description'] = desc2
-    meta2['date'] = date2
-
-    # Dictionary mapping the metadata to the respective folders
-    flight_meta = {}#{'GrandMesa2020_F1': meta1, # Temporarily suppressed
-                   #  'GrandMesa2020_F2': meta2}
-
-    # Name of the data mapped from respective folder names
-    names = {'Bare_Earth_Digital_Elevation_Models': 'DEM',
-             'Digital_Surface_Models': 'DSM'}
-
-    # error counting
-    errors_count = 0
-
-    # Loop over the flight names
-    for flight in flight_meta.keys():
-
-        # Loop over the two types of data to upload
-        for dem in ['Bare_Earth_Digital_Elevation_Models',
-                    'Digital_Surface_Models']:
-
-            # Form the directory structure and grab all the important files
-            d = join(downloads, flight, 'Rasters', dem)
-            files = find_files(d, 'adf', 'w001001x')
-
-            out_dir = join(downloads, flight, 'Rasters', dem, 'utm_12')
-            final = reproject(files, base['epsg'], out_dir)
-
-            # Grab the flight meta data
-            data = flight_meta[flight]
-
-            # Add a type to it and rename it
-            data['type'] = names[dem]
-
-            # Instantiate the uploader
-            # TODO: use the new class here
-            rs = UploadRasterBatch(final, **data)
-
-            # Submit to the DB
-            rs.push()
-
-            # Keep track of errors for run.py
-            errors_count += len(rs.errors)
-
-    return errors_count
+    # Instantiate the uploader
+    with db_session_with_credentials() as (_engine, session):
+        u = UploadRaster(
+            session, final, EPSG, **raster_metadata)
+        u.submit()
 
 
 if __name__ == '__main__':

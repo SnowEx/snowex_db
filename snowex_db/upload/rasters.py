@@ -1,3 +1,6 @@
+import os
+import shlex
+
 from geoalchemy2.elements import RasterElement
 from subprocess import STDOUT, check_output
 import logging
@@ -5,16 +8,45 @@ from snowexsql.tables import (
     Campaign, DOI, Instrument, MeasurementType, Observer, ImageObservation,
     ImageData,
 )
-
-from snowexsql.db import get_table_attributes
-
 from .base import BaseUpload
 from .cog_handler import COGHandler
-from ..utilities import (assign_default_kwargs, get_file_creation_date,
-                        get_logger)
+from ..utilities import (get_logger)
 
 
 LOG = logging.getLogger(__name__)
+
+
+def ensure_sso_env(profile: str) -> dict:
+    """
+    Ensure AWS_* environment vars are set using an SSO profile.
+    Requires awscli v2 and that you've already done `aws sso login --profile <profile>`
+    (this function can also try to call it).
+    Returns the dict of vars it set.
+    """
+    env_updates = {}
+
+    # 1) Make sure the CLI reads your shared config files
+    os.environ.setdefault("AWS_SDK_LOAD_CONFIG", "1")
+    os.environ.setdefault("AWS_PROFILE", profile)
+
+    # 2) Export short-lived creds as env lines
+    cmd = f"aws configure export-credentials --profile {shlex.quote(profile)} --format env"
+    out = check_output(cmd, shell=True, text=True)
+
+    # 3) Parse lines like: export AWS_ACCESS_KEY_ID=..., etc.
+    for line in out.splitlines():
+        line = line.strip()
+        if not line.startswith("export "):
+            continue
+        k, v = line[len("export "):].split("=", 1)
+        os.environ[k] = v
+        env_updates[k] = v
+
+    # (Optional) region if you know it
+    os.environ.setdefault("AWS_REGION", "us-west-2")
+    env_updates.setdefault("AWS_REGION", "us-west-2")
+
+    return env_updates
 
 
 class UploadRaster(BaseUpload):
@@ -28,7 +60,7 @@ class UploadRaster(BaseUpload):
             self, session, filename, epsg,
             use_s3=True, no_data=None, cog_dir="./snowex_cog_storage",
             doi=None, description=None, measurement_type=None, units=None,
-            date=None,
+            date=None, use_sso=True,
             **kwargs
     ):
         """
@@ -46,6 +78,8 @@ class UploadRaster(BaseUpload):
             measurement_type: type of measurement
             units: units of the measurement, e.g. 'meters'
             date_obj: date object for the measurement
+            use_sso: whether to use SSO for AWS access. In this case
+                we need to export our credentials to env variables first.
             **kwargs:
         """
 
@@ -57,6 +91,7 @@ class UploadRaster(BaseUpload):
         self._no_data = no_data
         self._units = units
         self.use_s3 = use_s3
+        self._use_sso = use_sso
         self._cog_dir = cog_dir
         self._doi = doi
         self._description = description
@@ -97,6 +132,8 @@ class UploadRaster(BaseUpload):
         cmd = cog_handler.to_sql_command(
             self._epsg, no_data=self._no_data
         )
+        if self._use_sso:
+            ensure_sso_env("default")
         self.log.debug('Executing: {}'.format(' '.join(cmd)))
         s = check_output(cmd, stderr=STDOUT).decode('utf-8')
 
