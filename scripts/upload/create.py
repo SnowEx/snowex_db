@@ -1,7 +1,7 @@
 """
 Script used to create the database and tables for the first time
 """
-from snowexsql.db import get_db, initialize
+from snowexsql.db import get_db, initialize, db_session_with_credentials
 from sqlalchemy import text as sqltext
 import argparse
 import logging
@@ -17,37 +17,35 @@ def main(overwrite=False, credentials='./credentials.json'):
         overwrite: Bool indicating whether to ask the user before overwriting the db
         db: Name of a local database to write tables to
     """
+    with db_session_with_credentials() as (_engine, session):
 
-    engine, session = get_db(credentials)
+        if overwrite:
+            initialize(_engine)
+            LOG.warning('Database cleared!\n')
+            try:
+                with _engine.connect() as connection:
+                    # Autocommit so the user is created before granting access
+                    connection = connection.execution_options(
+                        isolation_level="AUTOCOMMIT")
+                    connection.execute(
+                        sqltext("CREATE USER snow WITH PASSWORD 'hackweek';")
+                    )
+                    connection.execute(
+                        sqltext("GRANT USAGE ON SCHEMA public TO snow;")
+                    )
+            except Exception as e:
+                LOG.error("Failed on user creation")
+                raise e
 
-    if overwrite:
-        initialize(engine)
-        LOG.warning('Database cleared!\n')
-        try:
-            with engine.connect() as connection:
-                # Autocommit so the user is created before granting access
-                connection = connection.execution_options(
-                    isolation_level="AUTOCOMMIT")
-                connection.execute(
-                    sqltext("CREATE USER snow WITH PASSWORD 'hackweek';")
-                )
-                connection.execute(
-                    sqltext("GRANT USAGE ON SCHEMA public TO snow;")
-                )
-        except Exception as e:
-            LOG.error("Failed on user creation")
-            raise e
+            for t in ['sites', 'points', 'layers', 'images']:
 
-        for t in ['sites', 'points', 'layers', 'images']:
+                sql = f'GRANT SELECT ON {t} TO snow;'
+                LOG.info(f'Adding read only permissions for table {t}...')
+                with _engine.connect() as connection:
+                    connection.execute(sqltext(sql))
+        else:
+            LOG.warning('Aborted. Database has not been modified.\n')
 
-            sql = f'GRANT SELECT ON {t} TO snow;'
-            LOG.info(f'Adding read only permissions for table {t}...')
-            with engine.connect() as connection:
-                connection.execute(sqltext(sql))
-    else:
-        LOG.warning('Aborted. Database has not been modified.\n')
-
-    session.close()
 
 
 if __name__ == '__main__':
