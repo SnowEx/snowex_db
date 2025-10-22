@@ -19,14 +19,15 @@ classifiers = [
     'Programming Language :: Python :: 3.12',
 ]
 dependencies = [
+    "boto3<1.24",
+    "coloredlogs",
+    "earthaccess~=0.14",
+    "insitupy~=0.4",
+    "metloom==0.6.1",
+    "rasterio<1.4",
     "snowexsql==0.6.0rc1",
     "snowmicropyn",
-    "insitupy~=0.4",
-    "boto3<1.24",
-    "rasterio<1.4",
     "timezonefinder<7",
-    "metloom==0.6.1",
-    "coloredlogs",
 ]
 
 [project.optional-dependencies]

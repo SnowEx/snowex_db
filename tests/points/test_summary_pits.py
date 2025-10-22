@@ -1,17 +1,15 @@
-from datetime import datetime, timezone, date
-
 import pytest
 from geoalchemy2 import WKTElement
-from snowexsql.db import db_session_with_credentials
+
 from snowexsql.tables import PointData, DOI, Campaign, Instrument, \
     MeasurementType, PointObservation
-from snowexsql.tables.campaign_observation import CampaignObservation
 
 from snowex_db.upload.points import PointDataCSV
-from tests.points._base import PointBaseTesting
+from tests.helpers import WithUploadedFile
+from tests.sql_test_base import TableTestBase
 
 
-class TestSummaryPits(PointBaseTesting):
+class TestSummaryPits(TableTestBase, WithUploadedFile):
     """
     Test the summary csvs for a collection of pits
     """
@@ -19,7 +17,7 @@ class TestSummaryPits(PointBaseTesting):
     kwargs = {
         'timezone': 'MST',
         'doi': "some_point_pit_doi",
-        "row_based_timezone": True,  # row based timezone
+        "row_based_timezone": True, # row based timezone
         "derived": True,
         "instrument_map": {
             "depth": "manual",
@@ -42,78 +40,122 @@ class TestSummaryPits(PointBaseTesting):
             str(data_dir.joinpath("pit_summary_points.csv"))
         )
 
-    def filter_measurement_type(self, session, measurement_type, query=None):
-        if query is None:
-            query = session.query(self.TableClass)
+    @pytest.mark.usefixtures('uploaded_file')
+    @pytest.mark.parametrize(
+        "name, count", [
+            ("CAAMCL", 14),
+            ("COER12", 10),
+        ]
+    )
+    def test_point_observation(self, name, count, session):
+        """
+        3 records per each date and site
+        """
+        records = session.query(PointObservation).filter(
+            PointObservation.name.like(f'{name}%')
+        ).all()
+        assert len(records) == count
 
-        query = query.join(
-            self.TableClass.observation
-        ).join(
-            PointObservation.measurement_type
-        ).filter(MeasurementType.name == measurement_type)
-        return query
+    @pytest.mark.usefixtures('uploaded_file')
+    @pytest.mark.parametrize(
+        "name, units, derived", [
+            ("depth", "cm", True),
+            ("swe", "mm", True),
+            ("density", "kg/m^3", True),
+        ]
+    )
+    def test_measurement_types(self, name, units, derived):
+        record = self.get_records(MeasurementType, 'name', name)
+
+        assert len(record) == 1
+        assert record[0].units == units
+        assert record[0].derived == derived
+
+    @pytest.mark.usefixtures('uploaded_file')
+    @pytest.mark.parametrize(
+        "name", [
+            "American River Basin",
+            "East River",
+        ]
+    )
+    def test_campaign(self, name):
+        assert len(self.get_records(Campaign, 'name', name)) == 1
+
+    @pytest.mark.usefixtures('uploaded_file')
+    @pytest.mark.parametrize("name", [ "cutter", "manual" ])
+    def test_instrument(self, name):
+        assert len(self.get_records(Instrument, 'name', name)) == 1
 
     @pytest.mark.parametrize(
         "table, attribute, expected_value", [
-            (Campaign, "name", "American River Basin"),
-            (Instrument, "name", "cutter"),
-            (Instrument, "model", None),
-            (MeasurementType, "name", ['density', 'swe', 'depth']),
-            (MeasurementType, "units", ['kg/m^3', 'mm', 'cm']),
-            (MeasurementType, "derived", [True, True, True]),
             (DOI, "doi", "some_point_pit_doi"),
-            (CampaignObservation, "name", "CAAMCL_20191220_1300_cutter_density"),
             (PointData, "geom",
                 WKTElement('POINT (-120.04186927254749 38.71033054555811)', srid=4326)
              ),
-            (PointObservation, "date", date(2019, 12, 20)),
         ]
     )
     def test_metadata(self, table, attribute, expected_value, uploaded_file):
         self._check_metadata(table, attribute, expected_value)
 
+    @pytest.mark.usefixtures('uploaded_file')
     @pytest.mark.parametrize(
-        "data_name, attribute_to_check, filter_attribute, filter_value, expected", [
-            ('depth', 'value', 'value', 117.0, [117.0]),
-            ('depth', 'units', 'value', 117.0, ['cm']),
-            ('depth', 'datetime', 'value', 117.0, [datetime(2020, 2, 21, 20, 00, tzinfo=timezone.utc)]),
-        ]
+        "measurement_type, attribute_to_check, filter_attribute, filter_value",
+        [
+            ("depth", "value", "value", [135, 123, 119, 117, 92, 72, 50]),
+            (
+                "density", "value", "value",
+                [
+                    267.0,
+                    278.0,
+                    329.5,
+                    356.0,
+                    356.5,
+                    359.5,
+                    364.0,
+                    368.0,
+                    393.0,
+                    396.5,
+                    403.5,
+                    435.5,
+                ],
+            ),
+            (
+                "swe", "value", "value",
+                [
+                    196.0,
+                    245.5,
+                    257.0,
+                    333.5,
+                    356.5,
+                    367.0,
+                    424.0,
+                    434.5,
+                    442.5,
+                    446.5,
+                    475.5,
+                    479.5,
+                ],
+            ),
+        ],
     )
-    def test_value(
-            self, data_name, attribute_to_check,
-            filter_attribute, filter_value, expected, uploaded_file
-    ):
-        self.check_value(
-            data_name, attribute_to_check,
-            filter_attribute, filter_value, expected,
-        )
+    def test_value(self, measurement_type, attribute_to_check, filter_attribute, filter_value):
+        for value in filter_value:
+            records = self.check_value(
+                measurement_type, attribute_to_check, filter_attribute, value, [value]
+            )
+            assert records[0].measurement_type.name == measurement_type
 
+    @pytest.mark.usefixtures('uploaded_file')
     @pytest.mark.parametrize(
-        "data_name, expected", [
-            ("depth", 12)
-        ]
+        "data_name, expected",
+        [
+            ("depth", 12),
+            ("density", 12),
+            ("swe", 12),
+        ],
     )
-    def test_count(self, data_name, expected, uploaded_file):
-        n = self.check_count(data_name)
-        assert n == expected
-
-    @pytest.mark.parametrize(
-        "data_name, attribute_to_count, expected", [
-            ("depth", "value", 9),
-            ("depth", "units", 1)
-        ]
-    )
-    def test_unique_count(self, data_name, attribute_to_count, expected, uploaded_file):
-        self.check_unique_count(
-            data_name, attribute_to_count, expected
-        )
-
-    def test_unique_types(self, uploaded_file):
+    def test_count(self, data_name, expected):
         """
-        Test number of unique measurement types
+        Check that all entries in the CSV made it into the database
         """
-        with db_session_with_credentials() as (engine, session):
-            records = session.query(
-                MeasurementType.name
-            ).distinct().all()
-            assert len(records) == 3
+        assert self.check_count(data_name) == expected

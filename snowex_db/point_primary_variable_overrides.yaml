@@ -68,6 +68,7 @@ IGNORE:
   - avgvelocity
   - count
   - site
+  - version_number
   match_on_code: true
 INSTRUMENT:
   auto_remap: true
@@ -243,11 +244,6 @@ FLAGS:
   description: measurement flag
   map_from:
     - flag
-  match_on_code: true
-VERSION_NUMBER:
-  auto_remap: true
-  code: version_number
-  description: version
   match_on_code: true
 PIT_ID:
   auto_remap: true

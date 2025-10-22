@@ -3,7 +3,6 @@ import pytest
 from numpy.testing import assert_almost_equal
 from sqlalchemy import asc
 
-from snowexsql.db import initialize, db_session_with_credentials
 from snowexsql.tables import MeasurementType
 
 
@@ -14,21 +13,7 @@ def safe_float(r):
         return r
 
 
-def pytest_generate_tests(metafunc):
-    """
-    Function used to parametrize functions. If the function is in the
-    params keys then run it. Otherwise run all the tests normally.
-    """
-    # Were params provided?
-    if hasattr(metafunc.cls, 'params'):
-        if metafunc.function.__name__ in metafunc.cls.params.keys():
-            funcarglist = metafunc.cls.params[metafunc.function.__name__]
-            argnames = sorted(funcarglist[0])
-            metafunc.parametrize(
-                argnames, [[funcargs[name] for name in argnames] for funcargs in funcarglist]
-            )
-
-
+# TODO: Review methods for similarity and combine those
 class TableTestBase:
     """
     Test any table by picking
@@ -45,32 +30,26 @@ class TableTestBase:
     # Always define this using a table class from data.py and is used for ORM
     TableClass = None
 
-    @pytest.fixture(scope="class")
-    def session(self):
-        """
-        Interact with the DB when running tests.
-        """
-        with db_session_with_credentials() as (engine, session):
-            initialize(engine)
+    @pytest.fixture(autouse=True)
+    def setup(self, session):
+        # Store the session as an attribute to use in helper functions
+        self._session = session # noqa
 
-            yield session
-
-    def filter_measurement_type(self, session, measurement_type, query=None):
+    def filter_measurement_type(self, measurement_type, query=None):
         if query is None:
-            query = session.query(self.TableClass)
+            query = self._session.query(self.TableClass)
 
         query = query.join(
             self.TableClass.measurement_type
         ).filter(MeasurementType.name == measurement_type)
         return query
 
-    def get_query(self, session, filter_attribute, filter_value, query=None):
+    def get_query(self, filter_attribute, filter_value, query=None):
         """
         Return the base query using an attribute and value that it is supposed
         to be
 
         Args:
-            session: DB Session object
             filter_attribute: Name of attribute to search for
             filter_value: Value that attribute should be to filter db search
             query: If were extended a query use it instead of forming a new one
@@ -79,19 +58,22 @@ class TableTestBase:
         """
 
         if query is None:
-            query = session.query(self.TableClass)
+            query = self._session.query(self.TableClass)
 
-        fa = getattr(self.TableClass, filter_attribute)
-        q = query.filter(fa == filter_value).order_by(asc(fa))
-        return q
+        filter_attribute = getattr(self.TableClass, filter_attribute)
+        query = query.filter(
+            filter_attribute == filter_value
+        ).order_by(
+            asc(filter_attribute)
+        )
+        return query
 
     def check_count(self, data_name):
         """
         Test the record count of a data type
         """
-        with db_session_with_credentials() as (engine, session):
-            q = self.filter_measurement_type(session, data_name)
-            records = q.all()
+        q = self.filter_measurement_type(data_name)
+        records = q.all()
         return len(records)
 
     def check_value(
@@ -102,13 +84,13 @@ class TableTestBase:
         Test that the first value in a filtered record search is as expected
         """
         # Filter to the queried data type
-        with db_session_with_credentials() as (engine, session):
-            q = self.filter_measurement_type(session, measurement_type)
+        q = self.filter_measurement_type(measurement_type)
 
-            # Add another filter by some attribute
-            q = self.get_query(session, filter_attribute, filter_value, query=q)
+        # Add another filter by some attribute
+        q = self.get_query(filter_attribute, filter_value, query=q)
 
-            records = q.all()
+        records = q.all()
+
         if records:
             received = [getattr(r, attribute_to_check) for r in records]
             received = [safe_float(r) for r in received]
@@ -124,13 +106,43 @@ class TableTestBase:
             assert pytest.approx(received) == expected, \
                 f"Assertion failed: Expected {expected}, but got {received}"
 
+        return records
+
     def check_unique_count(self, data_name, attribute_to_count, expected_count):
         """
         Test that the number of unique values in a given attribute is as expected
         """
         # Add another filter by some attribute
-        with db_session_with_credentials() as (engine, session):
-            q = self.filter_measurement_type(session, data_name)
-            records = q.all()
+        q = self.filter_measurement_type(data_name)
+        records = q.all()
         received = len(set([getattr(r, attribute_to_count) for r in records]))
         assert received == expected_count
+
+    def get_value(self, table, attribute):
+        obj = getattr(table, attribute)
+        result = self._session.query(obj).all()
+        return result[0][0]
+
+    def get_values(self, table, attribute):
+        obj = getattr(table, attribute)
+        result = self._session.query(obj).all()
+        return [r[0] for r in result]
+
+    def get_records(self, table, attribute, value):
+        """
+        Fetches records that match criteria.
+
+        Using the session object from the test class allows for lazy loading
+        associated records.
+
+        Arguments:
+            table: Table to query
+            attribute: The name of the attribute in the table to use as a filter.
+            value: The attribute value to filter by.
+
+        Returns:
+            A list of records
+        """
+        attribute = getattr(table, attribute)
+        return self._session.query(table).filter(attribute == value).all()
+

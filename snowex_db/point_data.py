@@ -1,7 +1,6 @@
 import logging
 from typing import List
 
-import geopandas as gpd
 import numpy as np
 import pandas as pd
 from insitupy.io.dates import DateTimeManager
@@ -37,7 +36,14 @@ class SnowExPointData(MeasurementData):
         """
         self._row_based_timezone = row_based_timezone
         self._in_timezone = timezone
+        self._timezonefinder = None
         super().__init__(variable, meta_parser)
+
+    @property
+    def timezonefinder(self):
+        if self._timezonefinder is None:
+            self._timezonefinder = TimezoneFinder(in_memory=True)
+        return self._timezonefinder
 
     @staticmethod
     def read_csv_dataframe(profile_filename, columns, header_position):
@@ -54,12 +60,15 @@ class SnowExPointData(MeasurementData):
             df: pd.dataframe contain csv data with desired column names
         """
         # header=0 because docs say to if using skip rows and columns
+        # NOTE: Using the 'c' engine won't automatically detect any delimiters
+        #       and won't parse any files that hava a non comma separator,
         df = pd.read_csv(
             profile_filename, header=0,
             skiprows=header_position,
             names=columns,
             encoding='latin',
-            dtype=str  # treat all columns as strings to get weird date format
+            dtype=str,  # treat all columns as strings to get weird date format,
+            engine='c',
         )
         if "flags" in df.columns:
             # Max length of the flags column
@@ -96,7 +105,7 @@ class SnowExPointData(MeasurementData):
         tz = self._in_timezone
         if self._row_based_timezone:
             # Look up the timezone for the location and apply that
-            timezone_str = TimezoneFinder().timezone_at(
+            timezone_str = self.timezonefinder.timezone_at(
                 lat=row["latitude"], lng=row["longitude"]
             )
             tz = timezone_str  # e.g., 'America/Denver'
@@ -138,8 +147,6 @@ class SnowExPointData(MeasurementData):
             # Verify the sample column exists and rename to variable
             self._check_sample_columns()
 
-        columns = self._df.columns.tolist()
-
         # If we do not have a geometry column, we need to parse
         # the raw df, otherwise we assume this has been done already,
         # likely on the first read of the file
@@ -168,14 +175,6 @@ class SnowExPointData(MeasurementData):
                 self._get_datetime, axis=1, result_type="expand"
             )
 
-        location = gpd.points_from_xy(
-            self._df["longitude"], self._df["latitude"]
-        )
-        # self._df = self._df.drop(columns=["longitude", "latitude"])
-
-        self._df = gpd.GeoDataFrame(
-            self._df, geometry=location
-        ).set_crs("EPSG:4326")
         self._df = self._df.replace(-9999, np.NaN)
 
 
@@ -233,6 +232,7 @@ class PointDataCollection:
             meta_parser.primary_variables.entries["EASTING"],
             meta_parser.primary_variables.entries["ELEVATION"],
             meta_parser.primary_variables.entries["FLAGS"],
+            meta_parser.primary_variables.entries["FREQUENCY"],
             meta_parser.primary_variables.entries["INSTRUMENT"],
             meta_parser.primary_variables.entries["INSTRUMENT_MODEL"],
             meta_parser.primary_variables.entries["LATITUDE"],
@@ -244,8 +244,6 @@ class PointDataCollection:
             meta_parser.primary_variables.entries["UTCTOD"],
             meta_parser.primary_variables.entries["UTCYEAR"],
             meta_parser.primary_variables.entries["UTM_ZONE"],
-            meta_parser.primary_variables.entries["VERSION_NUMBER"],
-            meta_parser.primary_variables.entries["FREQUENCY"],
         ]
 
         shared_columns = [
