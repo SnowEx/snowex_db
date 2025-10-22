@@ -7,60 +7,11 @@ import time
 from os.path import abspath, basename, expanduser, join
 
 from snowex_db.interpretation import get_InSar_flight_comment
-from snowex_db.metadata import (ExtendedSnowExMetadataParser, read_InSar_annotation)
+from snowex_db.metadata import read_InSar_annotation
 from snowex_db.upload.rasters import UploadRaster
 from snowex_db.utilities import get_logger, metadata_to_dict
 from snowexsql.db import get_table_attributes
 from snowexsql.tables import Site
-from snowex_db.projection import add_geom
-
-
-class SiteDetailsUploader:
-    """
-    Wrapper class to replace DataHeader for site details upload functionality.
-    Provides the same interface as DataHeader but uses ExtendedSnowExMetadataParser internally.
-    """
-    
-    def __init__(self, session, filename, **kwargs):
-        """
-        Initialize site details uploader
-        
-        Args:
-            session: SQLAlchemy session object  
-            filename: Path to site details file
-            **kwargs: Additional keyword arguments for parser
-        """
-        self.session = session
-        self.filename = filename
-        
-        # Parse metadata using insitupy
-        # Map in_timezone to timezone parameter for insitupy compatibility
-        parser_kwargs = kwargs.copy()
-        if 'in_timezone' in parser_kwargs:
-            parser_kwargs['timezone'] = parser_kwargs.pop('in_timezone')
-            
-        parser = ExtendedSnowExMetadataParser(**parser_kwargs)
-        self.metadata, self.columns, self.columns_map, self.header_pos = parser.parse(filename)
-        
-        # Convert metadata to dict format for compatibility
-        self.info = metadata_to_dict(self.metadata)
-    
-    
-    def submit(self):
-        """
-        Submit metadata to the database as site info
-        """
-        # Only submit valid keys to db
-        kwargs = {}
-        valid = get_table_attributes(Site)
-        for k, v in self.info.items():
-            if k in valid:
-                kwargs[k] = v
-
-        kwargs = add_geom(kwargs, self.info['epsg'])
-        d = Site(**kwargs)
-        self.session.add(d)
-        self.session.commit()
 
 
 class BatchBase:
@@ -185,13 +136,6 @@ class BatchBase:
 
         self.log.info('Finished! Elapsed {:d}s\n'.format(
             int(time.time() - self.start)))
-
-
-class UploadSiteDetailsBatch(BatchBase):
-    """
-    Class for uploading site details files to the sites table
-    """
-    UploaderClass = SiteDetailsUploader
 
 
 class UploadRasterBatch(BatchBase):
