@@ -9,7 +9,7 @@ from os.path import abspath, basename, expanduser, join
 from snowex_db.interpretation import get_InSar_flight_comment
 from snowex_db.metadata import read_InSar_annotation
 from snowex_db.upload.rasters import UploadRaster
-from snowex_db.utilities import get_logger, metadata_to_dict
+from snowex_db.utilities import get_logger
 from snowexsql.db import get_table_attributes
 from snowexsql.tables import Site
 
