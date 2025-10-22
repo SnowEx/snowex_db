@@ -3,7 +3,7 @@ from shapely.wkb import loads as load_wkb
 from shapely.wkt import loads as load_wkt
 from snowexsql.tables import MeasurementType, Observer
 
-from snowex_db.upload.layers import UploadProfileBatch, UploadProfileData
+from snowex_db.upload.layers import UploadProfileData
 
 
 class WithUploadedFile:

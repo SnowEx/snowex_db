@@ -1,7 +1,6 @@
 import pytest
 from snowexsql.tables import LayerData, Site
 
-from snowex_db.upload.layers import UploadProfileBatch
 from tests.helpers import WithUploadBatchFiles
 from tests.sql_test_base import TableTestBase
 
