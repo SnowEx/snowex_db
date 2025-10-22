@@ -82,6 +82,7 @@ class UploadRaster(BaseUpload):
                 we need to export our credentials to env variables first.
             **kwargs:
         """
+        super().__init__()
 
         self._session = session
         self.log = get_logger(__name__)

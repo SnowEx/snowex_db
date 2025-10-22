@@ -92,7 +92,7 @@ def main():
         'campaign_name': 'Grand Mesa',
         'timezone': 'MST',
         'doi': 'https://doi.org/10.5067/M9TPF6NWL53K',
-        'name': "QSI Lidar data",
+        'name': "QSI Lidar Snow Depth",
         'tiled': True,
         'no_data': -9999,
         "comments": "QSI Lidar derived snow depth for SnowEx 2020 Grand Mesa campaign",
@@ -108,7 +108,7 @@ def main():
 
     raster_metadata = metadata_from_single_file(
         Path(final),
-        RasterType.SWE,
+        RasterType.DEPTH,
         date=pd.to_datetime('02/01/2020').date(),
         **kwargs
     )
