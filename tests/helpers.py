@@ -33,16 +33,3 @@ class WithUploadedFile:
         else:
             assert result == expected_value, f"Assertion failed: Expected {expected_value}, but got {result}"
 
-
-class WithUploadBatchFiles(WithUploadedFile):
-    """
-    Overwrite `upload_file` function to support passing of multiple files.
-    """
-    UploaderClass = UploadProfileBatch
-
-    def upload_file(self, filenames, session):
-        u = self.UploaderClass(
-            filenames=filenames, session=session, debug=True, **self.kwargs
-        )
-
-        u.push()
