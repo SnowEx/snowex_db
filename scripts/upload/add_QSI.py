@@ -25,10 +25,16 @@ from subprocess import check_output
 import pandas as pd
 from snowexsql.db import db_session_with_credentials
 
+from scripts.upload.earthaccess_data import get_files
 from snowex_db.upload.raster_mapping import metadata_from_single_file, \
     RasterType
 from snowex_db.upload.rasters import UploadRaster
 from snowex_db.utilities import get_logger
+
+
+QSI_DOI = {
+    "SNEX20_GM_Lidar": "10.5067/M9TPF6NWL53K"
+}
 
 
 def reproject(filenames, out_epsg, out_dir, adjust_vdatum=False):
@@ -79,7 +85,7 @@ def reproject(filenames, out_epsg, out_dir, adjust_vdatum=False):
     return final
 
 
-def main():
+def main(files, doi):
     EPSG = 26912
     downloads = "../download/data/nsidc-cumulus-prod-protected"
     downloads = abspath(expanduser(downloads))
@@ -91,7 +97,7 @@ def main():
         'instrument': 'lidar',
         'campaign_name': 'Grand Mesa',
         'timezone': 'MST',
-        'doi': 'https://doi.org/10.5067/M9TPF6NWL53K',
+        'doi': doi,
         'name': "QSI Lidar Snow Depth",
         'tiled': True,
         'no_data': -9999,
@@ -99,9 +105,7 @@ def main():
     }
 
     # Form the directory structure and grab all the important files
-    d = Path(downloads).joinpath(
-        "SNOWEX/SNEX20_GM_Lidar/1/2020/02/01/SNEX20_GM_Lidar_SD_20200201_20200202_v01.0.tif"
-    )
+    d = Path(files[0])
     output_dir = d.parent.joinpath('reprojected')
     output_dir.mkdir(exist_ok=True, parents=True)
     final = reproject([d], EPSG, str(output_dir))[0]
@@ -121,4 +125,10 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    for data_set_id, doi in QSI_DOI.items():
+        with get_files(
+            data_set_id, doi, key_words=[
+                "SNEX20_GM_Lidar_SD_20200201_20200202_v01.0.tif"
+            ]
+        ) as files:
+            main(files, doi)
