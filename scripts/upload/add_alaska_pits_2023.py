@@ -7,7 +7,6 @@ import re
 from os.path import abspath, join
 from pathlib import Path
 
-from snowex_db.batch import UploadProfileBatch, UploadSiteDetailsBatch
 from snowex_db.upload import PointDataCSV
 from snowex_db import db_session
 
