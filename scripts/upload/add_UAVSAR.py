@@ -83,7 +83,6 @@ def main():
                         session, raster_path, epsg,
                         cog_dir=output_geotif_loc, **raster_metadata
                     )
-                    print("here")
                     rs.submit()
 
         if region in ['all', 'lowman']:

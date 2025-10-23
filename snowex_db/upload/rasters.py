@@ -193,20 +193,18 @@ class UploadRaster(BaseUpload):
             self._session, ImageObservation, dict(
                 name=measurement_name,
                 date=self._date_obj,
-                instrument=instrument,
-                doi=doi,
-                measurement_type=measurement_obj,
+                instrument_id=instrument.id,
+                doi_id=doi.id,
             ),
             object_kwargs=dict(
                 name=measurement_name,
                 description=self._description,
                 date=self._date_obj,
-                instrument=instrument,
-                doi=doi,
+                instrument_id=instrument.id,
+                doi_id=doi.id,
                 # type=row["type"],  # THIS TYPE IS RESERVED FOR POLYMORPHIC STUFF
-                measurement_type=measurement_obj,
                 observer=observer,
-                campaign=campaign,
+                campaign_id=campaign.id,
             )
         )
 
@@ -218,6 +216,7 @@ class UploadRaster(BaseUpload):
             new_entry = self.TABLE_CLASS(
                 raster=raster,
                 observation=observation,
+                measurement_type_id=measurement_obj.id,
             )
             self._session.add(new_entry)
         self._session.commit()
