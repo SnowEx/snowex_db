@@ -17,7 +17,7 @@ def main(overwrite=False, credentials='./credentials.json'):
         overwrite: Bool indicating whether to ask the user before overwriting the db
         db: Name of a local database to write tables to
     """
-    with db_session_with_credentials() as (_engine, session):
+    with db_session_with_credentials(credentials_path=credentials) as (_engine, session):
 
         if overwrite:
             initialize(_engine)
