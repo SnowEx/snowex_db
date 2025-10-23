@@ -1,0 +1,17 @@
+# Table of contents
+# Learn more at https://jupyterbook.org/customize/toc.html
+
+format: jb-book
+root: readme
+chapters:
+  - file: installation
+  - file: usage
+  - file: database_structure
+  - file: RDS_db_connection
+  - file: data_notes
+  - file: snowex_db
+  - file: contributing
+  - file: documentation_development
+  - file: authors
+  - file: history
+  - file: api/modules
