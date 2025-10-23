@@ -64,6 +64,7 @@ class PointDataCSV(BaseUpload):
                 row_based_timezone
                 instrument_map
         """
+        super().__init__()
         self.filename = profile_filename
         self._session = session
 
@@ -206,18 +207,21 @@ class PointDataCSV(BaseUpload):
                 c_observations = self._add_campaign_observation(df)
                 measurement_types = self._add_measurement_types(df)
 
+                all_records_map = []
                 for row in df.to_dict(orient="records"):
                     row["geometry"] = WKTElement(
                         str(f"POINT ({row['longitude']} {row['latitude']})"),
                         srid=4326,
                     )
 
-                    d = self._add_entry(row, c_observations, measurement_types)
+                    all_records_map.append(
+                        self._add_entry(row, c_observations, measurement_types)
+                    )
 
-                    # session.bulk_save_objects(objects) does not resolve
-                    # foreign keys, DO NOT USE IT
-                    self._session.add(d)
-                    self._session.commit()
+                self._session.bulk_insert_mappings(self.TABLE_CLASS, all_records_map)
+                self._session.commit()
+                # Mark all cached objects as expired
+                self._session.expunge_all()
             else:
                 # procedure to still upload metadata (sites, etc)
                 LOG.warning(
@@ -328,23 +332,21 @@ class PointDataCSV(BaseUpload):
                 )
 
             date_obj = self._get_first_check_unique(grouped_df, "date")
-            object_args = dict(
+            check_args = dict(
                 date=date_obj,
                 name=measurement_name,
-                # Link objects
-                doi=doi,
-                instrument=instrument,
+                doi_id=doi.id,
+                instrument_id=instrument.id,
             )
             observation = self._check_or_add_object(
                 self._session,
                 PointObservation,
-                object_args,
+                check_args,
                 object_kwargs=dict(
-                    **object_args,
+                    **check_args,
                     description=description,
-                    # Link objects
-                    campaign=campaign,
-                    observer=observer,
+                    campaign_id=campaign.id,
+                    observers_id=observer.id,
                 )
             )
 
@@ -387,7 +389,7 @@ class PointDataCSV(BaseUpload):
 
         return types
 
-    def _add_entry(self, row: dict, observations: dict, measurement_types: dict) -> PointData:
+    def _add_entry(self, row: dict, observations: dict, measurement_types: dict) -> dict:
         """
         Add a single point entry and map with the metadata.
 
@@ -409,12 +411,12 @@ class PointDataCSV(BaseUpload):
             )
 
         # Now that the other objects exist, create the entry
-        new_entry = self.TABLE_CLASS(
+        new_entry = dict(
             datetime=row["datetime"],
             elevation=row.get('elevation', None),
             geom=row['geometry'],
-            measurement_type=measurement_types[row["type"]],
-            observation=observation,
+            measurement_type_id=measurement_types[row["type"]].id,
+            observation_id=observation.id,
             value=row["value"],
         )
 

@@ -20,7 +20,9 @@ def get_files(data_set_id:str, doi:str) ->Generator[List[Path], None, None]:
     files = []
 
     if source_files.exists() and source_files.is_dir():
-        files = list(source_files.glob("*.csv"))
+        files = [
+            file.as_posix() for file in source_files.glob("*.csv", case_sensitive=False)
+        ]
 
     if len(files) == 0:
         earthaccess.login()

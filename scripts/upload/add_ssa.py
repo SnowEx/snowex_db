@@ -29,7 +29,7 @@ def main(file_list, doi):
         for file in file_list:
             LOG.info(f"Uploading: {file}")
             uploader = UploadProfileData(
-                session, filename=str(file), doi=doi, timezone='MST'
+                session, filename=file, doi=doi, timezone='MST'
             )
             uploader.submit()
 
