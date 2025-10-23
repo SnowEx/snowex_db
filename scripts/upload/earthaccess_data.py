@@ -27,11 +27,12 @@ def get_files(
         files = [
             file.as_posix() for file in source_files.glob("*.csv")
         ]
+        files += [file.as_posix() for file in source_files.glob("*.tif")]
 
     if len(files) == 0:
         found_data = earthaccess.search_data(doi=doi)
         if key_words:
-            # Filter by key words in file name
+            # Filter by keywords in file name
             found_data = [
                 item for item in found_data
                 if any(
