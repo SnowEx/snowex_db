@@ -58,7 +58,11 @@ def main():
 
     # Expand the paths
     downloads = abspath(expanduser(downloads))
-    geotif_loc = join(downloads, geotif_loc)
+    geotif_loc = Path(downloads, geotif_loc)
+    geotif_loc.mkdir(parents=True, exist_ok=True)
+
+    output_geotif_loc = geotif_loc.joinpath('converted')
+    Path(output_geotif_loc).mkdir(parents=True, exist_ok=True)
 
     with db_session_with_credentials() as (_engine, session):
 
@@ -73,15 +77,13 @@ def main():
                 # Map the annotation files to the related ones and parse
                 # the metadata
                 for raster_metadata, raster_path in rasters_from_annotation(
-                    Path(f), Path(geotif_loc), **data
+                    Path(f), geotif_loc, **data
                 ):
-                    # TODO: we are going to rely heavily on parameter pass ins
-                    #   to the UploadRaster class to set the metadata, since the files
-                    #   are not self-describing
                     rs = UploadRaster(
                         session, raster_path, epsg,
-                        cog_dir=geotif_loc, **raster_metadata
+                        cog_dir=output_geotif_loc, **raster_metadata
                     )
+                    print("here")
                     rs.submit()
 
         if region in ['all', 'lowman']:
