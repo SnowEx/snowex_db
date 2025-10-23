@@ -1,0 +1,84 @@
+[build-system]
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
+
+[project]
+name = "snowex_db"
+dynamic = ["version"]
+description = "SQL Database software for SnowEx data"
+keywords = ["snowexdb", "snowexsql", "sql", "database", "snow"]
+readme = "README.rst"
+
+
+requires-python = ">=3.10"
+classifiers = [
+    'Development Status :: 2 - Pre-Alpha',
+    'Intended Audience :: Developers',
+    'Natural Language :: English',
+    'Programming Language :: Python :: 3.10',
+    'Programming Language :: Python :: 3.11',
+    'Programming Language :: Python :: 3.12',
+]
+dependencies = [
+    "boto3<1.24",
+    "coloredlogs",
+    "earthaccess~=0.14",
+    "insitupy~=0.4",
+    "metloom==0.6.1",
+    "rasterio<1.4",
+    "snowexsql @ git+https://github.com/SnowEx/snowexsql.git@release-0.6.x",
+    "snowmicropyn",
+    "timezonefinder<7",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-cov",
+    "moto<3.2",
+]
+uploader = [
+    "progressbar2",
+]
+docs = [
+    "ipython>7.0,<9.0",
+    "nbconvert>=6.4.3,<6.5.0",
+    "nbsphinx==0.9.4",
+    "pandoc==1.0.2",
+    "plotly==5.22.0",
+    "sphinx-gallery==0.9.0",
+    "sphinx>=7.1,<7.4",
+    "sphinxcontrib-apidoc==0.3.0",
+    "jupyter-book>=1.0.2,<1.1",
+    "pyyaml<6.1",
+    "sphinx-autobuild<=2024.5",
+    "sphinxcontrib-mermaid>=0.7,<1.0",
+]
+all = ["snowexdb[dev,uploader,docs]"]
+
+[project.scripts]
+clear_dataset = "snowex_db.cli:clear_dataset"
+
+# TODO - Issue #36
+#[project.license]
+#file = "LICENSE"
+
+[project.urls]
+Homepage = "https://github.com/SnowEx/snowex_db"
+Repository = "https://github.com/SnowEx/snowex_db.git"
+Issues = "https://github.com/SnowEx/snowex_db/issues"
+
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.build.hooks.vcs]
+version-file = "snowex_db/_version.py"
+
+[tool.hatch.version.raw-options]
+local_scheme = "no-local-version"
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[tool.hatch.build.targets.sdist]
+exclude = ["/tests"]

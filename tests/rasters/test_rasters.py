@@ -1,23 +1,21 @@
 import shutil
-from datetime import date
-from os.path import join, dirname, exists
 from os import makedirs
-import pytest
-import boto3
+from os.path import dirname, exists, join
 
+import boto3
 import numpy as np
+import pytest
 from geoalchemy2.shape import to_shape
 from geoalchemy2.types import Raster
+from moto import mock_s3
 from shapely.geometry import Point
 from sqlalchemy import func
-from moto import mock_s3
+
+from snowex_db.upload.rasters import COGHandler, UploadRaster
+from snowexsql.conversions import raster_to_rasterio
 from snowexsql.functions import ST_PixelAsPoint
-
-from snowex_db.conversions import raster_to_rasterio
-from snowexsql.data import ImageData
-from snowex_db.upload import UploadRaster, COGHandler
-
-from .sql_test_base import DBSetup, TableTestBase, pytest_generate_tests
+from snowexsql.tables import ImageData
+from tests.sql_test_base import TableTestBase
 
 
 class TestRaster(TableTestBase):
@@ -145,16 +143,16 @@ class TestCogHandler:
         ]
 
 
-class TestTiledRaster(DBSetup):
+class TestTiledRaster():
     """
     A class to test common operations and features of tiled raster in the DB
     """
 
-    def setup_class(self):
+    def setup(self):
         """
         Setup the database one time for testing
         """
-        super().setup_class()
+        super().setup()
         # Positional arguments to pass to the uploader class
         args = [join(self.data_dir, 'uavsar', 'uavsar_utm.amp1.real.tif')]
 
@@ -180,7 +178,7 @@ class TestTiledRaster(DBSetup):
         Tiled raster should be 500x500 in most cases (can be smaller to fit domains)
         """
         rasters = self.session.query(func.ST_AsTiff(ImageData.raster)).all()
-        datasets = raster_to_rasterio(self.session, rasters)
+        datasets = raster_to_rasterio(rasters)
 
         for d in datasets:
             assert d.width <= 256
@@ -218,10 +216,3 @@ class TestTiledRaster(DBSetup):
         merged = self.session.query(func.ST_Union(ImageData.raster, type_=Raster)).filter(
             ImageData.id.in_([1, 2])).all()
         assert len(merged) == 1
-
-    def test_date_accessed(self):
-        """
-        Tests that the date accessed is auto assigned on upload
-        """
-        result = self.session.query(ImageData.date_accessed).limit(1).all()
-        assert type(result[0][0]) is date

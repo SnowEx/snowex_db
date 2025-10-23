@@ -7,45 +7,30 @@ Uploads the Snowex 2020 depths to the database
 """
 
 import glob
-import time
 from os.path import abspath, join
 
-from snowexsql.db import get_db
-from snowex_db.upload import *
+from snowex_db.upload.points import PointDataCSV
+from snowexsql.db import db_session_with_credentials
 
 
 def main():
     # Site name
-    start = time.time()
     site_name = 'Grand Mesa'
-    timezone = 'MST'
-
+    timezone = 'US/Mountain'
+    doi = 'https://doi.org/10.5067/9IA978JIACAR'
     # Read in the Grand Mesa Snow Depths Data
     base = abspath(join('../download/data/SNOWEX/SNEX20_SD.001/'))
 
-    # Start the Database
-    db_name = 'localhost/snowex'
-    engine, session = get_db(db_name, credentials='./credentials.json')
+    profiles = glob.glob(join(base, '*/*.csv'))
 
-    csvs = glob.glob(join(base, '*/*.csv'))
-
-    errors = 0
-
-    for f in csvs:
-        csv = PointDataCSV(
-            f,
-            depth_is_metadata=False,
-            units='cm',
-            site_name=site_name,
-            in_timezone=timezone,
-            epsg=26912,
-            doi="https://doi.org/10.5067/9IA978JIACAR")
-
-        csv.submit(session)
-        errors += len(csv.errors)
-
-    return errors
-
-
+    with db_session_with_credentials() as (_engine, session):
+        for f in profiles:
+            uploader = PointDataCSV(session,
+                                    filename=f, 
+                                    campaign_name=site_name,
+                                    doi=doi,
+                                    site_name=site_name, 
+                                    timezone=timezone)
+            uploader.submit()
 if __name__ == '__main__':
     main()

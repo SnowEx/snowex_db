@@ -1,0 +1,115 @@
+# Book settings
+# Learn more at https://jupyterbook.org/customize/config.html
+
+title: snowex_db Documentation
+author: SnowEx DB Developers
+copyright: "2025"
+logo: ""
+
+# Force re-execution of notebooks on each build.
+# See https://jupyterbook.org/content/execute.html
+execute:
+  execute_notebooks: 'off'
+
+# Define the name of the latex output file for PDF builds
+latex:
+  latex_documents:
+    targetname: book.tex
+
+# Information about where the book exists on the web
+repository:
+  url: https://github.com/SnowEx/snowex_db  # Online location of your book
+  path_to_book: docs  # Optional path to your book, relative to the repository root
+  branch: main  # Which branch of the repository should be used when creating links (optional)
+
+# Add GitHub buttons to your book
+# See https://jupyterbook.org/customize/config.html#add-a-link-to-your-repository
+html:
+  use_issues_button: true
+  use_repository_button: true
+
+exclude_patterns: ['_build', 'Thumbs.db', '.DS_Store']
+
+sphinx:
+  extra_extensions:
+    - 'sphinx_togglebutton'
+    - 'sphinx_copybutton'
+    - 'myst_nb'
+    - 'jupyter_book'
+    - 'sphinx_thebe'
+    - 'sphinx_comments'
+    - 'sphinx_external_toc'
+    - 'sphinx.ext.intersphinx'
+    - 'sphinx_design'
+    - 'sphinx_book_theme'
+    - 'sphinx.ext.autodoc'
+    - 'sphinxcontrib.apidoc'
+    - 'sphinx.ext.viewcode'
+    - 'sphinx_gallery.load_style'
+    - 'sphinx.ext.autosectionlabel'
+    - 'sphinxcontrib.mermaid'
+  config:
+    html_js_files:
+      - https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js
+    # Theme and title
+    html_title: 'snowex_db Documentation'
+    html_theme: 'sphinx_book_theme'
+    html_theme_options:
+      search_bar_text: 'Search this book...'
+      launch_buttons:
+        notebook_interface: 'classic'
+        binderhub_url: ''
+        jupyterhub_url: ''
+        thebe: false
+        colab_url: ''
+      path_to_docs: 'docs'
+      repository_url: 'https://github.com/SnowEx/snowex_db'
+      repository_branch: 'main'
+      extra_footer: ''
+      home_page_in_toc: true
+      announcement: ''
+      analytics:
+        google_analytics_id: ''
+      use_repository_button: true
+      use_edit_page_button: false
+      use_issues_button: true
+    # External ToC
+    external_toc_exclude_missing: false
+    external_toc_path: '_toc.yml'
+    # API doc configuration
+    apidoc_module_dir: '../snowex_db'
+    apidoc_output_dir: './api'
+    apidoc_separate_modules: true
+    # Intersphinx for cross-referencing snowexsql
+    intersphinx_mapping:
+      snowexsql:
+        - 'https://snowexsql.readthedocs.io/en/latest/'
+        - null
+      python:
+        - 'https://docs.python.org/3/'
+        - null
+    # MyST & execution settings (match conf.py)
+    myst_enable_extensions:
+      - colon_fence
+      - dollarmath
+      - linkify
+      - substitution
+      - tasklist
+    myst_url_schemes:
+      - mailto
+      - http
+      - https
+    nb_execution_allow_errors: false
+    nb_execution_cache_path: ''
+    nb_execution_excludepatterns: []
+    nb_execution_in_temp: false
+    nb_execution_mode: 'off'
+    nb_execution_timeout: 30
+    nb_output_stderr: 'show'
+    # Misc
+    numfig: true
+    pygments_style: 'sphinx'
+    suppress_warnings:
+      - myst.domains
+    use_jupyterbook_latex: true
+    use_multitoc_numbering: true

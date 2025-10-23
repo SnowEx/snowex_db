@@ -1,58 +1,20 @@
-from os.path import dirname, join
-
+import numpy as np
+import pytest
 from numpy.testing import assert_almost_equal
 from sqlalchemy import asc
 
-from snowexsql.db import get_db, initialize
+from snowexsql.tables import MeasurementType
 
 
-def pytest_generate_tests(metafunc):
-    """
-    Function used to parametrize functions. If the function is in the
-    params keys then run it. Otherwise run all the tests normally.
-    """
-    # Were params provided?
-    if hasattr(metafunc.cls, 'params'):
-        if metafunc.function.__name__ in metafunc.cls.params.keys():
-            funcarglist = metafunc.cls.params[metafunc.function.__name__]
-            argnames = sorted(funcarglist[0])
-            metafunc.parametrize(
-                argnames, [[funcargs[name] for name in argnames] for funcargs in funcarglist]
-            )
+def safe_float(r):
+    try:
+        return float(r)
+    except Exception:
+        return r
 
 
-class DBSetup:
-    """
-    Base class for all our tests. Ensures that we clean up after every class that's run
-    """
-
-    @classmethod
-    def setup_class(self):
-        """
-        Setup the database one time for testing
-        """
-        self.db = 'localhost/test'
-        self.data_dir = join(dirname(__file__), 'data')
-        creds = join(dirname(__file__), 'credentials.json')
-
-        self.engine, self.session, self.metadata = get_db(self.db, credentials=creds, return_metadata=True)
-
-        initialize(self.engine)
-
-    @classmethod
-    def teardown_class(self):
-        """
-        Remove the databse
-        """
-        self.metadata.drop_all(bind=self.engine)
-        self.session.close()  # optional, depends on use case
-
-    def teardown(self):
-        self.session.flush()
-        self.session.rollback()
-
-
-class TableTestBase(DBSetup):
+# TODO: Review methods for similarity and combine those
+class TableTestBase:
     """
     Test any table by picking
     """
@@ -68,45 +30,19 @@ class TableTestBase(DBSetup):
     # Always define this using a table class from data.py and is used for ORM
     TableClass = None
 
-    # First filter to be applied is count_attribute == data_name
-    count_attribute = 'type'
+    @pytest.fixture(autouse=True)
+    def setup(self, session):
+        # Store the session as an attribute to use in helper functions
+        self._session = session # noqa
 
-    # Define params which is a dictionary of test names and their args
-    params = {
-        'test_count': [dict(data_name=None, expected_count=None)],
-        'test_value': [
-            dict(data_name=None, attribute_to_check=None, filter_attribute=None, filter_value=None, expected=None)],
-        'test_unique_count': [dict(data_name=None, attribute_to_count=None, expected_count=None)]
-    }
+    def filter_measurement_type(self, measurement_type, query=None):
+        if query is None:
+            query = self._session.query(self.TableClass)
 
-    @classmethod
-    def setup_class(self):
-        """
-        Setup the database one time for testing
-        """
-        super().setup_class()
-
-        # Batches always provide a list of files
-        if type(self.args[0]) == list:
-            self.args[0] = [join(self.data_dir, f) for f in self.args[0]]
-        # Single uploaders only upload a single file
-        else:
-            self.args[0] = join(self.data_dir, self.args[0])
-
-        # In case we have a smp_log file make it point to the data folder too
-        if 'smp_log_f' in self.kwargs.keys():
-            if self.kwargs['smp_log_f'] != None:
-                self.kwargs['smp_log_f'] = join(self.data_dir, self.kwargs['smp_log_f'])
-
-        self.kwargs['db_name'] = self.db
-        self.kwargs['credentials'] = join(dirname(__file__), 'credentials.json')
-        u = self.UploaderClass(*self.args, **self.kwargs)
-
-        # Allow for batches and single upload
-        if 'batch' in self.UploaderClass.__name__.lower():
-            u.push()
-        else:
-            u.submit(self.session)
+        query = query.join(
+            self.TableClass.measurement_type
+        ).filter(MeasurementType.name == measurement_type)
+        return query
 
     def get_query(self, filter_attribute, filter_value, query=None):
         """
@@ -118,56 +54,95 @@ class TableTestBase(DBSetup):
             filter_value: Value that attribute should be to filter db search
             query: If were extended a query use it instead of forming a new one
         Return:
-            q: Uncompiled SQLalchemy Query object
+            q: Uncompiled SQLAlchemy Query object
         """
 
         if query is None:
-            query = self.session.query(self.TableClass)
+            query = self._session.query(self.TableClass)
 
-        fa = getattr(self.TableClass, filter_attribute)
-        q = query.filter(fa == filter_value).order_by(asc(fa))
-        return q
+        filter_attribute = getattr(self.TableClass, filter_attribute)
+        query = query.filter(
+            filter_attribute == filter_value
+        ).order_by(
+            asc(filter_attribute)
+        )
+        return query
 
-    def test_count(self, data_name, expected_count):
+    def check_count(self, data_name):
         """
         Test the record count of a data type
         """
-        q = self.get_query(self.count_attribute, data_name)
+        q = self.filter_measurement_type(data_name)
         records = q.all()
-        assert len(records) == expected_count
+        return len(records)
 
-    def test_value(self, data_name, attribute_to_check, filter_attribute, filter_value, expected):
+    def check_value(
+            self, measurement_type, attribute_to_check, filter_attribute,
+            filter_value, expected
+    ):
         """
         Test that the first value in a filtered record search is as expected
         """
-        # Filter  to the data type were querying
-        q = self.get_query(self.count_attribute, data_name)
+        # Filter to the queried data type
+        q = self.filter_measurement_type(measurement_type)
 
         # Add another filter by some attribute
         q = self.get_query(filter_attribute, filter_value, query=q)
 
         records = q.all()
+
         if records:
-            received = getattr(records[0], attribute_to_check)
+            received = [getattr(r, attribute_to_check) for r in records]
+            received = [safe_float(r) for r in received]
         else:
             received = None
 
-        try:
-            received = float(received)
-        except:
-            pass
-
         if type(received) == float:
-            assert_almost_equal(received, expected, 6)
+            assert_almost_equal(received, expected, 6), f"Assertion failed: Expected {expected}, but got {received}"
+        elif isinstance(received, list) and np.issubdtype(np.array(received).dtype, np.number):
+            # Compare arrays, treating NaNs as equal
+            assert np.array_equal(np.array(received), np.array(expected), equal_nan=True)
         else:
-            assert received == expected
+            assert pytest.approx(received) == expected, \
+                f"Assertion failed: Expected {expected}, but got {received}"
 
-    def test_unique_count(self, data_name, attribute_to_count, expected_count):
+        return records
+
+    def check_unique_count(self, data_name, attribute_to_count, expected_count):
         """
         Test that the number of unique values in a given attribute is as expected
         """
         # Add another filter by some attribute
-        q = self.get_query(self.count_attribute, data_name)
+        q = self.filter_measurement_type(data_name)
         records = q.all()
         received = len(set([getattr(r, attribute_to_count) for r in records]))
         assert received == expected_count
+
+    def get_value(self, table, attribute):
+        obj = getattr(table, attribute)
+        result = self._session.query(obj).all()
+        return result[0][0]
+
+    def get_values(self, table, attribute):
+        obj = getattr(table, attribute)
+        result = self._session.query(obj).all()
+        return [r[0] for r in result]
+
+    def get_records(self, table, attribute, value):
+        """
+        Fetches records that match criteria.
+
+        Using the session object from the test class allows for lazy loading
+        associated records.
+
+        Arguments:
+            table: Table to query
+            attribute: The name of the attribute in the table to use as a filter.
+            value: The attribute value to filter by.
+
+        Returns:
+            A list of records
+        """
+        attribute = getattr(table, attribute)
+        return self._session.query(table).filter(attribute == value).all()
+

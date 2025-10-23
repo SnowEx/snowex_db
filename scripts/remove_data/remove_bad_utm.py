@@ -1,7 +1,7 @@
 """
 A set of data got uploaded with a bad EPSG value. This script removes them
 """
-from snowexsql.data import LayerData, PointData
+from snowexsql.tables import LayerData, PointData
 from snowexsql.db import get_db
 
 

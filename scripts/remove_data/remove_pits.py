@@ -3,7 +3,7 @@ File to remove all snowpits from the database
 """
 import argparse
 from snowexsql.api import db_session
-from snowexsql.data import LayerData
+from snowexsql.tables import LayerData
 from snowexsql.db import get_db
 
 
