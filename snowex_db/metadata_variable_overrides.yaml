@@ -6,6 +6,15 @@ INSTRUMENT_MODEL:
     - smp_serial_number
     - wise_serial_no
     - lwc_serial_#
+
+PRECIP:
+  auto_remap: true
+  code: precip
+  description: Site notes on precipitation
+  map_from:
+    - precip
+    - precip_type
+
 IGNORE:
   auto_remap: false
   code: ignore
@@ -16,3 +25,5 @@ IGNORE:
     - original_total_samples
     - data_subsampled_to
     - total_samples
+    - precip_rate
+    - parameter_codes
