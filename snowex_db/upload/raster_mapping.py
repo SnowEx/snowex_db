@@ -112,7 +112,7 @@ def meta_from_annotation_file(
     Returns:
         A dictionary containing metadata for the raster file.
         keys are:
-        - type: Type of the raster file
+        - measurement_type: Type of the raster file
         - date: Date of the acquisition
         - units: Units of the raster file
         - comments: Comments about the raster file
@@ -121,11 +121,10 @@ def meta_from_annotation_file(
     meta = deepcopy(kwargs)
     desc = read_InSar_annotation(annotation_file)
     # Populate the metadata
-    # TODO: Not type anymore, this will go in measurement type
-    meta['type'] = 'insar ' + raster_type.abbreviation
+    meta['measurement_type'] = 'insar ' + raster_type.abbreviation
 
     if raster_type == RasterType.INT:
-        meta['type'] += (' ' + component)
+        meta['measurement_type'] += (' ' + component)
 
     # Assign the date for the respective flights
     if raster_type in [RasterType.AMP1, RasterType.AMP2]:
