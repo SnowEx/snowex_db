@@ -7,8 +7,13 @@ import fileinput
 from earthaccess_data import get_files
 from import_logger import get_logger
 
+<<<<<<< HEAD
 from snowexsql.db import db_session_with_credentials
 from snowex_db.upload.layers import UploadProfileData
+=======
+from snowex_db.utilities import get_logger
+import concurrent.futures
+>>>>>>> 1892ebd (removed Batch Uploader classes)
 
 LOG = get_logger()
 

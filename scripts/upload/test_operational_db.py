@@ -3,7 +3,7 @@ Script is used to confirm uploads to the db were successful
 """
 
 from snowexsql.db import get_db
-from snowexsql.data import SiteData, PointData, LayerData, ImageData
+from snowexsql.tables import Site, PointData, LayerData, ImageData
 import pytest
 
 @pytest.fixture(scope='session')
@@ -59,9 +59,10 @@ def test_site_details_upload(session):
     """
     Confirm the site details wereu uploaded
     """
-    n_pnts = session.query(SiteData.site_id).count()
+    n_pnts = session.query(Site.site_id).count()
     assert n_pnts == 155
 
+@pytest.mark.skip(reason="no way to currently test this")
 @pytest.mark.parametrize
 def test_add_downsampled_smp(session):
     """

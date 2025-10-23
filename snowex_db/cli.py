@@ -2,7 +2,7 @@ import argparse
 
 import pandas as pd
 
-from snowexsql.data import *
+from snowexsql.tables import *
 from snowexsql.db import get_db
 
 
@@ -11,7 +11,7 @@ def clear_dataset():
     # Add tool arguments
     parser = argparse.ArgumentParser(
         description='Delete sections of the database by dataset name and observers')
-    parser.add_argument('table_class', metavar='C', type=str, choices=['ImageData', 'SiteData', 'PointData', 'LayerData'],
+    parser.add_argument('table_class', metavar='C', type=str, choices=['ImageData', 'Site', 'PointData', 'LayerData'],
                         help='TableClass name to query')
 
     parser.add_argument(
@@ -60,7 +60,7 @@ def clear_dataset():
     # Get the DB table
     tables = {
         'ImageData': ImageData,
-        'SiteData': SiteData,
+        'SiteData': Site,
         'PointData': PointData,
         'LayerData': LayerData}
 

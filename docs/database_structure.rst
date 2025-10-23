@@ -160,7 +160,7 @@ The sites table contains all the details regarding pit site details. This
 table is formed exclusively from the `SiteDetails.csv` files that were provided
 with `stratigraphy.csv` and `density.csv` files.
 
-This table is mapped to python with :class:`snowex_db.data.SiteData`.
+This table is mapped to python with :class:`snowexsql.tables.Site`.
 This table has a lot of columns. They are:
 
 * air_temp - Air temperature in degrees C at time of digging the pit
