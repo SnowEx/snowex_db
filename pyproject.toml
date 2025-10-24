@@ -54,7 +54,7 @@ docs = [
     "sphinx-autobuild<=2024.5",
     "sphinxcontrib-mermaid>=0.7,<1.0",
 ]
-all = ["snowexdb[dev,uploader,docs]"]
+all = ["snowex_db[dev,uploader,docs]"]
 
 [project.scripts]
 clear_dataset = "snowex_db.cli:clear_dataset"
