@@ -26,7 +26,7 @@ dependencies = [
     "insitupy~=0.4",
     "metloom==0.6.1",
     "rasterio<1.4",
-    "snowexsql @ git+https://github.com/SnowEx/snowexsql.git@release-0.6.x",
+    "snowexsql @ git+https://github.com/SnowEx/snowexsql.git@master",
     "snowmicropyn",
     "timezonefinder<7",
 ]
