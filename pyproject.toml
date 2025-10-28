@@ -25,7 +25,7 @@ dependencies = [
     "insitupy~=0.4",
     "metloom==0.6.1",
     "rasterio<1.4",
-    "snowexsql==0.6.0rc1",
+    "snowexsql==1.0.0",
     "snowmicropyn",
     "timezonefinder<7",
 ]
