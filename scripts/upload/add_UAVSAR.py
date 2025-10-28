@@ -22,8 +22,12 @@ Usage:
 import sys
 import glob
 from os.path import abspath, expanduser, join
+from pathlib import Path
 
-from snowex_db.batch import UploadUAVSARBatch
+from snowexsql.db import db_session_with_credentials
+
+from snowex_db.upload.raster_mapping import rasters_from_annotation
+from snowex_db.upload.rasters import UploadRaster
 
 
 def main():
@@ -43,88 +47,84 @@ def main():
         # Tile the data going in for faster retrieval
         'tiled': True,
 
-        # Spatial Reference
-        'epsg': 26912,
-
         # Metadata
-        'observers': 'UAVSAR team, JPL',
+        'observer': 'UAVSAR team, JPL',
         'instrument': 'UAVSAR, L-band InSAR',
-        'site_name': 'Grand Mesa',
-        'units': None,  # Add from the Annotation file
-        'description': '',  # Added from the annotation file
+        'campaign_name': 'Grand Mesa',
+        'name': 'UAVSAR Data',
         'doi': "https://asf.alaska.edu/doi/uavsar/#R0ARICRBAKYE",
-        'in_timezone': 'MST'
+        'timezone': 'MST',
     }
 
     # Expand the paths
     downloads = abspath(expanduser(downloads))
-    geotif_loc = join(downloads, geotif_loc)
+    geotif_loc = Path(downloads, geotif_loc)
+    geotif_loc.mkdir(parents=True, exist_ok=True)
 
-    # error counting
-    errors_count = 0
+    output_geotif_loc = geotif_loc.joinpath('converted')
+    Path(output_geotif_loc).mkdir(parents=True, exist_ok=True)
 
-    if region in ['all', 'grand_mesa']:
-        print('Uploading Grand Mesa')
-        ########################## Grand Mesa #####################################
-        # Grab all the grand mesa annotation files in the original data folder
-        ann_files = glob.glob(join(downloads, 'grmesa_*.ann'))
+    with db_session_with_credentials() as (_engine, session):
 
-        # Instantiate the uploader
-        rs = UploadUAVSARBatch(ann_files, geotiff_dir=geotif_loc, **data)
+        if region in ['all', 'grand_mesa']:
+            epsg = 26912  # EPSG code for the Grand Mesa area
+            print('Uploading Grand Mesa')
+            ########################## Grand Mesa #####################################
+            # Grab all the grand mesa annotation files in the original data folder
+            ann_files = glob.glob(join(downloads, 'grmesa_*.ann'))
+            # Instantiate the uploader
+            for f in ann_files:
+                # Map the annotation files to the related ones and parse
+                # the metadata
+                for raster_metadata, raster_path in rasters_from_annotation(
+                    Path(f), geotif_loc, **data
+                ):
+                    rs = UploadRaster(
+                        session, raster_path, epsg,
+                        cog_dir=output_geotif_loc, **raster_metadata
+                    )
+                    rs.submit()
 
-        # Submit to the db
-        rs.push()
+        if region in ['all', 'lowman']:
+            print('Uploading Lowman')
+            ############################### Idaho - Lowman ####################################
+            # Make adjustments to metadata for lowman files
+            data['campaign_name'] = 'idaho'
+            epsg = 26911
 
-        # Keep track of number of errors for run.py
-        errors_count += len(rs.errors)
+            # Grab all the lowman and reynolds annotation files
+            ann_files = glob.glob(join(downloads, 'lowman_*.ann'))
 
-        # Memory clean up
-        del rs
+            for f in ann_files:
+                for raster_metadata, raster_path in rasters_from_annotation(
+                        Path(f), Path(geotif_loc), **data
+                ):
+                    rs = UploadRaster(
+                        session, raster_path, epsg,
+                        cog_dir=geotif_loc, **raster_metadata
+                    )
+                    rs.submit()
 
-    if region in ['all', 'lowman']:
-        print('Uploading Lowman')
-        ############################### Idaho - Lowman ####################################
-        # Make adjustments to metadata for lowman files
-        data['site_name'] = 'idaho'
-        data['epsg'] = 26911
+        if region in ['all', 'reynolds']:
+            print("Uploading Reynolds Creek")
 
-        # Grab all the lowman and reynolds annotation files
-        ann_files = glob.glob(join(downloads, 'lowman_*.ann'))
+            ############################## Idaho - Reynolds ####################################
+            # Make adjustments to metadata for lowman files
+            data['campaign_name'] = 'idaho'
+            epsg = 26911
 
-        # Instantiate the uploader
-        rs = UploadUAVSARBatch(ann_files, geotiff_dir=geotif_loc, **data)
+            # Grab all the lowman and reynolds annotation files
+            ann_files = glob.glob(join(downloads, 'silver_*.ann'))
 
-        # Submit to the db
-        rs.push()
-
-        # Keep track of the number of errors
-        errors_count += len(rs.errors)
-
-        # Memory clean up
-        del rs
-
-    if region in ['all', 'reynolds']:
-        print("Uploading Reynolds Creek")
-
-        ############################## Idaho - Reynolds ####################################
-        # Make adjustments to metadata for lowman files
-        data['site_name'] = 'idaho'
-        data['epsg'] = 26911
-
-        # Grab all the lowman and reynolds annotation files
-        ann_files = glob.glob(join(downloads, 'silver_*.ann'))
-
-        # Instantiate the uploader
-        rs = UploadUAVSARBatch(ann_files, geotiff_dir=geotif_loc, **data)
-
-        # Submit to the db
-        rs.push()
-
-        # Keep track of the number of errors
-        errors_count += len(rs.errors)
-
-    # Return the error count so run.py can keep track
-    return errors_count
+            for f in ann_files:
+                for raster_metadata, raster_path in rasters_from_annotation(
+                        Path(f), Path(geotif_loc), **data
+                ):
+                    rs = UploadRaster(
+                        session, raster_path, epsg,
+                        cog_dir=geotif_loc, **raster_metadata
+                    )
+                    rs.submit()
 
 
 if __name__ == '__main__':

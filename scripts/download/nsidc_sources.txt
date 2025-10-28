@@ -11,4 +11,4 @@ https://n5eil01u.ecs.nsidc.org/SNOWEX/SNEX21_TS_SP.001/
 https://n5eil01u.ecs.nsidc.org/SNOWEX/SNEX_Met.001/
 https://n5eil01u.ecs.nsidc.org/SNOWEX/SNEX23_Lidar.001/2022.10.24/SNEX23_Lidar_FLCF_CH_0.25M_20221024_V01.0.tif
 https://n5eil01u.ecs.nsidc.org/SNOWEX/SNEX23_Lidar.001/2023.03.11/SNEX23_Lidar_FLCF_SD_0.25M_20230311_V01.0.tif
-
+https://data.nsidc.earthdatacloud.nasa.gov/nsidc-cumulus-prod-protected/SNOWEX/SNEX20_GM_Lidar/1/2020/02/01/SNEX20_GM_Lidar_SD_20200201_20200202_v01.0.tif
