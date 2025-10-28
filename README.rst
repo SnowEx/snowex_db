@@ -25,10 +25,15 @@ to become a community database open to all.
 
 DOI
 ---
-* SnowEx Hackweek 2022
-
-.. image:: https://zenodo.org/badge/DOI/10.5281/zenodo.7618108.svg
+.. |HW24| image:: https://zenodo.org/badge/DOI/10.5281/zenodo.13375919.svg
+  :target: https://doi.org/10.5281/zenodo.13375919
+.. |HW22| image:: https://zenodo.org/badge/DOI/10.5281/zenodo.7618108.svg
    :target: https://doi.org/10.5281/zenodo.7618108
+
+
+* SnowEx Hackweek 2024 - |HW24|
+* SnowEx Hackweek 2022 - |HW22|
+
    
 Features
 --------

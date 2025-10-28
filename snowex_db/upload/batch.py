@@ -7,9 +7,10 @@ import time
 from os.path import abspath, basename, expanduser, join
 
 from snowex_db.interpretation import get_InSar_flight_comment
-from snowex_db.metadata import (DataHeader, read_InSar_annotation)
+from snowex_db.metadata import read_InSar_annotation
 from snowex_db.upload.rasters import UploadRaster
 from snowex_db.utilities import get_logger
+
 
 
 class BatchBase:
@@ -134,13 +135,6 @@ class BatchBase:
 
         self.log.info('Finished! Elapsed {:d}s\n'.format(
             int(time.time() - self.start)))
-
-
-class UploadSiteDetailsBatch(BatchBase):
-    """
-    Class for uploading site details files to the sites table
-    """
-    UploaderClass = DataHeader
 
 
 class UploadRasterBatch(BatchBase):

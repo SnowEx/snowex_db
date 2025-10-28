@@ -3,7 +3,7 @@ from shapely.wkb import loads as load_wkb
 from shapely.wkt import loads as load_wkt
 from snowexsql.tables import MeasurementType, Observer
 
-from snowex_db.upload.layers import UploadProfileBatch, UploadProfileData
+from snowex_db.upload.layers import UploadProfileData
 
 
 class WithUploadedFile:
@@ -33,16 +33,3 @@ class WithUploadedFile:
         else:
             assert result == expected_value, f"Assertion failed: Expected {expected_value}, but got {result}"
 
-
-class WithUploadBatchFiles(WithUploadedFile):
-    """
-    Overwrite `upload_file` function to support passing of multiple files.
-    """
-    UploaderClass = UploadProfileBatch
-
-    def upload_file(self, filenames, session):
-        u = self.UploaderClass(
-            filenames=filenames, session=session, debug=True, **self.kwargs
-        )
-
-        u.push()

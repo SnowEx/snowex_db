@@ -7,7 +7,7 @@ import re
 from os.path import abspath, join
 from pathlib import Path
 
-from snowex_db.batch import UploadProfileBatch, UploadSiteDetailsBatch
+
 
 
 tz_map = {'US/Pacific': ['CA', 'NV', 'WA'],

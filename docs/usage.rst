@@ -49,7 +49,7 @@ Each table has a class already built in the snowex_db. At a minimum you need at
 least one of those classes to interact with it using this library. To grab
 all points in the table::
 
-    from snowexsql.data import PointData, LayerData, ImageData, SiteData
+    from snowexsql.tables import PointData, LayerData, ImageData, Site
 
     # Grab the first 10 records from points table
     points = session.query(PointData).limit(10).all()

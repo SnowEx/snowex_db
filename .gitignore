@@ -23,12 +23,14 @@ htmlcov/*
 docs/modules.rst
 docs/snowex_db.rst
 docs/_build/*
+docs/api/*
 
 scripts/upload/test*.txt
 scripts/upload/credentials.json
 
 scripts/download/data/*
 venv/
+snowex_venv/
 
 # IDE files
 .idea/*
