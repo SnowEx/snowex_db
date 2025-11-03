@@ -7,7 +7,7 @@ import numpy as np
 import pytest
 from geoalchemy2.shape import to_shape
 from geoalchemy2.types import Raster
-from moto import mock_s3
+from moto import mock_aws
 from shapely.geometry import Point
 from sqlalchemy import func
 
@@ -69,7 +69,7 @@ class TestCogHandler:
 
     @pytest.fixture(scope="class")
     def s3_client(self):
-        with mock_s3():
+        with mock_aws():
             yield boto3.client(
                 "s3",
                 aws_access_key_id="FAKE",
