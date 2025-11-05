@@ -131,24 +131,25 @@ System Diagram
 
     flowchart TB
 
-    subgraph VPC
-      subgraph Public_Subnet
-        IGW[Internet Gateway]
-        NAT[NAT Gateway]
+    subgraph VPC["VPC"]
+      subgraph Public_Subnet["Public Subnet"]
+        IGW["Internet Gateway"]
+        NAT["NAT Gateway"]
       end
 
-      subgraph Private_Subnet
-        LAMBDA[Lambda Function]
-        RDS[Amazon RDS: PostgreSQL]
-        EC2[EC2 Admin Host]
+      subgraph Private_Subnet["Private Subnet"]
+        LAMBDA["Lambda Function"]
+        RDS["Amazon RDS PostgreSQL"]
+        EC2["EC2 Admin Host"]
       end
     end
 
     %% Connections
-    LAMBDA -- Query --> RDS
-    EC2 -- Admin Access --> RDS
-    LAMBDA -- Outbound Traffic --> NAT --> IGW
-    EC2 -- Outbound HTTPS (443) --> NAT --> IGW
+    LAMBDA -->|Query| RDS
+    EC2 -->|Admin Access| RDS
+    LAMBDA -->|Outbound Traffic| NAT
+    NAT --> IGW
+    EC2 -->|Outbound HTTPS| NAT
 
 Sequence Diagram
 ----------------
