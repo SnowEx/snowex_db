@@ -25,9 +25,9 @@ class SnowExPointData(MeasurementData):
         self, variable: MeasurementDescription = None,
         meta_parser: MetaDataParser = None,
         row_based_timezone=False,
-        timezone=None
         timezone=None,
         single_date=False,
+        skip_format_df=False,
     ):
         """
         Args:
@@ -35,12 +35,14 @@ class SnowExPointData(MeasurementData):
             row_based_timezone: does each row have a unique timezone implied
             timezone: input timezone for the whole file
             single_date: Dataset is from a single day
+            skip_format_df: Skip parsing shared columns
 
         """
         self._row_based_timezone = row_based_timezone
         self._in_timezone = timezone
         self._timezonefinder = None
         self._single_date = single_date
+        self._skip_format_df = skip_format_df
         super().__init__(variable, meta_parser)
 
     @property
@@ -150,6 +152,9 @@ class SnowExPointData(MeasurementData):
         if self.variable.code != "-1":
             # Verify the sample column exists and rename to variable
             self._check_sample_columns()
+
+        if self._skip_format_df:
+            return
 
         # If we do not have a geometry column, we need to parse
         # the raw df, otherwise we assume this has been done already,
@@ -280,19 +285,15 @@ class PointDataCollection:
             points = cls.DATA_CLASS(
                 variable=all_file.meta_columns_map[column],
                 meta_parser=meta_parser,
-                timezone=timezone, row_based_timezone=row_based_timezone
+                timezone=timezone,
+                row_based_timezone=row_based_timezone,
+                skip_format_df=True,
             )
-            # IMPORTANT - Metadata needs to be set before assigning the
-            # dataframe as information from the metadata is used to format_df
-            # the information
-            points.metadata = all_file.metadata
-            df_columns = all_file.df.columns.tolist()
-            # The df setter filters some columns, so adjust our shared columns
-            df_shared_columns = [
-                 c for c in shared_columns if c in df_columns
+            drop_columns = [
+                variable for variable in variable_columns if variable != column
             ]
-            # run the whole file through the df setter
-            points.df = all_file.df.loc[:, df_shared_columns + [column]].copy()
+            points.df = all_file.df.copy()
+            points.df.drop(columns=drop_columns, inplace=True)
             # --------
             result.append(points)
 
