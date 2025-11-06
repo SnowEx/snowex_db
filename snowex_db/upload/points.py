@@ -41,9 +41,7 @@ class PointDataCSV(BaseUpload):
         'density': 'kg/m^3'
     }
 
-    def __init__(
-            self, session, profile_filename, timezone="US/Mountain", **kwargs
-    ):
+    def __init__(self, session, profile_filename, timezone="US/Mountain", **kwargs):
         """
 
         Args:
@@ -63,6 +61,7 @@ class PointDataCSV(BaseUpload):
                 name
                 row_based_timezone
                 instrument_map
+                single_date
         """
         super().__init__()
         self.filename = profile_filename
@@ -79,6 +78,7 @@ class PointDataCSV(BaseUpload):
                 "Please choose one."
             )
         self._header_sep = kwargs.get("header_sep", ",")
+        # Site ID/Name
         self._id = kwargs.get("id")
         self._campaign_name = kwargs.get("campaign_name")
         # Is this file for derived measurements
@@ -101,6 +101,9 @@ class PointDataCSV(BaseUpload):
         else:
             in_timezone = timezone
 
+        # All observations are from the same date
+        self._single_date = kwargs.get("single_date", False)
+
         # Read in data
         self.data = self._read(in_timezone=in_timezone)
 
@@ -120,7 +123,8 @@ class PointDataCSV(BaseUpload):
                 row_based_timezone=self._row_based_tz,
                 primary_variable_file=Path(__file__).parent.joinpath(
                     "../point_primary_variable_overrides.yaml"
-                )
+                ),
+                single_date=self._single_date,
             )
         except pd.errors.ParserError as e:
             LOG.error(e)

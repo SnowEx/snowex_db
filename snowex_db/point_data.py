@@ -26,17 +26,21 @@ class SnowExPointData(MeasurementData):
         meta_parser: MetaDataParser = None,
         row_based_timezone=False,
         timezone=None
+        timezone=None,
+        single_date=False,
     ):
         """
         Args:
             See MeasurementData.__init__
             row_based_timezone: does each row have a unique timezone implied
             timezone: input timezone for the whole file
+            single_date: Dataset is from a single day
 
         """
         self._row_based_timezone = row_based_timezone
         self._in_timezone = timezone
         self._timezonefinder = None
+        self._single_date = single_date
         super().__init__(variable, meta_parser)
 
     @property
@@ -171,9 +175,14 @@ class SnowExPointData(MeasurementData):
             LOG.debug("not parsing date")
         else:
             # Parse the datetime
-            self._df["datetime"] = self._df.apply(
-                self._get_datetime, axis=1, result_type="expand"
-            )
+            if self._single_date:
+                self._df["datetime"] = DateTimeManager.handle_separate_datetime(
+                    self._df.iloc[0]
+                )
+            else:
+                self._df["datetime"] = self._df.apply(
+                    self._get_datetime, axis=1, result_type="expand"
+                )
 
         self._df = self._df.replace(-9999, np.NaN)
 
@@ -198,8 +207,12 @@ class PointDataCollection:
 
     @classmethod
     def _read_csv(
-        cls, fname, meta_parser: PointSnowExMetadataParser,
-        timezone=None, row_based_timezone=False
+        cls,
+        fname,
+        meta_parser: PointSnowExMetadataParser,
+        timezone=None,
+        row_based_timezone=False,
+        single_date=False,
     ) -> List[SnowExPointData]:
         """
         Args:
@@ -207,6 +220,7 @@ class PointDataCollection:
             meta_parser: parser for the metadata
             timezone: input timezone
             row_based_timezone: is the timezone row based?
+            single_date: All observations are from single date
 
         Returns:
             a list of ProfileData objects
@@ -217,7 +231,9 @@ class PointDataCollection:
         all_file = cls.DATA_CLASS(
             variable=None,  # we do not have a variable yet
             meta_parser=meta_parser,
-            timezone=timezone, row_based_timezone=row_based_timezone
+            timezone=timezone,
+            row_based_timezone=row_based_timezone,
+            single_date=single_date,
         )
         all_file.from_csv(fname)
 
@@ -284,11 +300,18 @@ class PointDataCollection:
 
     @classmethod
     def from_csv(
-        cls, fname, timezone="US/Mountain", header_sep=",", site_id=None,
-        campaign_name=None, allow_map_failure=False, units_map=None,
+        cls,
+        fname,
+        timezone="US/Mountain",
+        header_sep=",",
+        site_id=None,
+        campaign_name=None,
+        allow_map_failure=False,
+        units_map=None,
         row_based_timezone=False,
         metadata_variable_file=None,
         primary_variable_file=None,
+        single_date=False,
     ):
         """
         Find all variables in a single csv file
@@ -305,6 +328,7 @@ class PointDataCollection:
                 variables
             primary_variable_file: list of files to override the
                 primary variables
+            single_date: This dataset collection is from a single date
 
         Returns:
             This class with a collection of profiles and metadata
@@ -319,8 +343,11 @@ class PointDataCollection:
 
         # read in the actual data
         profiles, metadata = cls._read_csv(
-            fname, meta_parser,
-            timezone=timezone, row_based_timezone=row_based_timezone
+            fname,
+            meta_parser,
+            timezone=timezone,
+            row_based_timezone=row_based_timezone,
+            single_date=single_date,
         )
         # ignore profiles with the name 'ignore'
         profiles = [
