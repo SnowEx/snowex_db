@@ -1,48 +1,51 @@
 """
-Read in the SnowEx 2023 CSU GPR data collected at Farmers Loop and Creamers Field.
-
-1. Data is preliminary and currently only available via email from Randall B.
-2A. python run.py # To run all together all at once
-2B. python add_gpr.py # To run individually
-
+Read in the SnowEx 2023 CSU GPR data collected in Alaska 2023
 """
 
-from os.path import abspath, expanduser
-from pathlib import Path
+from earthaccess_data import get_files
+from import_logger import get_logger
 from snowexsql.db import db_session_with_credentials
+
 from snowex_db.upload.points import PointDataCSV
-import pandas as pd
 
+LOG = get_logger()
 
-# Issue #71
+GPR_CSU_MAP = {
+    "SNEX23_CSU_GPR": "10.5067/3X5Q3X7Y87U3"
+}
 
-def main():
-    file = Path('../download/data/SnowEx223_FLCF_1GHz_GPR_CSU.csv')
+SITE_MAP = {
+    "FLLCF": "Farmers Loop/Creamers Field",
+    "BCEF": "Cumulative Experimental Forest",
+    "CPCW": "Caribou/Poker Creek Research Watershed"
+}
+
+def main(file_list: list, doi: str) -> None:
+
+    LOG.info(f"Uploading DOI: {doi} with {len(file_list)} files.")
 
     kwargs = {
         # Constant Metadata for the GPR data
-        'campaign_name': 'farmers-creamers',  # TODO: should this be AK-something?
-        'observer': 'Randall Bonnell',
-        'instrument': 'gpr',
-        'instrument_model': 'pulseEkko pro 1 GHz GPR',
-        'timezone': 'UTC',
-        'doi': None,  # TODO: presumably this exists now?
-        'name': 'CSU GPR Data',
+        "campaign_name": "Alaska 2023",
+        "observer": "Randall Bonnell",
+        "instrument": "gpr",
+        "instrument_model": "1 GHz GPR",
+        "timezone": "UTC",
+        "doi": doi,
+        "name": "CSU GPR Data",
     }
 
-    # Break out the path and make it an absolute path
-    file = abspath(expanduser(file))
-
-    # Grab a db connection
     with db_session_with_credentials() as (_engine, session):
-        # Instantiate the point uploader
-        uploader = PointDataCSV(session, file, **kwargs)
-        # Push it to the database
-        uploader.submit()
-
-    # return the number of errors for run.py can report it
-    # return len(csv.errors)
+        for file in file_list:
+            LOG.info(f"Uploading {file} file.")
+            site = SITE_MAP.get(file.split("_")[6].upper(), "")
+            # Instantiate the point uploader
+            uploader = PointDataCSV(session, file, id=site, **kwargs)
+            # Push it to the database
+            uploader.submit()
 
 
 if __name__ == '__main__':
-    main()
+    for data_set_id, doi in GPR_CSU_MAP.items():
+        with get_files(data_set_id, doi) as files:
+            main(files, doi)
