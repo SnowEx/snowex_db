@@ -1,47 +1,45 @@
 """
-Read in the SnowEx 2020 Decimated GPR data. Uploaded SWE, Two Way Travel, Depth, to
+Read in the SnowEx 2020 BSU GPR data. Uploaded SWE, Two Way Travel, Depth, to
 the database.
-
-1. Data must be downloaded via sh ../download/download_nsidc.sh
-2A. python run.py # To run all together all at once
-2B. python add_gpr.py # To run individually
-
 """
-
-from os.path import abspath, expanduser
-
+from earthaccess_data import get_files
+from import_logger import get_logger
 from snowexsql.db import db_session_with_credentials
+
 from snowex_db.upload.points import PointDataCSV
 
+LOG = get_logger()
 
-def main():
-    file = ('../download/data/SNOWEX/SNEX20_BSU_GPR.001/'
-            '2020.01.28/SNEX20_BSU_GPR_pE_01282020_01292020_02042020.csv')
+GPR_BSU_MAP = {
+    "SNEX20_BSU_GPR": "10.5067/Q2LFK0QSVGS2"
+}
 
+def main(file_list: list, doi: str) -> None:
+    # Constant Metadata for the GPR data
     kwargs = {
-        # Constant Metadata for the GPR data
-        'campaign_name': 'Grand Mesa',
-        'observer': 'Tate Meehan',
-        'instrument': 'gpr',
-        'instrument_model': 'pulse EKKO Pro multi-polarization 1 GHz GPR',
-        'timezone': 'UTC',
-        'doi': 'https://doi.org/10.5067/Q2LFK0QSVGS2',
-        'name': 'BSU GPR Data',
+        "campaign_name": "Grand Mesa",
+        "site": "Grand Mesa",
+        "observer": "Tate Meehan",
+        "instrument": "gpr",
+        "instrument_model": "1 GHz GPR",
+        "timezone": "UTC",
+        "doi": doi,
+        "name": "BSU GPR Data",
     }
 
-    # Break out the path and make it an absolute path
-    file = abspath(expanduser(file))
-
-    # Grab a db connection
     with db_session_with_credentials() as (_engine, session):
-        # Instantiate the point uploader
-        csv = PointDataCSV(file, **kwargs)
-        # Push it to the database
-        csv.submit(session)
+        for file in file_list:
+            # Skip the downsampled version
+            if "downsampled" in file:
+                continue
 
-    # return the number of errors for run.py can report it
-    # return len(csv.errors)
+            LOG.info(f"Uploading {file} file.")
+            uploader = PointDataCSV(session, file, **kwargs)
+            # Push it to the database
+            uploader.submit()
 
 
 if __name__ == '__main__':
-    main()
+    for data_set_id, doi in GPR_BSU_MAP.items():
+        with get_files(data_set_id, doi) as files:
+            main(files, doi)
