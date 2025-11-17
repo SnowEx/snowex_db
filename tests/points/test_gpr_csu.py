@@ -21,6 +21,7 @@ class TestCSUGPR(TableTestBase, WithUploadedFile):
         'timezone': 'UTC',
         'doi': 'https://doi.org/10.5067/S5EGFLCIAB18',
         'name': 'CSU GPR Data',
+        'single_date': True,
     }
     UploaderClass = PointDataCSV
     TableClass = PointData

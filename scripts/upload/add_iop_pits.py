@@ -1,40 +1,48 @@
 """
 Read in the SnowEx 2020 profiles from pits.
-
-1. Data must be downloaded via sh ../download/download_nsidc.sh
-2A. python run.py # To run all together all at once
-2B. python add_profiles.py # To run individually
 """
 
-import glob
-from os.path import join, abspath
-
-from snowex_db.upload.layers import UploadProfileData
+from earthaccess_data import get_files
+from import_logger import get_logger
 from snowexsql.db import db_session_with_credentials
 
-def main():
-    debug = True
-    doi = "https://doi.org/10.5067/DUD2VZEVBJ7S"
+from snowex_db.upload.layers import UploadProfileData
 
-    # Obtain a list of Grand mesa pits
+LOG = get_logger()
 
-    directory = abspath('../download/data/SNOWEX/SNEX20_GM_SP.001/')
-    # Grab all the csvs in the pits folder
-    filenames = glob.glob(join(directory, '*/*.csv'))
-    # Grab all the site details files
-    sites = glob.glob(join(directory, '*/*site*.csv'))
-    summaries = glob.glob(join(directory, '*/*Summary*.csv'))
-    # Remove the site details from the total file list to get only the profiles
-    profiles = list(set(filenames) - set(sites) - set(summaries))
+# Map of DATA SET ID to DOI from NSIDC
+# * https://nsidc.org/data/snex20_gm_sp/versions/1
+IOP_PIT_DOI = {
+    "SNEX20_GM_SP": "10.5067/DUD2VZEVBJ7S",
+}
 
+INSTRUMENT_FILE_MAP = {
+    "density": "Density Cutter",
+    "temperature": "Thermometer",
+    "lwc": "A2 Sensor",
+    "stratigraphy": "Manual",
+}
+
+def main(file_list: list, doi: str) -> None:
+    # Filter to CSV only
+    file_list = [file for file in file_list if str(file).lower().endswith(".csv")]
+
+    LOG.info(f"Uploading DOI: {doi} with {len(file_list)} files.")
+    
     with db_session_with_credentials() as (_engine, session):
-        for f in sites:
-            uploader = UploadProfileData(f, doi=doi, timezone='MST')
-            uploader.submit(session)
+        for pit_data in file_list:
+            # Skipping summary files, all information is in each CSV
+            if "Summary" in pit_data:
+                continue
 
-        for f in profiles:          
-            uploader = UploadProfileData(f, doi=doi, timezone='MST')
-            uploader.submit(session)
+            instrument = INSTRUMENT_FILE_MAP.get(pit_data.split("_")[-2].lower(), "")
+            LOG.info(f"Uploading {pit_data} file.")
+            pid_upload = UploadProfileData(
+                session, filename=pit_data, doi=doi, instrument=instrument
+            )
+            pid_upload.submit()
 
 if __name__ == '__main__':
-    main()
+    for data_set_id, doi in IOP_PIT_DOI.items():
+        with get_files(data_set_id, doi) as files:
+            main(files, doi)

@@ -25,18 +25,24 @@ class SnowExPointData(MeasurementData):
         self, variable: MeasurementDescription = None,
         meta_parser: MetaDataParser = None,
         row_based_timezone=False,
-        timezone=None
+        timezone=None,
+        single_date=False,
+        skip_format_df=False,
     ):
         """
         Args:
             See MeasurementData.__init__
             row_based_timezone: does each row have a unique timezone implied
             timezone: input timezone for the whole file
+            single_date: Dataset is from a single day
+            skip_format_df: Skip parsing shared columns
 
         """
         self._row_based_timezone = row_based_timezone
         self._in_timezone = timezone
         self._timezonefinder = None
+        self._single_date = single_date
+        self._skip_format_df = skip_format_df
         super().__init__(variable, meta_parser)
 
     @property
@@ -147,6 +153,9 @@ class SnowExPointData(MeasurementData):
             # Verify the sample column exists and rename to variable
             self._check_sample_columns()
 
+        if self._skip_format_df:
+            return
+
         # If we do not have a geometry column, we need to parse
         # the raw df, otherwise we assume this has been done already,
         # likely on the first read of the file
@@ -171,9 +180,14 @@ class SnowExPointData(MeasurementData):
             LOG.debug("not parsing date")
         else:
             # Parse the datetime
-            self._df["datetime"] = self._df.apply(
-                self._get_datetime, axis=1, result_type="expand"
-            )
+            if self._single_date:
+                self._df["datetime"] = DateTimeManager.handle_separate_datetime(
+                    self._df.iloc[0]
+                )
+            else:
+                self._df["datetime"] = self._df.apply(
+                    self._get_datetime, axis=1, result_type="expand"
+                )
 
         self._df = self._df.replace(-9999, np.NaN)
 
@@ -198,8 +212,12 @@ class PointDataCollection:
 
     @classmethod
     def _read_csv(
-        cls, fname, meta_parser: PointSnowExMetadataParser,
-        timezone=None, row_based_timezone=False
+        cls,
+        fname,
+        meta_parser: PointSnowExMetadataParser,
+        timezone=None,
+        row_based_timezone=False,
+        single_date=False,
     ) -> List[SnowExPointData]:
         """
         Args:
@@ -207,6 +225,7 @@ class PointDataCollection:
             meta_parser: parser for the metadata
             timezone: input timezone
             row_based_timezone: is the timezone row based?
+            single_date: All observations are from single date
 
         Returns:
             a list of ProfileData objects
@@ -217,7 +236,9 @@ class PointDataCollection:
         all_file = cls.DATA_CLASS(
             variable=None,  # we do not have a variable yet
             meta_parser=meta_parser,
-            timezone=timezone, row_based_timezone=row_based_timezone
+            timezone=timezone,
+            row_based_timezone=row_based_timezone,
+            single_date=single_date,
         )
         all_file.from_csv(fname)
 
@@ -264,19 +285,15 @@ class PointDataCollection:
             points = cls.DATA_CLASS(
                 variable=all_file.meta_columns_map[column],
                 meta_parser=meta_parser,
-                timezone=timezone, row_based_timezone=row_based_timezone
+                timezone=timezone,
+                row_based_timezone=row_based_timezone,
+                skip_format_df=True,
             )
-            # IMPORTANT - Metadata needs to be set before assigning the
-            # dataframe as information from the metadata is used to format_df
-            # the information
-            points.metadata = all_file.metadata
-            df_columns = all_file.df.columns.tolist()
-            # The df setter filters some columns, so adjust our shared columns
-            df_shared_columns = [
-                 c for c in shared_columns if c in df_columns
+            drop_columns = [
+                variable for variable in variable_columns if variable != column
             ]
-            # run the whole file through the df setter
-            points.df = all_file.df.loc[:, df_shared_columns + [column]].copy()
+            points.df = all_file.df.copy()
+            points.df.drop(columns=drop_columns, inplace=True)
             # --------
             result.append(points)
 
@@ -284,11 +301,18 @@ class PointDataCollection:
 
     @classmethod
     def from_csv(
-        cls, fname, timezone="US/Mountain", header_sep=",", site_id=None,
-        campaign_name=None, allow_map_failure=False, units_map=None,
+        cls,
+        fname,
+        timezone="US/Mountain",
+        header_sep=",",
+        site_id=None,
+        campaign_name=None,
+        allow_map_failure=False,
+        units_map=None,
         row_based_timezone=False,
         metadata_variable_file=None,
         primary_variable_file=None,
+        single_date=False,
     ):
         """
         Find all variables in a single csv file
@@ -305,6 +329,7 @@ class PointDataCollection:
                 variables
             primary_variable_file: list of files to override the
                 primary variables
+            single_date: This dataset collection is from a single date
 
         Returns:
             This class with a collection of profiles and metadata
@@ -319,8 +344,11 @@ class PointDataCollection:
 
         # read in the actual data
         profiles, metadata = cls._read_csv(
-            fname, meta_parser,
-            timezone=timezone, row_based_timezone=row_based_timezone
+            fname,
+            meta_parser,
+            timezone=timezone,
+            row_based_timezone=row_based_timezone,
+            single_date=single_date,
         )
         # ignore profiles with the name 'ignore'
         profiles = [
