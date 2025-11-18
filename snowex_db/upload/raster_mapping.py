@@ -7,12 +7,6 @@ from snowex_db.interpretation import get_InSar_flight_comment
 from snowex_db.metadata import read_InSar_annotation
 
 
-#     dname_map = {'int': 'interferogram',
-#                  'amp1': 'amplitude of pass 1',
-#                  'amp2': 'amplitude of pass 2',
-#                  'cor': 'correlation'}
-
-
 class RasterType(Enum):
     """
     Enum for different types of raster files.
