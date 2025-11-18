@@ -17,7 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.10', 3.11, 3.12]
+        python-version: ['3.10', '3.11', '3.12', '3.13']
 
     services:
 
@@ -38,10 +38,12 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
+      
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
+      
       - name: Install dependencies
         run: |
           sudo apt-get update
@@ -49,11 +51,21 @@ jobs:
           python -m pip install --upgrade pip
           pip install pytest coverage wheel
           python3 -m pip install -e ".[dev]"
-
+          
+          # We need to install snowexsql again to get the credentials.json
+          # file moved into the right place for the tests to pass. This also
+          # has the consequence that we always test against latest from master.
+          pushd ../
+          git clone https://github.com/SnowEx/snowexsql.git
+          cd snowexsql/
+          python3 -m pip install --no-deps -e .
+          mv credentials.json.sample credentials.json
+          popd
+      
       - name: Test with pytest
         run: |
           pytest -s tests/
-
+      
       # Run coverage only once
       - if: ${{ matrix.python-version == '3.10'}}
         name: Get Coverage for badge
