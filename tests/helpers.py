@@ -1,4 +1,5 @@
 import numpy as np
+import pytest
 from shapely.wkb import loads as load_wkb
 from shapely.wkt import loads as load_wkt
 from snowexsql.tables import MeasurementType, Observer
@@ -16,19 +17,32 @@ class WithUploadedFile:
         )
         u.submit()
 
+    def _check_location(self, table, expected_lon, expected_lat, attribute="geom"):
+        """
+        Check that the geometry stored in the table matches expected lon/lat
+
+        Args:
+            table: table name
+            expected_lon: expected longitude
+            expected_lat: expected latitude
+            attribute: attribute name storing geometry (default "geom")
+
+        Returns:
+
+        """
+        result = self.get_value(table, attribute)
+        geom_from_wkb = load_wkb(bytes(result.data))
+        assert geom_from_wkb.x == pytest.approx(expected_lon)
+        assert geom_from_wkb.y == pytest.approx(expected_lat)
+
     def _check_metadata(self, table, attribute, expected_value):
         # Get multiple values for observers
         if table in [Observer, MeasurementType]:
             result = self.get_values(table, attribute)
         else:
             result = self.get_value(table, attribute)
-        if attribute == "geom":
-            # Check geometry equals expected
-            geom_from_wkb = load_wkb(bytes(result.data))
-            geom_from_wkt = load_wkt(expected_value.data)
 
-            assert geom_from_wkb.equals(geom_from_wkt), f"Assertion failed: Expected {geom_from_wkt}, but got {geom_from_wkb}"
-        elif isinstance(expected_value, float) and np.isnan(expected_value):
+        if isinstance(expected_value, float) and np.isnan(expected_value):
             assert np.isnan(result)
         else:
             assert result == expected_value, f"Assertion failed: Expected {expected_value}, but got {result}"

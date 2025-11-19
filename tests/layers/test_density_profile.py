@@ -39,11 +39,6 @@ class TestDensityProfile(TableTestBase, WithUploadedFile):
                     2020, 2, 5, 20, 30, tzinfo=timezone.utc
                 ),
             ),
-            (
-                    Site, "geom", WKTElement(
-                    'POINT (-108.1894813320662 39.031261970372725)', srid=4326
-                ),
-            ),
             (Campaign, "name", "Grand Mesa"),
             (Instrument, "name", "kelly cutter"),
             (MeasurementType, "name", ['density']),
@@ -53,6 +48,16 @@ class TestDensityProfile(TableTestBase, WithUploadedFile):
     )
     def test_metadata(self, table, attribute, expected_value, uploaded_file):
         self._check_metadata(table, attribute, expected_value)
+
+    @pytest.mark.parametrize(
+        "table, attribute, lon, lat", [
+            (Site, "geom", -108.1894813320662, 39.031261970372725),
+        ]
+    )
+    def test_point_location(
+            self, table, attribute, lon, lat, uploaded_file
+    ):
+        self._check_location(table, lon, lat, attribute=attribute)
 
     @pytest.mark.parametrize(
         "data_name, attribute_to_check, filter_attribute, filter_value, expected",
@@ -120,19 +125,24 @@ class TestDensityAlaska(TableTestBase, WithUploadedFile):
             (Site, "name", "SB454"),
             (
                     Site, "datetime", datetime(
-                    2023, 3, 16, 18, 25, tzinfo=timezone.utc
-                ),
-            ),
-            (
-                    Site, "geom", WKTElement(
-                    'POINT (-148.31829 64.70955)', srid=4326
-                ),
+                        2023, 3, 16, 18, 25, tzinfo=timezone.utc
+                    ),
             ),
             (Campaign, "name", "Fairbanks"),
         ]
     )
     def test_metadata(self, table, attribute, expected_value, uploaded_file):
         self._check_metadata(table, attribute, expected_value)
+
+    @pytest.mark.parametrize(
+        "table, attribute, lon, lat", [
+            (Site, "geom", -148.31829, 64.70955),
+        ]
+    )
+    def test_point_location(
+            self, table, attribute, lon, lat, uploaded_file
+    ):
+        self._check_location(table, lon, lat, attribute=attribute)
 
     @pytest.mark.parametrize(
         "data_name, expected", [

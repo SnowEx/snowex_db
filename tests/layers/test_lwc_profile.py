@@ -37,17 +37,21 @@ class TestLWCProfile(TableTestBase, WithUploadedFile):
                 Site, "datetime",
                 datetime(2020, 2, 5, 20, 30, tzinfo=timezone.utc),
             ),
-            (
-                Site, "geom",
-                WKTElement(
-                    'POINT (-108.1894813320662 39.031261970372725)', srid=4326
-                ),
-            ),
             (Campaign, "name", "Grand Mesa"),
         ]
     )
     def test_metadata(self, table, attribute, expected_value, uploaded_file):
         self._check_metadata(table, attribute, expected_value)
+
+    @pytest.mark.parametrize(
+        "table, attribute, lon, lat", [
+            (Site, "geom", -108.1894813320662, 39.031261970372725),
+        ]
+    )
+    def test_point_location(
+            self, table, attribute, lon, lat, uploaded_file
+    ):
+        self._check_location(table, lon, lat, attribute=attribute)
 
     @pytest.mark.parametrize(
         "data_name, attribute_to_check, filter_attribute, filter_value, expected",
@@ -115,12 +119,6 @@ class TestLWCProfileB(TableTestBase, WithUploadedFile):
                 Site, "datetime",
                 datetime(2020, 3, 12, 21, 45, tzinfo=timezone.utc),
             ),
-            (
-                Site, "geom",
-                WKTElement(
-                    'POINT (-108.06310597266031 39.04495658046074)', srid=4326
-                ),
-            ),
             (Campaign, "name", "Grand Mesa"),
             (Instrument, "name", "this is an instrument"),
             (
@@ -133,6 +131,16 @@ class TestLWCProfileB(TableTestBase, WithUploadedFile):
     )
     def test_metadata(self, table, attribute, expected_value, uploaded_file):
         self._check_metadata(table, attribute, expected_value)
+
+    @pytest.mark.parametrize(
+        "table, attribute, lon, lat", [
+            (Site, "geom", -108.06310597266031, 39.04495658046074),
+        ]
+    )
+    def test_point_location(
+            self, table, attribute, lon, lat, uploaded_file
+    ):
+        self._check_location(table, lon, lat, attribute=attribute)
 
     @pytest.mark.parametrize(
         "data_name, attribute_to_check, filter_attribute, filter_value, expected",

@@ -89,13 +89,21 @@ class TestSummaryPits(TableTestBase, WithUploadedFile):
     @pytest.mark.parametrize(
         "table, attribute, expected_value", [
             (DOI, "doi", "some_point_pit_doi"),
-            (PointData, "geom",
-                WKTElement('POINT (-120.04186927254749 38.71033054555811)', srid=4326)
-             ),
         ]
     )
     def test_metadata(self, table, attribute, expected_value, uploaded_file):
         self._check_metadata(table, attribute, expected_value)
+
+
+    @pytest.mark.parametrize(
+        "table, attribute, lon, lat", [
+            (PointData, "geom", -120.04186927254749, 38.71033054555811),
+        ]
+    )
+    def test_point_location(
+            self, table, attribute, lon, lat, uploaded_file
+    ):
+        self._check_location(table, lon, lat, attribute=attribute)
 
     @pytest.mark.usefixtures('uploaded_file')
     @pytest.mark.parametrize(
