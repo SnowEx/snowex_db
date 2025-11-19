@@ -1,3 +1,4 @@
+import shutil
 from datetime import date
 from pathlib import Path
 from geoalchemy2.shape import to_shape
@@ -37,15 +38,21 @@ class TestUploadRasters(TableTestBase, WithUploadedFile):
     TableClass = ImageData
 
     @pytest.fixture(scope="class")
-    def uploaded_file(self, session, data_dir, tmpdir_factory):
-        tmpdir = tmpdir_factory.mktemp("data")
+    def tmp_dir(self, data_dir):
+        dest = Path(data_dir).joinpath("tmp_rasters")
+        dest.mkdir(exist_ok=True)
+        yield dest
+        shutil.rmtree(dest)
+
+    @pytest.fixture(scope="class")
+    def uploaded_file(self, session, data_dir, tmp_dir):
         for raster_metadata, raster_path in rasters_from_annotation(
                 Path(data_dir).joinpath("uavsar.ann"),
                 Path(data_dir).joinpath("uavsar"), **self.kwargs
         ):
             rs = UploadRaster(
                 session, raster_path, 26911,
-                cog_dir=tmpdir, use_s3=False, use_sso=False,
+                cog_dir=tmp_dir, use_s3=False, use_sso=False,
                 **raster_metadata
             )
             rs.submit()
@@ -152,8 +159,8 @@ class TestUploadRasters(TableTestBase, WithUploadedFile):
         """
         Test two rasters uploaded
         """
-        records = self.session.query(ImageData.id).all()
-        assert len(records) == 9
+        records = self._session.query(ImageData.id).all()
+        assert len(records) == 45  # 9 tiles * 5 rasters
 
     @pytest.mark.usefixtures("uploaded_file")
     def test_tiled_raster_size(self):
