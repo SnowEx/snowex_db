@@ -1,6 +1,11 @@
 from datetime import date
 from pathlib import Path
-
+from geoalchemy2.shape import to_shape
+from geoalchemy2.types import Raster
+from shapely.geometry import Point
+from snowexsql.conversions import raster_to_rasterio
+from snowexsql.functions import ST_PixelAsPoint
+import numpy as np
 import pytest
 from snowexsql.tables.campaign_observation import CampaignObservation
 from sqlalchemy import func
@@ -30,22 +35,6 @@ class TestUploadRasters(TableTestBase, WithUploadedFile):
     }
     UploaderClass = UploadRaster
     TableClass = ImageData
-
-    #         'test_count': [dict(data_name='insar amplitude', expected_count=18),
-  #                        dict(data_name='insar correlation', expected_count=9),
-  #                        dict(data_name='insar interferogram real', expected_count=9),
-  #                        dict(data_name='insar interferogram imaginary', expected_count=9)],
-  #
-  #         'test_value': [
-  #             dict(data_name='insar interferogram imaginary', attribute_to_check='observers', filter_attribute='units',
-  #                  filter_value='Linear Power and Phase in Radians', expected='UAVSAR team, JPL'),
-  #             dict(data_name='insar interferogram real', attribute_to_check='units', filter_attribute='observers',
-  #                  filter_value=observers, expected='Linear Power and Phase in Radians'),
-  #             dict(data_name='insar correlation', attribute_to_check='instrument', filter_attribute='observers',
-  #                  filter_value=observers, expected='UAVSAR, L-band InSAR'),
-  #             ],
-  #         # Test we have two dates for the insar amplitude overapasses
-  #         'test_unique_count': [dict(data_name='insar amplitude', attribute_to_count='date', expected_count=2), ]
 
     @pytest.fixture(scope="class")
     def uploaded_file(self, session, data_dir, tmpdir_factory):
@@ -128,6 +117,7 @@ class TestUploadRasters(TableTestBase, WithUploadedFile):
         # This is tiled so we have multiple entries
         assert self.check_count("insar interferogram real") == 9
 
+    @pytest.mark.usefixtures("uploaded_file")
     @pytest.mark.parametrize("data_name, kw", [
         # Check the single pass products have a few key words
         ('amplitude', ['duration', 'overpass', 'polarization', 'dem']),
@@ -154,3 +144,63 @@ class TestUploadRasters(TableTestBase, WithUploadedFile):
 
         for k in kw:
             assert k in records[0][0].lower()
+
+    # Section for checking the actual data
+
+    @pytest.mark.usefixtures("uploaded_file")
+    def test_tiled_raster_count(self):
+        """
+        Test two rasters uploaded
+        """
+        records = self.session.query(ImageData.id).all()
+        assert len(records) == 9
+
+    @pytest.mark.usefixtures("uploaded_file")
+    def test_tiled_raster_size(self):
+        """
+        Tiled raster should be 500x500 in most cases (can be smaller to fit domains)
+        """
+        rasters = self._session.query(func.ST_AsTiff(ImageData.raster)).all()
+        datasets = raster_to_rasterio(rasters)
+
+        for d in datasets:
+            assert d.width <= 256
+            assert d.height <= 256
+
+    @pytest.mark.usefixtures("uploaded_file")
+    def test_raster_point_retrieval(self):
+        """
+        Test we can retrieve coordinates of a point from the database
+        """
+
+        # Get the first pixel as a point
+        records = self._session.query(ST_PixelAsPoint(ImageData.raster, 1, 1)).limit(1).all()
+        received = to_shape(records[0][0])
+        expected = Point(748446.1945536422, 4328702.971977075)
+
+        # Convert geom to shapely object and compare
+        np.testing.assert_almost_equal(received.x, expected.x, 6)
+        np.testing.assert_almost_equal(received.y, expected.y, 6)
+
+    @pytest.mark.usefixtures("uploaded_file")
+    def test_raster_union(self):
+        """
+        Test we can retrieve coordinates of a point from the database
+        """
+
+        # Get the first pixel as a point
+        rasters = self._session.query(func.ST_AsTiff(func.ST_Union(ImageData.raster, type_=Raster))).all()
+        assert len(rasters) == 1
+
+    @pytest.mark.usefixtures("uploaded_file")
+    def test_raster_union2(self):
+        """
+        Test we can retrieve coordinates of a point from the database
+        """
+
+        # Get the first pixel as a point
+        merged = self._session.query(
+            func.ST_Union(ImageData.raster, type_=Raster)
+        ).filter(
+            ImageData.id.in_([1, 2])).all()
+        assert len(merged) == 1
