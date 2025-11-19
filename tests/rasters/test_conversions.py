@@ -1,6 +1,7 @@
 import os
 import shutil
-from os.path import isdir, join, dirname
+from os.path import isdir, join
+from pathlib import Path
 
 import rasterio
 
@@ -18,7 +19,7 @@ class InSarToRasterioBase:
     This conversion is complicated and requires multiple tests to ensure
     fidelity.
     """
-    this_location = dirname(__file__)
+    this_location = Path(__file__).parent.parent
 
     # Temporary output folder
     temp = join(this_location, 'temp')

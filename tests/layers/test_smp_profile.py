@@ -46,12 +46,6 @@ class TestSMPProfile(TableTestBase, WithUploadedFile):
                     2020, 1, 31, 22, 42, 14, 0, tzinfo=timezone.utc
                 ),
             ),
-            (
-                Site, "geom",
-                WKTElement(
-                    'POINT (-108.16268920898438 39.03013229370117)', srid=4326
-                ),
-            ),
             (Site, "comments", "Filename: S06M0874_2N12_20200131.CSV"),
             (Campaign, "name", "Grand Mesa"),
             (Instrument, "name", "snowmicropen"),
@@ -65,6 +59,16 @@ class TestSMPProfile(TableTestBase, WithUploadedFile):
         # need:
         #  * comments = "Filename: filename"
         self._check_metadata(table, attribute, expected_value)
+
+    @pytest.mark.parametrize(
+        "table, attribute, lon, lat", [
+            (Site, "geom", -108.16268920898438, 39.03013229370117),
+        ]
+    )
+    def test_point_location(
+            self, table, attribute, lon, lat, uploaded_file
+    ):
+        self._check_location(table, lon, lat, attribute=attribute)
 
     @pytest.mark.usefixtures("uploaded_file")
     @pytest.mark.parametrize(

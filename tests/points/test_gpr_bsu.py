@@ -69,13 +69,20 @@ class TestGPRBsu(TableTestBase, WithUploadedFile):
         "table, attribute, expected_value", [
             (Campaign, "name", "Grand Mesa"),
             (DOI, "doi", "some_gpr_point_doi"),
-            (PointData, "geom",
-                WKTElement('POINT (-108.190889311605 39.0343743775669)', srid=4326)
-             ),
         ]
     )
     def test_metadata(self, table, attribute, expected_value):
         self._check_metadata(table, attribute, expected_value)
+
+    @pytest.mark.parametrize(
+        "table, attribute, lon, lat", [
+            (PointData, "geom", -108.190889311605, 39.0343743775669),
+        ]
+    )
+    def test_point_location(
+            self, table, attribute, lon, lat, uploaded_file
+    ):
+        self._check_location(table, lon, lat, attribute=attribute)
 
     @pytest.mark.usefixtures("uploaded_file")
     @pytest.mark.parametrize(

@@ -74,13 +74,20 @@ class TestCSUAKGPR(TableTestBase, WithUploadedFile):
         "table, attribute, expected_value", [
             (Campaign, "name", "Alaska 2023"),
             (DOI, "doi", "preliminary_gpr_ak_farmers-creamers"),
-            (PointData, "geom",
-                WKTElement('POINT (-147.737230798003 64.8638112503524)', srid=4326)
-             ),
         ]
     )
     def test_metadata(self, table, attribute, expected_value):
         self._check_metadata(table, attribute, expected_value)
+
+    @pytest.mark.parametrize(
+        "table, attribute, lon, lat", [
+            (PointData, "geom", -147.737230798003, 64.8638112503524),
+        ]
+    )
+    def test_point_location(
+            self, table, attribute, lon, lat, uploaded_file
+    ):
+        self._check_location(table, lon, lat, attribute=attribute)
 
     @pytest.mark.usefixtures("uploaded_file")
     @pytest.mark.parametrize(
