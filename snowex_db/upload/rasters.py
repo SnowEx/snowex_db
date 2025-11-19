@@ -59,7 +59,7 @@ class UploadRaster(BaseUpload):
     def __init__(
             self, session, filename, epsg,
             use_s3=True, no_data=None, cog_dir="./snowex_cog_storage",
-            doi=None, description=None, measurement_type=None, units=None,
+            doi=None, measurement_type=None, units=None,
             date=None, use_sso=True,
             **kwargs
     ):
@@ -74,10 +74,10 @@ class UploadRaster(BaseUpload):
             no_data: optional no data value for the raster
             cog_dir: directory to store COGs if not using S3
             doi: optional DOI for the measurement
-            description: optional description for the measurement
             measurement_type: type of measurement
             units: units of the measurement, e.g. 'meters'
             date_obj: date object for the measurement
+            comments: measurement description
             use_sso: whether to use SSO for AWS access. In this case
                 we need to export our credentials to env variables first.
             **kwargs:
@@ -95,7 +95,6 @@ class UploadRaster(BaseUpload):
         self._use_sso = use_sso
         self._cog_dir = cog_dir
         self._doi = doi
-        self._description = description
         self._date_obj = date
 
         self._campaign_name = kwargs.get("campaign_name")
@@ -198,7 +197,7 @@ class UploadRaster(BaseUpload):
             ),
             object_kwargs=dict(
                 name=measurement_name,
-                description=self._description,
+                description=self._comments,
                 date=self._date_obj,
                 instrument_id=instrument.id,
                 doi_id=doi.id,

@@ -21,7 +21,7 @@ class TestUploadRasters(TableTestBase, WithUploadedFile):
     """
     kwargs = {
         'timezone': 'MST',
-        'doi': "some_point_doi",
+        'doi': "some_raster_doi",
         "campaign_name": "Grand Mesa",
         "name": "some_uavsar",
         'observer': 'UAVSAR team, JPL',
@@ -63,18 +63,16 @@ class TestUploadRasters(TableTestBase, WithUploadedFile):
 
     @pytest.mark.usefixtures("uploaded_file")
     def test_measurement_type(self):
-        record = self.get_records(MeasurementType, "name", "depth")
+        record = self.get_records(MeasurementType, "name", "insar interferogram real")
         assert len(record) == 1
         record = record[0]
-        assert record.units == 'cm'
+        assert record.units == 'Linear Power and Phase in Radians'
         assert record.derived is False
 
     @pytest.mark.usefixtures("uploaded_file")
     @pytest.mark.parametrize(
         "name, model", [
-            ("mesa", "Mesa2_1"),
-            ("magnaprobe", "CRREL_B"),
-            ("pit ruler", None),
+            ("UAVSAR, L-band InSAR", None),
         ]
     )
     def test_instrument(self, name, model):
@@ -87,10 +85,7 @@ class TestUploadRasters(TableTestBase, WithUploadedFile):
     @pytest.mark.parametrize(
         "name, count, instrument_name",
         [
-            ("example_point_name magnaprobe CRREL_B", 1, 'magnaprobe'),
-            ("example_point_name mesa Mesa2_1", 1, 'mesa'),
-            # We have three different dates
-            ("example_point_name pit ruler", 3, 'pit ruler')
+            ("some_uavsar_UAVSAR, L-band InSAR_insar correlation", 1, "UAVSAR, L-band InSAR")
         ],
     )
     def test_campaign_observation_record(self, name, count, instrument_name):
@@ -100,19 +95,16 @@ class TestUploadRasters(TableTestBase, WithUploadedFile):
         # Check relationship mapping
         for record in names:
             assert record.campaign.name == "Grand Mesa"
-            assert record.doi.doi == "some_point_doi"
-            assert record.observer.name == 'unknown'
+            assert record.doi.doi == "some_raster_doi"
+            assert record.observer.name == 'UAVSAR team, JPL'
             assert record.instrument.name == instrument_name
 
     @pytest.mark.usefixtures("uploaded_file")
     @pytest.mark.parametrize(
         "date, count",
         [
-            (date(2020, 1, 28), 1),
-            (date(2020, 2, 4), 1),
-            (date(2020, 2, 11), 1),
-            (date(2020, 1, 30), 1),
-            (date(2020, 2, 5), 1),
+            (date(2020, 2, 12), 4),  # 4 components
+            (date(2020, 2, 4), 0),
         ],
     )
     def test_point_observation(self, date, count):
@@ -122,28 +114,19 @@ class TestUploadRasters(TableTestBase, WithUploadedFile):
     @pytest.mark.parametrize(
         "table, attribute, expected_value", [
             (Campaign, "name", "Grand Mesa"),
-            (DOI, "doi", "some_point_doi"),
+            (DOI, "doi", "some_raster_doi"),
         ]
     )
     def test_metadata(self, table, attribute, expected_value, uploaded_file):
         self._check_metadata(table, attribute, expected_value)
 
     @pytest.mark.usefixtures("uploaded_file")
-    @pytest.mark.parametrize(
-        "value", [94, 74, 90, 117, 110, 68, 72, 89]
-    )
-    def test_value(self, value):
-        records = self.check_value(
-            'depth', 'value', 'value', value, [value]
-        )
-        assert records[0].measurement_type.name == "depth"
-
-    @pytest.mark.usefixtures("uploaded_file")
     def test_record_count(self):
         """
-        Check that all entries in the CSV made it into the database
+        Check that all entries in the raster(s) made it into the database
         """
-        assert self.check_count("depth") == 10
+        # This is tiled so we have multiple entries
+        assert self.check_count("insar interferogram real") == 9
 
     @pytest.mark.parametrize("data_name, kw", [
         # Check the single pass products have a few key words
@@ -161,8 +144,13 @@ class TestUploadRasters(TableTestBase, WithUploadedFile):
         Asserts each kw is found in the description of the data
         """
         name = 'insar {}'.format(data_name)
-        records = self._session.query(ImageData.description).filter(
-            ImageData.type == name).all()
+        records = self._session.query(ImageObservation.description).join(
+            ImageData
+        ).join(
+            ImageData.measurement_type
+        ).filter(
+            MeasurementType.name == name
+        ).all()
 
         for k in kw:
             assert k in records[0][0].lower()
