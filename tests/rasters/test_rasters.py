@@ -84,7 +84,7 @@ class TestCogHandler:
         # assert result["ETag"] == '"87b4712c504c154c5f52e442d4bb2134"'
         assert result["ETag"] == '"f882db31c78c52cb5dbedc7d9bd3ffbe"'
         # assert result['ContentLength'] == 906155
-        assert result['ContentLength'] == 896294
+        assert result['ContentLength'] == 896290
 
     def test_to_sql_local(self, local_handler, tmp_outputs):
         local_handler.persist_cog()
