@@ -208,15 +208,16 @@ class UploadProfileData(BaseUpload):
                 )
                 self._add_metadata(profile.metadata)
 
-    def _add_metadata(self, metadata: SnowExProfileMetadata):
+    def _add_metadata(self, metadata: SnowExProfileMetadata, update=False):
         """
         Add the metadata entry and return objects to associate with each row.
 
         Args:
             metadata: ProfileMetadata information
+            update: Update the metadata if it exists.
 
         Returns:
-
+            Record objects that were inserted.
         """
         # Campaign record
         campaign = self._check_or_add_object(
@@ -282,7 +283,9 @@ class UploadProfileData(BaseUpload):
                 vegetation_height=metadata.vegetation_height,
                 weather_description=metadata.weather_description,
                 wind=metadata.wind,
-            ))
+            ),
+            update=update,
+        )
         return campaign, observer_list, site
 
     def _add_instrument(self, metadata: SnowExProfileMetadata):
