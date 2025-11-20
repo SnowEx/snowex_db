@@ -6,27 +6,32 @@ from snowexsql.db import DB_CONNECTION_OPTIONS, db_connection_string, initialize
 from sqlalchemy import create_engine, orm
 
 SESSION = orm.scoped_session(orm.sessionmaker())
-# Environment variable to load the correct credentials
-os.environ['SNOWEXSQL_TESTS'] = 'True'
+
+# Environment variable to load the custom DB test credentials
+if os.getenv("SNOWEX_TEST_DB") is None:
+    os.environ["SNOWEX_DB_CONNECTION"] = "builder:db_builder@localhost/test"
+else:
+    os.environ["SNOWEX_DB_CONNECTION"] = "builder:db_builder@" + os.getenv(
+        "SNOWEX_TEST_DB"
+    )
 
 
 @pytest.fixture(scope="session")
 def data_dir():
     return Path(__file__).parent.joinpath("data").absolute().resolve()
 
-@pytest.fixture(scope='session')
+
+@pytest.fixture(scope="session")
 def test_db_info():
     return db_connection_string()
 
-@pytest.fixture(scope='session')
+
+@pytest.fixture(scope="session")
 def sqlalchemy_engine(test_db_info):
     engine = create_engine(
         test_db_info,
         pool_pre_ping=True,
-        connect_args={
-            'connect_timeout': 10,
-            **DB_CONNECTION_OPTIONS
-        }
+        connect_args={"connect_timeout": 10, **DB_CONNECTION_OPTIONS},
     )
     initialize(engine)
 
@@ -39,9 +44,7 @@ def sqlalchemy_engine(test_db_info):
 def connection(sqlalchemy_engine):
     with sqlalchemy_engine.connect() as connection:
         # Configure session
-        SESSION.configure(
-            bind=connection, join_transaction_mode="create_savepoint"
-        )
+        SESSION.configure(bind=connection, join_transaction_mode="create_savepoint")
 
         yield connection
 
