@@ -1,51 +1,48 @@
 """
-Read in the SnowEx 2020 Colorado State GPR data. Uploaded SWE, Two Way Travel, Depth, to
-the database.
-
-1. Data must be downloaded via sh ../download/download_nsidc.sh
-2A. python run.py # To run all together all at once
-2B. python add_gpr.py # To run individually
-
+Read in the SnowEx 2020 Colorado State GPR data.
+Upload SWE, Two Way Travel, and Depth.
 """
 
-# Issue #70
-
-from os.path import abspath, expanduser
+from earthaccess_data import get_files
+from import_logger import get_logger
 
 from snowexsql.db import db_session_with_credentials
 from snowex_db.upload.points import PointDataCSV
 
+LOG = get_logger()
 
-def main():
-    file = (
-        '../download/data/nsidc-cumulus-prod-protected/SNOWEX/'
-        'SNEX20_GM_CSU_GPR/1/2020/02/06/SNEX20_GM_CSU_GPR_1GHz_v01.csv'
-    )
+GPR_CSU_MAP = {
+    "SNEX20_GM_CSU_GPR": "10.5067/S5EGFLCIAB18",
+}
+
+
+def main(file_list: list, doi: str) -> None:
+    LOG.info(f"Uploading DOI: {doi} with {len(file_list)} files.")
 
     kwargs = {
         # Constant Metadata for the GPR data
-        'campaign_name': 'Grand Mesa',
-        'observer': 'Randall Bonnell',
-        'instrument': 'gpr',
-        'instrument_model': 'pulse EKKO Pro multi-polarization 1 GHz GPR',
-        'timezone': 'UTC',
-        'doi': 'https://doi.org/10.5067/S5EGFLCIAB18',
-        'name': 'CSU GPR Data',
+        "campaign_name": "Grand Mesa",
+        "site": "Grand Mesa",
+        "observer": "Randall Bonnell",
+        "instrument": "gpr",
+        "instrument_model": "pulse EKKO Pro multi-polarization 1 GHz GPR",
+        "timezone": "UTC",
+        "doi": doi,
+        "name": "CSU GPR Data",
     }
 
-    # Break out the path and make it an absolute path
-    file = abspath(expanduser(file))
-
-    # Grab a db connection
     with db_session_with_credentials() as (_engine, session):
-        # Instantiate the point uploader
-        uploader = PointDataCSV(session, file, **kwargs)
-        # Push it to the database
-        uploader.submit()
+        for file in file_list:
+            LOG.info(f"Uploading {file} file.")
 
-    # return the number of errors for run.py can report it
-    # return len(csv.errors)
+            # Instantiate the point uploader
+            uploader = PointDataCSV(session, file, **kwargs)
+
+            # Push it to the database
+            uploader.submit()
 
 
-if __name__ == '__main__':
-    main()
+if __name__ == "__main__":
+    for data_set_id, doi in GPR_CSU_MAP.items():
+        with get_files(data_set_id, doi) as files:
+            main(files, doi)
