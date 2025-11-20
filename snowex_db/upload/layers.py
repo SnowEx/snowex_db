@@ -133,7 +133,7 @@ class UploadProfileData(BaseUpload):
             df: Dataframe ready for submission
         """
 
-        if profile.df is None:
+        if profile.df is None or len(profile.df) == 0:
             LOG.debug("df is empty, returning")
             return gpd.GeoDataFrame()
 
