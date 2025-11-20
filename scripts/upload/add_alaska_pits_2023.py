@@ -1,114 +1,75 @@
 """
-Script to upload the Snowex Time Series pits
+Alaska 2023 campaign
 """
 
-import glob
-import re
-from os.path import abspath, join
 from pathlib import Path
 
-from snowex_db.upload import PointDataCSV
-from snowex_db import db_session
+
+from earthaccess_data import get_files
+from import_logger import get_logger
+
+from snowexsql.db import db_session_with_credentials
+from snowex_db.upload.layers import UploadProfileData
 
 
-tz_map = {'US/Pacific': ['CA', 'NV', 'WA'],
-          'US/Mountain': ['CO', 'ID', 'NM', 'UT', 'MT'],
-          'US/Alaska': ["AK"]
-          }
+LOG = get_logger()
 
 
-def main():
-    """
-    Add 2020 timeseries pits
-    """
-    db_name = 'localhost/snowex'
-    # Preliminary data
-    doi = "preliminary_alaska_pits"
-    debug = True
-    timezone = "US/Alaska"
+# Map of DATA SET ID to DOI from NSIDC
+# * https://nsidc.org/data/snex23_mar23_sp/versions/1
+IOP_PIT_DOI = {
+    "SNEX23_MAR23_SP": "10.5067/SJZ90KNPKCYR",
+}
 
-    # Point to the downloaded data from
-    data_dir = abspath('../download/data/SNEX23_preliminary/Data/pits')
-    error_msg = []
+INSTRUMENT_FILE_MAP = {
+    "density": "Density Cutter",
+    "temperature": "Thermometer",
+    "lwc": "A2 Sensor",
+    "stratigraphy": "Manual",
+}
 
+
+def main(file_list: list, doi: str) -> None:
     # Files to ignore
     ignore_files = [
-        "SnowEx23_SnowPits_AKIOP_Summary_Environment_v01.csv",
-        "SnowEx23_SnowPits_AKIOP_Summary_SWE_v01.csv",
-        "SnowEx23_SnowPits_AKIOP_Summary_SWE_v01_modified.csv"
+        "Summary_Environment",
+        "Summary_SWE",
+        "Summary_SWE",
     ]
 
-    # Get all the date folders
-    unique_folders = Path(
-        data_dir
-    ).expanduser().absolute().glob("ALASKA*/*20*SNOW_PIT")
-    for udf in unique_folders:
-        # get all the csvs in the folder
-        dt_folder_files = list(udf.glob("*.csv"))
-        site_ids = []
-        # Get the unique site ids for this date folder
-        compiled = re.compile(
-            r'SnowEx23_SnowPits_AKIOP_([a-zA-Z0-9]*)_\d{8}.*_v01\.csv'
-        )
-        for file_path in dt_folder_files:
-            file_name = file_path.name
-            if file_name in ignore_files:
-                print(f"Skipping {file_name}")
-                continue
-            match = compiled.match(file_name)
-            if match:
-                code = match.group(1)
-                site_ids.append(code)
-            else:
-                raise RuntimeError(f"No site ID found for {file_name}")
+    # Data to skip for now
+    ignore_data = [
+        "gapFilled_density",
+    ]
 
-        # Get the unique site ids
-        site_ids = list(set(site_ids))
+    # Filter to CSV and relevant data
+    file_list = [
+        file
+        for file in file_list
+        if str(file).lower().endswith(".csv")
+        and not any(name in file for name in ignore_files)
+        and not any(name in file for name in ignore_data)
+    ]
 
-        for site_id in site_ids:
-            # Grab all the csvs in the pits folder
-            filenames = glob.glob(join(str(udf), f'*_{site_id}_*.csv'))
+    LOG.info(f"Uploading DOI: {doi} with {len(file_list)} files.")
 
-            # Grab all the site details files
-            sites = glob.glob(join(
-                str(udf), f'*_{site_id}_*siteDetails*.csv'
-            ))
+    with db_session_with_credentials() as (_engine, session):
+        for pit_data in file_list:
+            LOG.info(f"Uploading {pit_data} file.")
+            file_name_parts = Path(pit_data).name.split("_")
 
-            # Use no-gap-filled density
-            density_files = glob.glob(join(
-                str(udf), f'*_{site_id}_*_gapFilled_density*.csv'
-            ))
+            instrument = INSTRUMENT_FILE_MAP.get(file_name_parts[-2].lower(), "")
 
-            # Remove the site details from the total file list to get only the
-            profiles = list(
-                set(filenames) - set(sites) -
-                set(density_files)  # remove non-gap-filled denisty
+            pid_upload = UploadProfileData(
+                session,
+                filename=pit_data,
+                doi=doi,
+                instrument=instrument,
             )
-
-            # Submit all profiles associated with pit at a time
-            b = UploadProfileBatch(
-                filenames=profiles, debug=debug, doi=doi,
-                in_timezone=timezone,
-                db_name=db_name,
-                allow_split_lines=True,  # Logic for split header lines
-                header_sep=":"
-            )
-            b.push()
-            error_msg += b.errors
-
-            # Upload the site details
-            sd = UploadSiteDetailsBatch(
-                filenames=sites, debug=debug, doi=doi,
-                in_timezone=timezone,
-                db_name=db_name
-            )
-            sd.push()
-            error_msg += sd.errors
-
-    for f, m in error_msg:
-        print(f)
-    return len(error_msg)
+            pid_upload.submit()
 
 
-if __name__ == '__main__':
-    main()
+if __name__ == "__main__":
+    for data_set_id, doi in IOP_PIT_DOI.items():
+        with get_files(data_set_id, doi) as files:
+            main(files, doi)

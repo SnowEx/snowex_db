@@ -6,6 +6,33 @@ INSTRUMENT_MODEL:
     - smp_serial_number
     - wise_serial_no
     - lwc_serial_#
+    - density_cutter/instrument
+COMMENTS:
+  auto_remap: true
+  code: comments
+  description: Comments in the header
+  map_from:
+    - pit_comments
+    - assigned_plot_cmts
+GROUND_VEGETATION:
+  auto_remap: true
+  code: ground_vegetation
+  description: Description of the vegetation
+  map_from:
+    - ground_vegetation/cover
+PRECIP:
+  auto_remap: true
+  code: precip
+  description: Site notes on precipitation
+  map_from:
+    - precip_type
+SKY_COVER:
+  auto_remap: true
+  code: sky_cover
+  description: Sky Cover Description
+  map_from:
+  - sky
+  - snow_cover_condition
 IGNORE:
   auto_remap: false
   code: ignore
@@ -16,3 +43,14 @@ IGNORE:
     - original_total_samples
     - data_subsampled_to
     - total_samples
+    - gps_&_uncert.
+    - precip_rate
+    - standing_water_present
+    - percent_ground_cover
+    - tussocks_present
+    - tussock_vert_&_spacing
+    - forest_type
+    - percent_mixed_forest
+    - tree_height
+    - vegetation/forest_comments
+    - parameter_codes
