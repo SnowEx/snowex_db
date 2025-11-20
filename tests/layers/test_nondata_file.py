@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 import numpy as np
 import pytest
 from geoalchemy2 import WKTElement
+from geoalchemy2.functions import ST_DWithin
 from snowexsql.tables import LayerData, Site
 
 from snowex_db.upload.layers import UploadProfileData
@@ -18,8 +19,8 @@ class TestEmptyProfile(TableTestBase, WithUploadedFile):
 
     args = []
     kwargs = {
-        'timezone': 'MST',
-        'doi': 'no_doi',
+        "timezone": "MST",
+        "doi": "no_doi",
     }
     UploaderClass = UploadProfileData
     TableClass = LayerData
@@ -27,13 +28,14 @@ class TestEmptyProfile(TableTestBase, WithUploadedFile):
     @pytest.fixture(scope="class")
     def uploaded_file(self, session, data_dir):
         self.upload_file(
-            filename=str(data_dir.joinpath('empty_data.csv')), session=session
+            filename=str(data_dir.joinpath("empty_data.csv")), session=session
         )
 
     @pytest.mark.parametrize(
-        "data_name, expected", [
+        "data_name, expected",
+        [
             ("hand_hardness", 0),
-        ]
+        ],
     )
     def test_count(self, data_name, expected, uploaded_file):
         n = self.check_count(data_name)
@@ -44,17 +46,17 @@ class TestMetadata2020(TableTestBase, WithUploadedFile):
     """
     Test the site details file from the 2020 campaign
     """
+
     kwargs = {
-        'timezone': 'MST',
-        'doi': 'no_doi',
+        "timezone": "MST",
+        "doi": "no_doi",
     }
     UploaderClass = UploadProfileData
 
     @pytest.fixture(scope="class")
     def uploaded_site_details_file(self, session, data_dir):
         self.upload_file(
-            filename=str(data_dir.joinpath("site_details_2020.csv")),
-            session=session
+            filename=str(data_dir.joinpath("site_details_2020.csv")), session=session
         )
 
     @pytest.fixture
@@ -63,7 +65,8 @@ class TestMetadata2020(TableTestBase, WithUploadedFile):
 
     @pytest.mark.usefixtures("uploaded_site_details_file")
     @pytest.mark.parametrize(
-        "attribute, expected_value", [
+        "attribute, expected_value",
+        [
             ("datetime", datetime(2020, 2, 5, 20, 30, tzinfo=timezone.utc)),
             ("aspect", 180.0),
             ("slope_angle", 5.0),
@@ -82,9 +85,9 @@ class TestMetadata2020(TableTestBase, WithUploadedFile):
                 "comments",
                 "Start temperature measurements (top) 13:48 End temperature "
                 "measurements (bottom) 13:53 LWC sampler broke, no "
-                "measurements were possible; "
+                "measurements were possible; ",
             ),
-        ]
+        ],
     )
     def test_site_attributes(self, attribute, expected_value, site_records):
         assert len(site_records) == 1
@@ -100,13 +103,16 @@ class TestMetadata2020(TableTestBase, WithUploadedFile):
         """
         Test that we can find the site by its coordinates.
         """
-        site_coordinate = WKTElement(
-                'POINT (-108.1894813320662 39.031261970372725)', srid=4326
+        site_coordinate = WKTElement("POINT (-108.1894813 39.0312619)", srid=4326)
+        # The tolerance is less than 1 meter North of the Equator
+        site = (
+            self._session.query(Site)
+            .filter(ST_DWithin(Site.geom, site_coordinate, 0.0000001))
+            .first()
         )
-        site = self.get_records(Site, "geom", site_coordinate)
 
-        assert site[0].name == site_records[0].name
-        assert site[0].geom == site_records[0].geom
+        assert site.name == site_records[0].name
+        assert site.geom == site_records[0].geom
 
     @pytest.mark.usefixtures("uploaded_site_details_file")
     def test_site_campaign(self, site_records):
