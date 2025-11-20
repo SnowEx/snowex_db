@@ -10,7 +10,6 @@ from earthaccess_data import get_files
 from snowexsql.db import db_session_with_credentials
 from snowex_db.upload.layers import UploadProfileData
 
-<<<<<<< HEAD
 LOG = get_logger()
 
 # Map of DATA SET ID to DOI from NSIDC
@@ -21,10 +20,6 @@ SSA_DOI = {
     # "SNEX23_SSA_SO": "10.5067/9SY1H2L0BY0X",
     # "SNEX23_OCT22_SSA" : "10.5067/CPQ2DA73IZVH",
 }
-=======
-
->>>>>>> 1892ebd (removed Batch Uploader classes)
-
 
 def main(file_list, doi):
     LOG.info(f"Uploading DOI: {doi} with {len(file_list)} files.")
