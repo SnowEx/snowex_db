@@ -19,4 +19,5 @@ IGNORE:
   - avgvelocity
   - equipment
   - avg_density  # Ignore density from LWC files
+  - time_start/end # Temperatures profiles in AK
   match_on_code: true
