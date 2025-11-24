@@ -47,8 +47,8 @@ def main(file_list: list, doi: str) -> None:
         file
         for file in file_list
         if str(file).lower().endswith(".csv")
-        and not any(name in file for name in ignore_files)
-        and not any(name in file for name in ignore_data)
+        and not any(name in str(file) for name in ignore_files)
+        and not any(name in str(file) for name in ignore_data)
     ]
 
     LOG.info(f"Uploading DOI: {doi} with {len(file_list)} files.")
