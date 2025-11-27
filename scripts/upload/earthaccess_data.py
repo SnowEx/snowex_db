@@ -2,10 +2,16 @@ import contextlib
 from typing import Generator, List
 
 import earthaccess
+import os
 from pathlib import Path
 
-DOWNLOAD_FOLDER = Path(__file__).parent.parent / "download" / "data"
-
+# option to set custom download folder via env variable
+DOWNLOAD_FOLDER = Path(
+    os.environ.get(
+        "SNOWEX_DOWNLOAD_FOLDER",
+        Path(__file__).parent.parent / "download" / "data"
+    )
+)
 
 @contextlib.contextmanager
 def get_files(
