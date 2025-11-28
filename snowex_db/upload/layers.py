@@ -134,7 +134,7 @@ class UploadProfileData(BaseUpload):
         """
 
         if profile.df is None or len(profile.df) == 0:
-            LOG.debug("df is empty, returning")
+            LOG.debug(f"df from file {self.filename} is empty, returning")
             return gpd.GeoDataFrame()
 
         metadata = profile.metadata
@@ -178,12 +178,43 @@ class UploadProfileData(BaseUpload):
         information supplied in the constructor.
         """
 
+# Get all not-nullable columns (except primary keys, if desired)
+        not_nullable_cols = [
+            col.name
+            for col in self.TABLE_CLASS.__table__.columns
+            if not col.nullable and not col.primary_key
+        ]
+
         # Construct a dataframe with all metadata
         for profile in self.data.profiles:
             df = self.build_data(profile)
 
             # Grab each row, convert it to dict and join it with site info
             if not df.empty:
+                # Check for not nullable columns in the dataframe
+                present_not_nullable = [col for col in not_nullable_cols 
+                                        if col in df.columns]
+
+                if present_not_nullable:
+                    mask = df[present_not_nullable].isnull().any(axis=1)
+                    if mask.any():
+                        dropped = df[mask]
+                        self.log.debug(
+                            f"Dropped {len(dropped)} rows with missing values"
+                            f" in columns: {present_not_nullable} in {self.filename}"
+                        )
+                    # Now drop those rows
+                    df = df[~mask]
+
+                if df.empty:
+                    # case where all the rows were dropped
+                    self.log.warning(
+                        "All rows dropped due to missing required values in "
+                        f"{present_not_nullable} for {self.filename}. Only inserting metadata."
+                    )
+                    self._add_metadata(profile.metadata, update=True)
+                    continue
+
                 # Metadata for all layers
                 campaign, observer_list, site = self._add_metadata(profile.metadata)
 
@@ -191,12 +222,9 @@ class UploadProfileData(BaseUpload):
                 if "instrument" not in df.columns.values:
                     instrument = self._add_instrument(profile.metadata)
 
-                # Skip empty records
-                df_filtered = df[df["value"] != "None"]
-
                 all_records_map = [
                     self._add_entry(row, campaign, observer_list, site, instrument)
-                    for row in df_filtered.to_dict(orient="records")
+                    for row in df.to_dict(orient="records")
                 ]
 
                 # Process records in batches
