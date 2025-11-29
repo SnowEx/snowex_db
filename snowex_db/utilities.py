@@ -7,8 +7,13 @@ import datetime
 import logging
 from os import walk
 from os.path import getctime, join
-
+import re
+from pathlib import Path
 import coloredlogs
+
+state_tz_map = {'US/Pacific': ['CA', 'NV', 'WA'],
+                'US/Mountain': ['CO', 'ID', 'NM', 'UT', 'MT'],
+          }
 
 
 def get_logger(name, debug=True, ext_logger=None):
@@ -159,3 +164,26 @@ def get_file_creation_date(file):
 
     result = datetime.datetime.fromtimestamp(getctime(file)).date()
     return result
+
+
+def get_site_id_from_filename(filename: str, regex: str) -> str:
+    """
+    Get the site ID based on the site code in the filename from the pit files
+    """
+
+    compiled = re.compile(regex)
+    match = compiled.match(Path(filename).name)
+    if match:
+        code = match.group(1)
+        return code
+    else:
+        raise RuntimeError(f"No site ID found for {filename}")
+
+
+def get_timezone_from_site_id(site_id: str) -> str:
+    """
+    Get the timezone based on the site id
+    """
+    abbrev = site_id[0:2]
+    tz = [k for k, states in state_tz_map.items() if abbrev in states][0]
+    return tz
