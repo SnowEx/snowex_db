@@ -2,7 +2,6 @@
 Script to upload the Snowex Time Series pits
 """
 
-import glob
 import re
 from pathlib import Path
 from earthaccess_data import get_files
@@ -13,10 +12,6 @@ from snowex_db.upload.layers import UploadProfileBatch
 
 LOG = get_logger()
 
-
-tz_map = {'US/Pacific': ['CA', 'NV', 'WA'],
-          'US/Mountain': ['CO', 'ID', 'NM', 'UT', 'MT'],
-          }
 
 SNOWEX_PITS_MAP = {
     "SNEX20_TS_SP": "10.5067/KZ43HVLZV6G4"
@@ -30,6 +25,11 @@ INSTRUMENT_MAP = {
                     "LWC": "A2 Sensor",
                     "stratigraphy": "Manual"
                   }
+
+tz_map = {'US/Pacific': ['CA', 'NV', 'WA'],
+          'US/Mountain': ['CO', 'ID', 'NM', 'UT', 'MT'],
+          }
+
 
 def get_site_id(filename: str) -> str:
     """
@@ -65,8 +65,9 @@ def main(file_list: list, doi: str) -> None:
         "doi": doi,
     }
 
-    # Files to remove
-
+    # Files to ignore
+    gap_filled_density = [f for f in file_list if "gapDensity" in f]
+    file_list = list(set(file_list) - set(gap_filled_density))
 
     with db_session_with_credentials('./credentials.json') as (_engine, session):
 
@@ -76,9 +77,10 @@ def main(file_list: list, doi: str) -> None:
                 f for f in file_list if keyword in Path(f).name
             ]
             kwargs["instrument"] = instrument
+            LOG.info(f"\n\nUploading {len(instrumented_files)} files with keyword: {keyword}")
 
             # Filter to sites to manage the timezones
-            unique_sites = set([get_site_id(f) for f in instrumented_files])
+            unique_sites = list(set([get_site_id(f) for f in instrumented_files]))
             
             for site in unique_sites:
                 site_files = [
