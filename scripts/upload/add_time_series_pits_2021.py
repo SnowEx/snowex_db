@@ -2,115 +2,71 @@
 Script to upload the Snowex Time Series pits
 """
 
-import glob
-import re
-from os.path import abspath, join
 from pathlib import Path
+from earthaccess_data import get_files
+from snowexsql.db import db_session_with_credentials
+from snowex_db.utilities import get_timezone_from_site_id, get_site_id_from_filename
+from snowex_db.upload.layers import UploadProfileBatch
+from import_logger import get_logger
+
+LOG = get_logger()
 
 
+SNOWEX_PITS_MAP = {
+    "SNEX21_TS_SP": "10.5067/QIANJYJGRWOV"
+}
 
 
-tz_map = {'US/Pacific': ['CA', 'NV', 'WA'],
-          'US/Mountain': ['CO', 'ID', 'NM', 'UT', 'MT'],
-          }
+# Filename keyword to the instrument used
+INSTRUMENT_MAP = {
+                    "siteDetails": None,
+                    "density": "Density Cutter",
+                    "temperature": "Digital Thermometer",
+                    "LWC": "A2 Sensor",
+                    "stratigraphy": "Manual"
+                  }
 
-
-def main():
+def main(file_list: list, doi: str) -> None:
     """
-    Snowex 2021 timeseries pits
+    Add 2021 timeseries pits
     """
-    db_name = 'localhost/snowex'
-    # https://nsidc.org/data/snex21_ts_sp/versions/1
-    doi = "https://doi.org/10.5067/QIANJYJGRWOV"
-    debug = True
+    # Constant Metadata for the GPR data
+    kwargs = {
+        "campaign_name": "2021 Timeseries",
+        "doi": doi,
+    }
 
-    # Point to the downloaded data from
-    data_dir = abspath('../download/data/SNOWEX/SNEX21_TS_SP.001/')
-    error_msg = []
+    # Regex to get site id from filename
+    snowex_reg = r'SNEX21_TS_SP_\d{8}_\d{4}_([a-zA-Z0-9]*)_.*\.csv'
 
     # Files to ignore
-    ignore_files = [
-        "SNEX21_TS_SP_Summary_Environment_v01.csv",
-        "SNEX21_TS_SP_Summary_SWE_v01.csv",
-        "SNEX21_TS_SP_Summary_SWE_v01_modified.csv"
-    ]
+    gap_filled_density = [f for f in file_list if "gapDensity" in f]
+    file_list = list(set(file_list) - set(gap_filled_density))
 
-    # Get all the date folders
-    unique_dt_olders = Path(
-        data_dir
-    ).expanduser().absolute().glob("20*.*.*")
-    for udf in unique_dt_olders:
-        # get all the csvs in the folder
-        dt_folder_files = list(udf.glob("*.csv"))
-        site_ids = []
-        # Get the unique site ids for this date folder
-        compiled = re.compile(
-            r'SNEX21_TS_SP_\d{8}_\d{4}_([a-zA-Z0-9]*)_data_.*_v01\.csv'
-        )
-        for file_path in dt_folder_files:
-            file_name = file_path.name
-            if file_name in ignore_files:
-                print(f"Skipping {file_name}")
-                continue
+    with db_session_with_credentials('./credentials.json') as (_engine, session):
 
-            match = compiled.match(file_name)
-            if match:
-                code = match.group(1)
-                site_ids.append(code)
-            else:
-                raise RuntimeError(f"No site ID found for {file_name}")
+        # Filter by instrument
+        for keyword, instrument in INSTRUMENT_MAP.items():
+            instrumented_files = [
+                f for f in file_list if keyword in Path(f).name
+            ]
+            kwargs["instrument"] = instrument
+            LOG.info(f"\n\nUploading {len(instrumented_files)} files with keyword: {keyword}")
 
-        # Get the unique site ids
-        site_ids = list(set(site_ids))
+            # Filter to sites to manage the timezones
+            unique_sites = list(set([get_site_id_from_filename(f, snowex_reg) for f in instrumented_files]))
 
-        for site_id in site_ids:
-            abbrev = site_id[0:2]
-            tz = [k for k, states in tz_map.items() if abbrev in states][0]
+            for site in unique_sites:
+                site_files = [
+                    f for f in instrumented_files if site in f
+                ]
+                kwargs["timezone"] = get_timezone_from_site_id(site)
 
-            # Grab all the csvs in the pits folder
-            filenames = glob.glob(join(str(udf), f'*_{site_id}_*.csv'))
-
-            # Grab all the site details files
-            sites = glob.glob(join(
-                str(udf), f'*_{site_id}_*siteDetails*.csv'
-            ))
-
-            # Use no-gap-filled density for the sole reason that
-            # Gap filled density for profiles where the scale was broken
-            # are just an empty file after the headers. We should
-            # Record that Nan density was collected for the profile
-            density_files = glob.glob(join(
-                str(udf), f'*_{site_id}_*_gapFilledDensity_*.csv'
-            ))
-
-            # Remove the site details from the total file list to get only the
-            profiles = list(
-                set(filenames) - set(sites) -
-                set(density_files)  # remove non-gap-filled denisty
-            )
-
-            # Submit all profiles associated with pit at a time
-            b = UploadProfileBatch(
-                filenames=profiles, debug=debug, doi=doi, in_timezone=tz,
-                db_name=db_name,
-                allow_split_lines=True  # Logic for split header lines
-            )
-            b.push()
-            error_msg += b.errors
-
-            # Upload the site details
-            sd = UploadSiteDetailsBatch(
-                filenames=sites, debug=debug, doi=doi, in_timezone=tz,
-                db_name=db_name,
-                allow_split_lines=True  # Logic for split header lines
-            )
-            sd.push()
-            error_msg += sd.errors
-
-    for f, m in error_msg:
-        print(f)
-    return len(error_msg)
+                uploader = UploadProfileBatch(session, site_files, **kwargs)
+                uploader.push()
 
 
 if __name__ == '__main__':
-    main()
+    for data_set_id, doi in SNOWEX_PITS_MAP.items():
+        with get_files(data_set_id, doi) as files:
+            main(files, doi)

@@ -2,7 +2,6 @@
 Script to upload the Snowex Time Series pits
 """
 
-import re
 from pathlib import Path
 from earthaccess_data import get_files
 from import_logger import get_logger
