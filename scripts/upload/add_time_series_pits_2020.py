@@ -7,7 +7,7 @@ from pathlib import Path
 from earthaccess_data import get_files
 from import_logger import get_logger
 from snowexsql.db import db_session_with_credentials
-
+from snowex_db.utilities import get_timezone_from_site_id, get_site_id_from_filename
 from snowex_db.upload.layers import UploadProfileBatch
 
 LOG = get_logger()
@@ -26,34 +26,6 @@ INSTRUMENT_MAP = {
                     "stratigraphy": "Manual"
                   }
 
-tz_map = {'US/Pacific': ['CA', 'NV', 'WA'],
-          'US/Mountain': ['CO', 'ID', 'NM', 'UT', 'MT'],
-          }
-
-
-def get_site_id(filename: str) -> str:
-    """
-    Get the site ID based on the site code in the filename
-    """
-    compiled = re.compile(
-        r'SNEX20_TS_SP_\d{8}_\d{4}_([a-zA-Z0-9]*)_data_.*_v02\.csv'
-    )
-    match = compiled.match(Path(filename).name)
-    if match:
-        code = match.group(1)
-        return code
-    else:
-        raise RuntimeError(f"No site ID found for {filename}")
-
-
-def get_timezone(site_id: str) -> str:
-    """
-    Get the timezone based on the site code
-    """
-    abbrev = site_id[0:2]
-    tz = [k for k, states in tz_map.items() if abbrev in states][0]
-    return tz
-
 
 def main(file_list: list, doi: str) -> None:
     """
@@ -64,6 +36,9 @@ def main(file_list: list, doi: str) -> None:
         "campaign_name": "2020 Timeseries",
         "doi": doi,
     }
+
+    # Regex to get site id from filename
+    snowex_reg = r'SNEX20_TS_SP_\d{8}_\d{4}_([a-zA-Z0-9]*)_.*\.csv'
 
     # Files to ignore
     gap_filled_density = [f for f in file_list if "gapDensity" in f]
@@ -80,13 +55,13 @@ def main(file_list: list, doi: str) -> None:
             LOG.info(f"\n\nUploading {len(instrumented_files)} files with keyword: {keyword}")
 
             # Filter to sites to manage the timezones
-            unique_sites = list(set([get_site_id(f) for f in instrumented_files]))
+            unique_sites = list(set([get_site_id_from_filename(f, snowex_reg) for f in instrumented_files]))
             
             for site in unique_sites:
                 site_files = [
                     f for f in instrumented_files if site in f
                 ]
-                kwargs["timezone"] = get_timezone(site)
+                kwargs["timezone"] = get_timezone_from_site_id(site)
                 
                 uploader = UploadProfileBatch(session, site_files, **kwargs)
                 uploader.push()
