@@ -146,9 +146,9 @@ class UploadProfileData(BaseUpload):
         df["type"] = [variable.code] * len(df)
 
         # Manage nans and nones
+        df["value"] = df[variable.code].astype(str)
         for c in df.columns:
             df[c] = df[c].apply(lambda x: StringManager.parse_none(x))
-        df["value"] = df[variable.code].astype(str)
 
         if "units" not in df.columns:
             unit_str = profile.units_map.get(variable.code)
