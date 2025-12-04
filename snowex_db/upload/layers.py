@@ -192,7 +192,7 @@ class UploadProfileData(BaseUpload):
                     instrument = self._add_instrument(profile.metadata)
 
                 # Skip empty records
-                df_filtered = df[df["value"] != "None"]
+                df_filtered = df[df["value"].notna()]
 
                 # for the cases when all rows are None after filtering
                 if df_filtered.empty:
