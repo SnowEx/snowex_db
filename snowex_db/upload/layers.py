@@ -194,6 +194,14 @@ class UploadProfileData(BaseUpload):
                 # Skip empty records
                 df_filtered = df[df["value"] != "None"]
 
+                # for the cases when all rows are None after filtering
+                if df_filtered.empty:
+                    self.log.warning(
+                        "File contains data rows but no valid data after"
+                        " filtering. Skipping row submissions."
+                    )
+                    continue
+
                 all_records_map = [
                     self._add_entry(row, campaign, observer_list, site, instrument)
                     for row in df_filtered.to_dict(orient="records")
