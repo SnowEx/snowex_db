@@ -1,4 +1,4 @@
-name: PyTest and Coverage
+name: Code Quality
 
 on:
   # Triggers the workflow on push or pull request events but only for the main branch
@@ -11,18 +11,14 @@ on:
 
 # Only run once per branch, cancels current runs on new push
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}-code_quality
   cancel-in-progress: true
 
 jobs:
-  build:
+  coverage:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ['3.10', '3.11', '3.12', '3.13']
 
     services:
-
       postgis:
         image: kartoza/postgis:14-3.2
         env:
@@ -41,11 +37,11 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       
-      - name: Set up Python ${{ matrix.python-version }}
+      - name: Set up Python
         uses: actions/setup-python@v6
         with:
-          python-version: ${{ matrix.python-version }}
-          cache: 'pip'
+          python-version: "3.10"
+          cache: "pip"
       
       - name: Install dependencies
         run: |
@@ -55,13 +51,7 @@ jobs:
           pip install pytest coverage wheel
           python3 -m pip install -e ".[dev]"
 
-      - name: Test with pytest
-        run: |
-          pytest -s tests/
-      
-      # Run coverage only once
-      - if: ${{ matrix.python-version == '3.10'}}
-        name: Get Coverage for badge
+      - name: Code Coverage
         run: |
           # Run coverage save the results
           coverage run --source snowex_db -m pytest tests
@@ -84,8 +74,7 @@ jobs:
           # process.env.BRANCH = 'pull_27';
           echo "BRANCH=$(echo ${BRANCH_NAME})" >> $GITHUB_ENV
 
-      - if: ${{ matrix.python-version == '3.9'}}
-        name: Create the Badge
+      - name: Create the Badge
         uses: schneegans/dynamic-badges-action@v1.0.0
         with:
           auth: ${{ secrets.GIST_SECRET }}
