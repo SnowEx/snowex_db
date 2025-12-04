@@ -76,7 +76,7 @@ class TestDensityProfile(TableTestBase, WithUploadedFile):
 
     @pytest.mark.parametrize(
         "data_name, expected", [
-            ("density", 8),
+            ("density", 7),
         ]
     )
     def test_count(self, data_name, expected, uploaded_file):

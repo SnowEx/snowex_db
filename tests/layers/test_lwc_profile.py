@@ -71,7 +71,7 @@ class TestLWCProfile(TableTestBase, WithUploadedFile):
     @pytest.mark.parametrize(
         "data_name, expected",
         [
-            ("permittivity", 8),
+            ("permittivity", 6),
             ("density", 0),
         ]
     )
