@@ -40,7 +40,7 @@ def main(file_list: list, doi: str) -> None:
     snowex_reg = r'SNEX20_TS_SP_\d{8}_\d{4}_([a-zA-Z0-9]*)_.*\.csv'
 
     # Files to ignore
-    gap_filled_density = [f for f in file_list if "gapDensity" in f]
+    gap_filled_density = [f for f in file_list if "gapDensity" in str(f)]
     file_list = list(set(file_list) - set(gap_filled_density))
 
     with db_session_with_credentials('./credentials.json') as (_engine, session):
