@@ -146,9 +146,9 @@ class UploadProfileData(BaseUpload):
         df["type"] = [variable.code] * len(df)
 
         # Manage nans and nones
+        df["value"] = df[variable.code].astype(str)
         for c in df.columns:
             df[c] = df[c].apply(lambda x: StringManager.parse_none(x))
-        df["value"] = df[variable.code].astype(str)
 
         if "units" not in df.columns:
             unit_str = profile.units_map.get(variable.code)
@@ -192,7 +192,15 @@ class UploadProfileData(BaseUpload):
                     instrument = self._add_instrument(profile.metadata)
 
                 # Skip empty records
-                df_filtered = df[df["value"] != "None"]
+                df_filtered = df[df["value"].notna()]
+
+                # for the cases when all rows are None after filtering
+                if df_filtered.empty:
+                    self.log.warning(
+                        "File contains data rows but no valid data after"
+                        " filtering. Skipping row submissions."
+                    )
+                    continue
 
                 all_records_map = [
                     self._add_entry(row, campaign, observer_list, site, instrument)
