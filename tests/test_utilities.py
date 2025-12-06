@@ -5,7 +5,7 @@ import pytest
 
 from snowex_db.utilities import (
     read_n_lines, find_files, find_kw_in_lines, assign_default_kwargs,
-    get_file_creation_date
+    get_file_creation_date, get_site_id_from_filename, get_timezone_from_site_id
 )
 
 
@@ -100,3 +100,25 @@ def test_get_file_creation_date():
     """
     result = get_file_creation_date(__file__)
     assert type(result) is date
+
+
+def test_get_site_id_from_filename():
+    """
+    Test getting site ID from filename
+    """
+    filename = "SNEX20_TS_SP_20191029_1210_COFEJ1_data_gapFilledDensity_v02.csv"
+    regex = r'SNEX20_TS_SP_\d{8}_\d{4}_([a-zA-Z0-9]*)_data_.*_v02\.csv'
+    site_id = get_site_id_from_filename(filename, regex)
+    assert site_id == "COFEJ1"
+
+
+@pytest.mark.parametrize('site_id, expected_tz', [
+                         ('COGM', 'US/Mountain'),
+                         ('CAAM', 'US/Pacific'),
+                         ])
+def test_get_timezone_from_site_id(site_id, expected_tz):
+    """
+    Test getting timezone from site ID
+    """
+    tz = get_timezone_from_site_id(site_id)
+    assert tz == expected_tz
