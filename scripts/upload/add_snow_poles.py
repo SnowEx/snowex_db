@@ -1,42 +1,52 @@
 """
-Uploads the SnowEx 2020 depths derived from cameras looking at poles to the database
-
-1. Downloaded from Catherine Breen email. Later to be updated with a NSIDC DOI
-2A. python run.py # To run all together all at once
-2B. python add_snow_poles.py # To run individually
+Script to uploads the Snowex Snow Pole data to the database\
 """
 
-import time
-from os.path import abspath
+from earthaccess_data import get_files
+from import_logger import get_logger
+from snowexsql.db import db_session_with_credentials
+from snowex_db.upload.points import PointDataCSV
+LOG = get_logger()
 
-from snowexsql.db import get_db
-from snowex_db.upload import *
+SNOWEX_POLES_MAP = {
+    "SNEX20_SD_TLI": "10.5067/14EU7OLF051V"
+}
 
+def main(file_list: list, doi: str) -> None:
 
-def main():
-    # Read in the Grand Mesa Snow Depths Data
-    f = abspath('../download/data/SNOWEX/SNEX20_SD_TLI.001/2019.09.29/SNEX20_SD_TLI_clean.csv')
+    # Data to skip for now
+    ignore_data = [
+        "raw",
+    ]
 
-    # Start the Database
-    db_name = 'localhost/snowex'
-    engine, session = get_db(db_name, credentials='./credentials.json')
+    # Filter to CSV and relevant data
+    file_list = [
+        file
+        for file in file_list
+        if not any(name in str(file) for name in ignore_data)
+    ]
 
-    csv = PointDataCSV(
-        f,
-        depth_is_metadata=False,
-        units='cm',
-        site_name='Grand Mesa',
-        observers='Catherine Breen',
-        instrument='camera',
-        in_timezone='MST',
-        doi='https://doi.org/10.5067/14EU7OLF051V',
-        epsg=26912)
+    LOG.info(f"Uploading DOI: {doi} with {len(file_list)} files.")
 
-    csv.submit(session)
-    errors = len(csv.errors)
+    kwargs = {
+        "site_name": "Grand Mesa",
+        "campaign_name": "Grand Mesa",
+        "timezone": "US/Mountain",
+        "instrument": "camera",
+        "observer": "Catherine Breen",
+        "units": "cm",
+        "doi": doi,
+    }
 
-    return errors
+    with db_session_with_credentials() as (_engine, session):
+        for file in file_list:
+            uploader = PointDataCSV(session,
+                                    file, 
+                                    **kwargs)
+            uploader.submit()
 
 
 if __name__ == '__main__':
-    main()
+    for data_set_id, doi in SNOWEX_POLES_MAP.items():
+        with get_files(data_set_id, doi) as files:
+            main(files, doi)
