@@ -37,7 +37,7 @@ def stream_download(url, output_f):
         print(f"HTTP CODE {r.status_code}. Skipping download!")
 
 
-def download_uavsar(url, base_flight_name, output_dir='./data/uavsar', polarizations=['HH', 'HV', 'VH', 'VV'],
+def download_uavsar(url, base_flight_name, output_dir='/data/uploads', polarizations=['HH', 'HV', 'VH', 'VV'],
                     file_types=['amp1', 'amp2', 'cor', 'int']):
     """
     Downlaods uavsar files by constructing the file urls using a url, a base file name, a polarization and a file type
@@ -96,14 +96,14 @@ def main():
 
         # Grand Mesa processed with 5m DTM
         ('http://downloaduav.jpl.nasa.gov/Release2u/grmesa_27416_20003-028_20005-007_0011d_s01_L090_03/',
-         'grmesa_27416_20003-028_20005-007_0011d_s01_L090HH_03'),
-        #
+        'grmesa_27416_20003-028_20005-007_0011d_s01_L090HH_03'),
+        
         # Boise Basin, lowman_23205, 1 / 31 - 2 / 13
         ('http://downloaduav.jpl.nasa.gov/Release2v/lowman_23205_20002-007_20007-003_0013d_s01_L090_01/',
-         'lowman_23205_20002-007_20007-003_0013d_s01_L090HH_01'),
+        'lowman_23205_20002-007_20007-003_0013d_s01_L090HH_01'),
 
         # Boise Basin, lowman_23205, 2 / 13 - 2 / 21
-        ('http://uavsar.asfdaac.alaska.edu/UA_lowman_23205_20007-003_20011-003_0008d_s01_L090_01/',
+        ('http://uavsar.asf.alaska.edu/UA_lowman_23205_20007-003_20011-003_0008d_s01_L090_01/',
          'lowman_23205_20007-003_20011-003_0008d_s01_L090HH_01'),
 
         # Boise Basin, lowman_23205, 2 / 21 - 3 / 11
