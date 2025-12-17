@@ -58,9 +58,9 @@ class UploadRaster(BaseUpload):
 
     def __init__(
             self, session, filename, epsg,
-            use_s3=True, no_data=None, cog_dir="./snowex_cog_storage",
+            use_s3=True, no_data=None, cog_dir="/data/uploads/snowex_cog_storage",
             doi=None, measurement_type=None, units=None,
-            date=None, use_sso=True,
+            date=None, use_sso=False,
             **kwargs
     ):
         """

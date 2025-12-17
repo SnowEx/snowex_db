@@ -16,8 +16,8 @@ class COGHandler:
     """
     AWS_REGION = os.getenv("AWS_DEFAULT_REGION", "us-west-2")
 
-    def __init__(self, tif_file, s3_bucket="m3w-snowex", s3_prefix="cogs",
-                 cog_dir="./snowex_cog_storage", use_s3=True):
+    def __init__(self, tif_file, s3_bucket="snowex-rasters", s3_prefix="cogs",
+                 cog_dir="/data/uploads/snowex_cog_storage", use_s3=True):
         """
         Args:
             tif_file: local or abs bath to file that will be persisted
